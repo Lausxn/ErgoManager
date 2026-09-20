@@ -1,6 +1,6 @@
 package com.mgs.ergomanager.service.impl;
 
-import com.mgs.ergomanager.dto.history.HistoryResponse;
+import com.mgs.ergomanager.dto.history.HistoryResponseDTO;
 import com.mgs.ergomanager.repository.HistoryRepository;
 import com.mgs.ergomanager.service.HistoryService;
 import java.util.List;
@@ -24,14 +24,14 @@ public class HistoryServiceImpl implements HistoryService {
     }
 
     @Override
-    public List<HistoryResponse> findByCompany(Long companyId) {
-        // TODO: read the entries of the company and map them to HistoryResponse.
+    public List<HistoryResponseDTO> findByCompany(Long companyId) {
+        // TODO: read the entries of the company and map them to HistoryResponseDTO.
         throw new UnsupportedOperationException("HistoryService.findByCompany is not implemented yet");
     }
 
     @Override
-    public List<HistoryResponse> findByEmployee(String employeeEmail) {
-        // TODO: read the entries of the employee and map them to HistoryResponse.
+    public List<HistoryResponseDTO> findByEmployee(String employeeEmail) {
+        // TODO: read the entries of the employee and map them to HistoryResponseDTO.
         throw new UnsupportedOperationException("HistoryService.findByEmployee is not implemented yet");
     }
 }

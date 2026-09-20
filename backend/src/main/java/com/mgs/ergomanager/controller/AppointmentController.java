@@ -1,9 +1,9 @@
 package com.mgs.ergomanager.controller;
 
-import com.mgs.ergomanager.dto.appointment.AppointmentRequest;
-import com.mgs.ergomanager.dto.appointment.AppointmentResponse;
-import com.mgs.ergomanager.dto.appointment.AvailabilityRequest;
-import com.mgs.ergomanager.dto.appointment.AvailabilityResponse;
+import com.mgs.ergomanager.dto.appointment.AppointmentRequestDTO;
+import com.mgs.ergomanager.dto.appointment.AppointmentResponseDTO;
+import com.mgs.ergomanager.dto.appointment.AvailabilityRequestDTO;
+import com.mgs.ergomanager.dto.appointment.AvailabilityResponseDTO;
 import com.mgs.ergomanager.service.AppointmentService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -48,9 +48,9 @@ public class AppointmentController {
      * @return the created slot
      */
     @PostMapping("/availabilities")
-    public ResponseEntity<AvailabilityResponse> createAvailability(
-            @Valid @RequestBody AvailabilityRequest request) {
-        AvailabilityResponse created = appointmentService.createAvailability(request);
+    public ResponseEntity<AvailabilityResponseDTO> createAvailability(
+            @Valid @RequestBody AvailabilityRequestDTO request) {
+        AvailabilityResponseDTO created = appointmentService.createAvailability(request);
         return ResponseEntity.created(URI.create("/api/appointments/availabilities/" + created.id())).body(created);
     }
 
@@ -63,7 +63,7 @@ public class AppointmentController {
      * @return list of free slots
      */
     @GetMapping("/availabilities")
-    public ResponseEntity<List<AvailabilityResponse>> findFreeAvailabilities(
+    public ResponseEntity<List<AvailabilityResponseDTO>> findFreeAvailabilities(
             @RequestParam Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
@@ -77,8 +77,8 @@ public class AppointmentController {
      * @return the booked appointment
      */
     @PostMapping
-    public ResponseEntity<AppointmentResponse> book(@Valid @RequestBody AppointmentRequest request) {
-        AppointmentResponse created = appointmentService.book(request);
+    public ResponseEntity<AppointmentResponseDTO> book(@Valid @RequestBody AppointmentRequestDTO request) {
+        AppointmentResponseDTO created = appointmentService.book(request);
         return ResponseEntity.created(URI.create("/api/appointments/" + created.id())).body(created);
     }
 
@@ -91,7 +91,7 @@ public class AppointmentController {
      * @return list of appointments
      */
     @GetMapping
-    public ResponseEntity<List<AppointmentResponse>> findAgenda(
+    public ResponseEntity<List<AppointmentResponseDTO>> findAgenda(
             @RequestParam Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
@@ -105,7 +105,7 @@ public class AppointmentController {
      * @return the cancelled appointment
      */
     @PatchMapping("/{id}/cancel")
-    public ResponseEntity<AppointmentResponse> cancel(@PathVariable Long id) {
+    public ResponseEntity<AppointmentResponseDTO> cancel(@PathVariable Long id) {
         return ResponseEntity.ok(appointmentService.cancel(id));
     }
 }

@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Size;
  * @param email    registered email of the user
  * @param password plain password, checked against the stored hash
  */
-public record LoginRequest(
+public record LoginRequestDTO(
 
         @NotBlank
         @Email

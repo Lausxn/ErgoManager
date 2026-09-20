@@ -1,6 +1,6 @@
 package com.mgs.ergomanager.controller;
 
-import com.mgs.ergomanager.dto.history.HistoryResponse;
+import com.mgs.ergomanager.dto.history.HistoryResponseDTO;
 import com.mgs.ergomanager.service.HistoryService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
@@ -37,7 +37,7 @@ public class HistoryController {
      * @return list of history entries
      */
     @GetMapping
-    public ResponseEntity<List<HistoryResponse>> findByCompany(@RequestParam Long companyId) {
+    public ResponseEntity<List<HistoryResponseDTO>> findByCompany(@RequestParam Long companyId) {
         return ResponseEntity.ok(historyService.findByCompany(companyId));
     }
 
@@ -48,7 +48,7 @@ public class HistoryController {
      * @return list of history entries
      */
     @GetMapping("/employees/{employeeEmail}")
-    public ResponseEntity<List<HistoryResponse>> findByEmployee(@PathVariable String employeeEmail) {
+    public ResponseEntity<List<HistoryResponseDTO>> findByEmployee(@PathVariable String employeeEmail) {
         return ResponseEntity.ok(historyService.findByEmployee(employeeEmail));
     }
 }

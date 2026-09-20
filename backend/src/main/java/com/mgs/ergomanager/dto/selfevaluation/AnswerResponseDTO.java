@@ -9,7 +9,7 @@ package com.mgs.ergomanager.dto.selfevaluation;
  * @param selectedOption label of the option chosen by the employee
  * @param score          value of the chosen option
  */
-public record AnswerResponse(
+public record AnswerResponseDTO(
         Long id,
         Long questionId,
         String statement,

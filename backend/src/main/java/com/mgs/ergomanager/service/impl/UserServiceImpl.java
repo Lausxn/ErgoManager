@@ -1,7 +1,7 @@
 package com.mgs.ergomanager.service.impl;
 
-import com.mgs.ergomanager.dto.user.UserRequest;
-import com.mgs.ergomanager.dto.user.UserResponse;
+import com.mgs.ergomanager.dto.user.UserRequestDTO;
+import com.mgs.ergomanager.dto.user.UserResponseDTO;
 import com.mgs.ergomanager.repository.UserRepository;
 import com.mgs.ergomanager.service.UserService;
 import java.util.List;
@@ -30,25 +30,25 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserResponse> findAll() {
-        // TODO: read every user and map it to UserResponse.
+    public List<UserResponseDTO> findAll() {
+        // TODO: read every user and map it to UserResponseDTO.
         throw new UnsupportedOperationException("UserService.findAll is not implemented yet");
     }
 
     @Override
-    public UserResponse findById(Long id) {
+    public UserResponseDTO findById(Long id) {
         // TODO: read the user or raise ResourceNotFoundException.
         throw new UnsupportedOperationException("UserService.findById is not implemented yet");
     }
 
     @Override
-    public UserResponse create(UserRequest request) {
+    public UserResponseDTO create(UserRequestDTO request) {
         // TODO: reject a duplicated email and hash the password before saving.
         throw new UnsupportedOperationException("UserService.create is not implemented yet");
     }
 
     @Override
-    public UserResponse update(Long id, UserRequest request) {
+    public UserResponseDTO update(Long id, UserRequestDTO request) {
         // TODO: copy the request over the stored user, rehashing the password.
         throw new UnsupportedOperationException("UserService.update is not implemented yet");
     }

@@ -9,7 +9,7 @@ package com.mgs.ergomanager.dto.form;
  * @param weight        multiplier applied to the answer score
  * @param active        false when the question was deactivated
  */
-public record QuestionResponse(
+public record QuestionResponseDTO(
         Long id,
         String statement,
         Integer questionOrder,

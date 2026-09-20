@@ -12,7 +12,7 @@ import jakarta.validation.constraints.Size;
  * @param questionOrder position of the question inside the form
  * @param weight        multiplier applied to the answer score
  */
-public record QuestionRequest(
+public record QuestionRequestDTO(
 
         @NotBlank
         @Size(max = 500)

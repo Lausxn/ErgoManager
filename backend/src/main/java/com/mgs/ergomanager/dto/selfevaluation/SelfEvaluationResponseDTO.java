@@ -18,7 +18,7 @@ import java.util.List;
  * @param submittedAt      moment the self evaluation was submitted
  * @param answerList       answers given to every question of the form
  */
-public record SelfEvaluationResponse(
+public record SelfEvaluationResponseDTO(
         Long id,
         Long formId,
         Long companyId,
@@ -28,5 +28,5 @@ public record SelfEvaluationResponse(
         Integer totalScore,
         RiskLevel riskLevel,
         LocalDateTime submittedAt,
-        List<AnswerResponse> answerList) {
+        List<AnswerResponseDTO> answerList) {
 }

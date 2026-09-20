@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
  * @param startDateTime moment the slot starts
  * @param endDateTime   moment the slot ends
  */
-public record AvailabilityRequest(
+public record AvailabilityRequestDTO(
 
         @NotNull
         Long userId,

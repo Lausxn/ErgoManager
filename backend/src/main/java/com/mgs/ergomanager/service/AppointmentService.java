@@ -1,9 +1,9 @@
 package com.mgs.ergomanager.service;
 
-import com.mgs.ergomanager.dto.appointment.AppointmentRequest;
-import com.mgs.ergomanager.dto.appointment.AppointmentResponse;
-import com.mgs.ergomanager.dto.appointment.AvailabilityRequest;
-import com.mgs.ergomanager.dto.appointment.AvailabilityResponse;
+import com.mgs.ergomanager.dto.appointment.AppointmentRequestDTO;
+import com.mgs.ergomanager.dto.appointment.AppointmentResponseDTO;
+import com.mgs.ergomanager.dto.appointment.AvailabilityRequestDTO;
+import com.mgs.ergomanager.dto.appointment.AvailabilityResponseDTO;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -18,7 +18,7 @@ public interface AppointmentService {
      * @param request data of the slot
      * @return the created slot
      */
-    AvailabilityResponse createAvailability(AvailabilityRequest request);
+    AvailabilityResponseDTO createAvailability(AvailabilityRequestDTO request);
 
     /**
      * Returns the free slots of an ergonomist inside a date range.
@@ -28,7 +28,7 @@ public interface AppointmentService {
      * @param to     end of the range
      * @return list of free slots
      */
-    List<AvailabilityResponse> findFreeAvailabilities(Long userId, LocalDateTime from, LocalDateTime to);
+    List<AvailabilityResponseDTO> findFreeAvailabilities(Long userId, LocalDateTime from, LocalDateTime to);
 
     /**
      * Books an appointment on a free slot.
@@ -36,7 +36,7 @@ public interface AppointmentService {
      * @param request slot chosen by the employee
      * @return the booked appointment
      */
-    AppointmentResponse book(AppointmentRequest request);
+    AppointmentResponseDTO book(AppointmentRequestDTO request);
 
     /**
      * Returns the agenda of an ergonomist inside a date range.
@@ -46,7 +46,7 @@ public interface AppointmentService {
      * @param to     end of the range
      * @return list of appointments
      */
-    List<AppointmentResponse> findAgenda(Long userId, LocalDateTime from, LocalDateTime to);
+    List<AppointmentResponseDTO> findAgenda(Long userId, LocalDateTime from, LocalDateTime to);
 
     /**
      * Cancels an appointment and frees its slot.
@@ -54,5 +54,5 @@ public interface AppointmentService {
      * @param id identifier of the appointment
      * @return the cancelled appointment
      */
-    AppointmentResponse cancel(Long id);
+    AppointmentResponseDTO cancel(Long id);
 }

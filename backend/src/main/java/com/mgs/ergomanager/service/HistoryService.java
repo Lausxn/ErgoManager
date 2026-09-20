@@ -1,6 +1,6 @@
 package com.mgs.ergomanager.service;
 
-import com.mgs.ergomanager.dto.history.HistoryResponse;
+import com.mgs.ergomanager.dto.history.HistoryResponseDTO;
 import java.util.List;
 
 /**
@@ -14,7 +14,7 @@ public interface HistoryService {
      * @param companyId identifier of the company
      * @return list of history entries
      */
-    List<HistoryResponse> findByCompany(Long companyId);
+    List<HistoryResponseDTO> findByCompany(Long companyId);
 
     /**
      * Returns the history entries of an employee, newest first.
@@ -22,5 +22,5 @@ public interface HistoryService {
      * @param employeeEmail email of the employee
      * @return list of history entries
      */
-    List<HistoryResponse> findByEmployee(String employeeEmail);
+    List<HistoryResponseDTO> findByEmployee(String employeeEmail);
 }

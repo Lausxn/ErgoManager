@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * @param reportPath      location of the generated PDF report
  * @param evaluatedAt     moment the evaluation was written
  */
-public record PersonalizedEvaluationResponse(
+public record PersonalizedEvaluationResponseDTO(
         Long id,
         Long appointmentId,
         Long userId,

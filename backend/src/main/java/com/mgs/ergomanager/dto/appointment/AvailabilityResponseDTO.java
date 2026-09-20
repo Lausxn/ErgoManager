@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  * @param endDateTime   moment the slot ends
  * @param taken         true when an appointment already uses the slot
  */
-public record AvailabilityResponse(
+public record AvailabilityResponseDTO(
         Long id,
         Long userId,
         String fullName,

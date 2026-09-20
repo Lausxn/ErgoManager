@@ -1,7 +1,7 @@
 package com.mgs.ergomanager.controller;
 
-import com.mgs.ergomanager.dto.user.UserRequest;
-import com.mgs.ergomanager.dto.user.UserResponse;
+import com.mgs.ergomanager.dto.user.UserRequestDTO;
+import com.mgs.ergomanager.dto.user.UserResponseDTO;
 import com.mgs.ergomanager.service.UserService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -42,7 +42,7 @@ public class UserController {
      * @return list of users
      */
     @GetMapping
-    public ResponseEntity<List<UserResponse>> findAll() {
+    public ResponseEntity<List<UserResponseDTO>> findAll() {
         return ResponseEntity.ok(userService.findAll());
     }
 
@@ -53,7 +53,7 @@ public class UserController {
      * @return the user
      */
     @GetMapping("/{id}")
-    public ResponseEntity<UserResponse> findById(@PathVariable Long id) {
+    public ResponseEntity<UserResponseDTO> findById(@PathVariable Long id) {
         return ResponseEntity.ok(userService.findById(id));
     }
 
@@ -64,8 +64,8 @@ public class UserController {
      * @return the created user
      */
     @PostMapping
-    public ResponseEntity<UserResponse> create(@Valid @RequestBody UserRequest request) {
-        UserResponse created = userService.create(request);
+    public ResponseEntity<UserResponseDTO> create(@Valid @RequestBody UserRequestDTO request) {
+        UserResponseDTO created = userService.create(request);
         return ResponseEntity.created(URI.create("/api/users/" + created.id())).body(created);
     }
 
@@ -77,7 +77,7 @@ public class UserController {
      * @return the updated user
      */
     @PutMapping("/{id}")
-    public ResponseEntity<UserResponse> update(@PathVariable Long id, @Valid @RequestBody UserRequest request) {
+    public ResponseEntity<UserResponseDTO> update(@PathVariable Long id, @Valid @RequestBody UserRequestDTO request) {
         return ResponseEntity.ok(userService.update(id, request));
     }
 

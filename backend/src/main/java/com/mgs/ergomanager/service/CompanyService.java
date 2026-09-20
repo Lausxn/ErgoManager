@@ -1,7 +1,7 @@
 package com.mgs.ergomanager.service;
 
-import com.mgs.ergomanager.dto.company.CompanyRequest;
-import com.mgs.ergomanager.dto.company.CompanyResponse;
+import com.mgs.ergomanager.dto.company.CompanyRequestDTO;
+import com.mgs.ergomanager.dto.company.CompanyResponseDTO;
 import java.util.List;
 
 /**
@@ -14,7 +14,7 @@ public interface CompanyService {
      *
      * @return list of companies
      */
-    List<CompanyResponse> findAll();
+    List<CompanyResponseDTO> findAll();
 
     /**
      * Returns a single company.
@@ -22,7 +22,7 @@ public interface CompanyService {
      * @param id identifier of the company
      * @return the company
      */
-    CompanyResponse findById(Long id);
+    CompanyResponseDTO findById(Long id);
 
     /**
      * Registers a new company.
@@ -30,7 +30,7 @@ public interface CompanyService {
      * @param request data of the company
      * @return the created company
      */
-    CompanyResponse create(CompanyRequest request);
+    CompanyResponseDTO create(CompanyRequestDTO request);
 
     /**
      * Updates the data of an existing company.
@@ -39,7 +39,7 @@ public interface CompanyService {
      * @param request new data of the company
      * @return the updated company
      */
-    CompanyResponse update(Long id, CompanyRequest request);
+    CompanyResponseDTO update(Long id, CompanyRequestDTO request);
 
     /**
      * Deactivates a company without deleting its evaluation history.

@@ -1,7 +1,7 @@
 package com.mgs.ergomanager.service;
 
-import com.mgs.ergomanager.dto.selfevaluation.SelfEvaluationRequest;
-import com.mgs.ergomanager.dto.selfevaluation.SelfEvaluationResponse;
+import com.mgs.ergomanager.dto.selfevaluation.SelfEvaluationRequestDTO;
+import com.mgs.ergomanager.dto.selfevaluation.SelfEvaluationResponseDTO;
 import com.mgs.ergomanager.model.enums.RiskLevel;
 import java.util.List;
 
@@ -16,7 +16,7 @@ public interface SelfEvaluationService {
      * @param request answers sent by the employee
      * @return the stored self evaluation, including its risk level
      */
-    SelfEvaluationResponse submit(SelfEvaluationRequest request);
+    SelfEvaluationResponseDTO submit(SelfEvaluationRequestDTO request);
 
     /**
      * Returns a single self evaluation with its answers.
@@ -24,7 +24,7 @@ public interface SelfEvaluationService {
      * @param id identifier of the self evaluation
      * @return the self evaluation
      */
-    SelfEvaluationResponse findById(Long id);
+    SelfEvaluationResponseDTO findById(Long id);
 
     /**
      * Returns the self evaluations submitted by the employees of a company.
@@ -32,7 +32,7 @@ public interface SelfEvaluationService {
      * @param companyId identifier of the company
      * @return list of self evaluations
      */
-    List<SelfEvaluationResponse> findByCompany(Long companyId);
+    List<SelfEvaluationResponseDTO> findByCompany(Long companyId);
 
     /**
      * Calculates the risk level that matches a total score.

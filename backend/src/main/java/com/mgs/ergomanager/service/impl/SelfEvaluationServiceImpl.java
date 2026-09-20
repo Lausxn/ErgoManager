@@ -1,7 +1,7 @@
 package com.mgs.ergomanager.service.impl;
 
-import com.mgs.ergomanager.dto.selfevaluation.SelfEvaluationRequest;
-import com.mgs.ergomanager.dto.selfevaluation.SelfEvaluationResponse;
+import com.mgs.ergomanager.dto.selfevaluation.SelfEvaluationRequestDTO;
+import com.mgs.ergomanager.dto.selfevaluation.SelfEvaluationResponseDTO;
 import com.mgs.ergomanager.model.enums.RiskLevel;
 import com.mgs.ergomanager.repository.AnswerRepository;
 import com.mgs.ergomanager.repository.SelfEvaluationRepository;
@@ -32,19 +32,19 @@ public class SelfEvaluationServiceImpl implements SelfEvaluationService {
     }
 
     @Override
-    public SelfEvaluationResponse submit(SelfEvaluationRequest request) {
+    public SelfEvaluationResponseDTO submit(SelfEvaluationRequestDTO request) {
         // TODO: store the answers, add up the weighted scores and set the risk level.
         throw new UnsupportedOperationException("SelfEvaluationService.submit is not implemented yet");
     }
 
     @Override
-    public SelfEvaluationResponse findById(Long id) {
+    public SelfEvaluationResponseDTO findById(Long id) {
         // TODO: read the self evaluation or raise ResourceNotFoundException.
         throw new UnsupportedOperationException("SelfEvaluationService.findById is not implemented yet");
     }
 
     @Override
-    public List<SelfEvaluationResponse> findByCompany(Long companyId) {
+    public List<SelfEvaluationResponseDTO> findByCompany(Long companyId) {
         // TODO: read the self evaluations of the company.
         throw new UnsupportedOperationException("SelfEvaluationService.findByCompany is not implemented yet");
     }

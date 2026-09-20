@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
  * @param description              short text describing the milestone
  * @param registeredAt             moment the entry was recorded
  */
-public record HistoryResponse(
+public record HistoryResponseDTO(
         Long id,
         Long companyId,
         Long selfEvaluationId,

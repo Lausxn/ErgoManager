@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Size;
  * @param availabilityId   identifier of the chosen time slot
  * @param notes            free text the employee wants the ergonomist to read
  */
-public record AppointmentRequest(
+public record AppointmentRequestDTO(
 
         @NotNull
         Long selfEvaluationId,

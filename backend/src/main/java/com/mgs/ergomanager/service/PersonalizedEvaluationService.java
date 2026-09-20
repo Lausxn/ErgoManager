@@ -1,7 +1,7 @@
 package com.mgs.ergomanager.service;
 
-import com.mgs.ergomanager.dto.personalizedevaluation.PersonalizedEvaluationRequest;
-import com.mgs.ergomanager.dto.personalizedevaluation.PersonalizedEvaluationResponse;
+import com.mgs.ergomanager.dto.personalizedevaluation.PersonalizedEvaluationRequestDTO;
+import com.mgs.ergomanager.dto.personalizedevaluation.PersonalizedEvaluationResponseDTO;
 import java.util.List;
 
 /**
@@ -15,7 +15,7 @@ public interface PersonalizedEvaluationService {
      * @param request data written by the ergonomist
      * @return the stored evaluation
      */
-    PersonalizedEvaluationResponse create(PersonalizedEvaluationRequest request);
+    PersonalizedEvaluationResponseDTO create(PersonalizedEvaluationRequestDTO request);
 
     /**
      * Returns a single evaluation.
@@ -23,7 +23,7 @@ public interface PersonalizedEvaluationService {
      * @param id identifier of the evaluation
      * @return the evaluation
      */
-    PersonalizedEvaluationResponse findById(Long id);
+    PersonalizedEvaluationResponseDTO findById(Long id);
 
     /**
      * Returns the evaluations written by an ergonomist.
@@ -31,7 +31,7 @@ public interface PersonalizedEvaluationService {
      * @param userId identifier of the ergonomist
      * @return list of evaluations
      */
-    List<PersonalizedEvaluationResponse> findByErgonomist(Long userId);
+    List<PersonalizedEvaluationResponseDTO> findByErgonomist(Long userId);
 
     /**
      * Generates the PDF report of an evaluation.

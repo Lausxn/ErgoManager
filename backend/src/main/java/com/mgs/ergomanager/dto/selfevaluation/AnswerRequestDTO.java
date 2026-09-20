@@ -12,7 +12,7 @@ import jakarta.validation.constraints.Size;
  * @param selectedOption label of the option chosen by the employee
  * @param score          value of the chosen option
  */
-public record AnswerRequest(
+public record AnswerRequestDTO(
 
         @NotNull
         Long questionId,

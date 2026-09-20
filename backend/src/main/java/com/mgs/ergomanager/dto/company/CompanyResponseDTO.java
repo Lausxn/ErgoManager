@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
  * @param active       false when the company was deactivated
  * @param createdAt    moment the company was registered
  */
-public record CompanyResponse(
+public record CompanyResponseDTO(
         Long id,
         String businessName,
         String taxId,

@@ -1,7 +1,7 @@
 package com.mgs.ergomanager.controller;
 
-import com.mgs.ergomanager.dto.form.FormRequest;
-import com.mgs.ergomanager.dto.form.FormResponse;
+import com.mgs.ergomanager.dto.form.FormRequestDTO;
+import com.mgs.ergomanager.dto.form.FormResponseDTO;
 import com.mgs.ergomanager.service.FormService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -43,7 +43,7 @@ public class FormController {
      * @return list of forms
      */
     @GetMapping
-    public ResponseEntity<List<FormResponse>> findAll() {
+    public ResponseEntity<List<FormResponseDTO>> findAll() {
         return ResponseEntity.ok(formService.findAll());
     }
 
@@ -53,7 +53,7 @@ public class FormController {
      * @return list of active forms
      */
     @GetMapping("/active")
-    public ResponseEntity<List<FormResponse>> findActive() {
+    public ResponseEntity<List<FormResponseDTO>> findActive() {
         return ResponseEntity.ok(formService.findActive());
     }
 
@@ -64,7 +64,7 @@ public class FormController {
      * @return the form
      */
     @GetMapping("/{id}")
-    public ResponseEntity<FormResponse> findById(@PathVariable Long id) {
+    public ResponseEntity<FormResponseDTO> findById(@PathVariable Long id) {
         return ResponseEntity.ok(formService.findById(id));
     }
 
@@ -75,8 +75,8 @@ public class FormController {
      * @return the created form
      */
     @PostMapping
-    public ResponseEntity<FormResponse> create(@Valid @RequestBody FormRequest request) {
-        FormResponse created = formService.create(request);
+    public ResponseEntity<FormResponseDTO> create(@Valid @RequestBody FormRequestDTO request) {
+        FormResponseDTO created = formService.create(request);
         return ResponseEntity.created(URI.create("/api/forms/" + created.id())).body(created);
     }
 
@@ -88,7 +88,7 @@ public class FormController {
      * @return the updated form
      */
     @PutMapping("/{id}")
-    public ResponseEntity<FormResponse> update(@PathVariable Long id, @Valid @RequestBody FormRequest request) {
+    public ResponseEntity<FormResponseDTO> update(@PathVariable Long id, @Valid @RequestBody FormRequestDTO request) {
         return ResponseEntity.ok(formService.update(id, request));
     }
 

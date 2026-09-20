@@ -13,7 +13,7 @@ import jakarta.validation.constraints.Size;
  * @param phoneNumber  contact phone number
  * @param address      postal address
  */
-public record CompanyRequest(
+public record CompanyRequestDTO(
 
         @NotBlank
         @Size(max = 150)

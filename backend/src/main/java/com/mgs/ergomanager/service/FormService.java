@@ -1,7 +1,7 @@
 package com.mgs.ergomanager.service;
 
-import com.mgs.ergomanager.dto.form.FormRequest;
-import com.mgs.ergomanager.dto.form.FormResponse;
+import com.mgs.ergomanager.dto.form.FormRequestDTO;
+import com.mgs.ergomanager.dto.form.FormResponseDTO;
 import java.util.List;
 
 /**
@@ -14,14 +14,14 @@ public interface FormService {
      *
      * @return list of forms
      */
-    List<FormResponse> findAll();
+    List<FormResponseDTO> findAll();
 
     /**
      * Returns the forms that can currently be answered.
      *
      * @return list of active forms
      */
-    List<FormResponse> findActive();
+    List<FormResponseDTO> findActive();
 
     /**
      * Returns a single form with its questions.
@@ -29,7 +29,7 @@ public interface FormService {
      * @param id identifier of the form
      * @return the form
      */
-    FormResponse findById(Long id);
+    FormResponseDTO findById(Long id);
 
     /**
      * Creates a form together with its questions.
@@ -37,7 +37,7 @@ public interface FormService {
      * @param request data of the form
      * @return the created form
      */
-    FormResponse create(FormRequest request);
+    FormResponseDTO create(FormRequestDTO request);
 
     /**
      * Updates a form and its questions.
@@ -46,7 +46,7 @@ public interface FormService {
      * @param request new data of the form
      * @return the updated form
      */
-    FormResponse update(Long id, FormRequest request);
+    FormResponseDTO update(Long id, FormRequestDTO request);
 
     /**
      * Deactivates a form so it is no longer offered to the employees.

@@ -1,7 +1,7 @@
 package com.mgs.ergomanager.controller;
 
-import com.mgs.ergomanager.dto.selfevaluation.SelfEvaluationRequest;
-import com.mgs.ergomanager.dto.selfevaluation.SelfEvaluationResponse;
+import com.mgs.ergomanager.dto.selfevaluation.SelfEvaluationRequestDTO;
+import com.mgs.ergomanager.dto.selfevaluation.SelfEvaluationResponseDTO;
 import com.mgs.ergomanager.service.SelfEvaluationService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -43,8 +43,8 @@ public class SelfEvaluationController {
      * @return the stored self evaluation
      */
     @PostMapping
-    public ResponseEntity<SelfEvaluationResponse> submit(@Valid @RequestBody SelfEvaluationRequest request) {
-        SelfEvaluationResponse created = selfEvaluationService.submit(request);
+    public ResponseEntity<SelfEvaluationResponseDTO> submit(@Valid @RequestBody SelfEvaluationRequestDTO request) {
+        SelfEvaluationResponseDTO created = selfEvaluationService.submit(request);
         return ResponseEntity.created(URI.create("/api/self-evaluations/" + created.id())).body(created);
     }
 
@@ -55,7 +55,7 @@ public class SelfEvaluationController {
      * @return the self evaluation
      */
     @GetMapping("/{id}")
-    public ResponseEntity<SelfEvaluationResponse> findById(@PathVariable Long id) {
+    public ResponseEntity<SelfEvaluationResponseDTO> findById(@PathVariable Long id) {
         return ResponseEntity.ok(selfEvaluationService.findById(id));
     }
 
@@ -66,7 +66,7 @@ public class SelfEvaluationController {
      * @return list of self evaluations
      */
     @GetMapping
-    public ResponseEntity<List<SelfEvaluationResponse>> findByCompany(@RequestParam Long companyId) {
+    public ResponseEntity<List<SelfEvaluationResponseDTO>> findByCompany(@RequestParam Long companyId) {
         return ResponseEntity.ok(selfEvaluationService.findByCompany(companyId));
     }
 }

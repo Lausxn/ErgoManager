@@ -1,7 +1,7 @@
 package com.mgs.ergomanager.service.impl;
 
-import com.mgs.ergomanager.dto.auth.LoginRequest;
-import com.mgs.ergomanager.dto.auth.LoginResponse;
+import com.mgs.ergomanager.dto.auth.LoginRequestDTO;
+import com.mgs.ergomanager.dto.auth.LoginResponseDTO;
 import com.mgs.ergomanager.exception.ResourceNotFoundException;
 import com.mgs.ergomanager.model.User;
 import com.mgs.ergomanager.repository.UserRepository;
@@ -43,7 +43,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional(readOnly = true)
-    public LoginResponse login(LoginRequest request) {
+    public LoginResponseDTO login(LoginRequestDTO request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.password()));
 
@@ -53,7 +53,7 @@ public class AuthServiceImpl implements AuthService {
         String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
         long expiresAtMs = System.currentTimeMillis() + jwtService.getExpirationMs();
 
-        return new LoginResponse(token, TOKEN_TYPE, expiresAtMs, user.getId(), buildFullName(user), user.getRole());
+        return new LoginResponseDTO(token, TOKEN_TYPE, expiresAtMs, user.getId(), buildFullName(user), user.getRole());
     }
 
     /**

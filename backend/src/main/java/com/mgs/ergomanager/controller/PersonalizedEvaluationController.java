@@ -1,7 +1,7 @@
 package com.mgs.ergomanager.controller;
 
-import com.mgs.ergomanager.dto.personalizedevaluation.PersonalizedEvaluationRequest;
-import com.mgs.ergomanager.dto.personalizedevaluation.PersonalizedEvaluationResponse;
+import com.mgs.ergomanager.dto.personalizedevaluation.PersonalizedEvaluationRequestDTO;
+import com.mgs.ergomanager.dto.personalizedevaluation.PersonalizedEvaluationResponseDTO;
 import com.mgs.ergomanager.service.PersonalizedEvaluationService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -48,9 +48,9 @@ public class PersonalizedEvaluationController {
      * @return the stored evaluation
      */
     @PostMapping
-    public ResponseEntity<PersonalizedEvaluationResponse> create(
-            @Valid @RequestBody PersonalizedEvaluationRequest request) {
-        PersonalizedEvaluationResponse created = personalizedEvaluationService.create(request);
+    public ResponseEntity<PersonalizedEvaluationResponseDTO> create(
+            @Valid @RequestBody PersonalizedEvaluationRequestDTO request) {
+        PersonalizedEvaluationResponseDTO created = personalizedEvaluationService.create(request);
         return ResponseEntity.created(URI.create("/api/personalized-evaluations/" + created.id())).body(created);
     }
 
@@ -61,7 +61,7 @@ public class PersonalizedEvaluationController {
      * @return the evaluation
      */
     @GetMapping("/{id}")
-    public ResponseEntity<PersonalizedEvaluationResponse> findById(@PathVariable Long id) {
+    public ResponseEntity<PersonalizedEvaluationResponseDTO> findById(@PathVariable Long id) {
         return ResponseEntity.ok(personalizedEvaluationService.findById(id));
     }
 
@@ -72,7 +72,7 @@ public class PersonalizedEvaluationController {
      * @return list of evaluations
      */
     @GetMapping
-    public ResponseEntity<List<PersonalizedEvaluationResponse>> findByErgonomist(@RequestParam Long userId) {
+    public ResponseEntity<List<PersonalizedEvaluationResponseDTO>> findByErgonomist(@RequestParam Long userId) {
         return ResponseEntity.ok(personalizedEvaluationService.findByErgonomist(userId));
     }
 

@@ -16,7 +16,7 @@ import jakarta.validation.constraints.Size;
  * @param password       plain password, hashed before being stored
  * @param role           role granted to the user
  */
-public record UserRequest(
+public record UserRequestDTO(
 
         @NotBlank
         @Size(max = 60)

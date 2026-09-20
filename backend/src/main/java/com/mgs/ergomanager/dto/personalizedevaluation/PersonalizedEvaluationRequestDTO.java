@@ -13,7 +13,7 @@ import jakarta.validation.constraints.Size;
  * @param recommendations actions proposed to reduce the ergonomic risk
  * @param riskLevel       risk level confirmed by the ergonomist
  */
-public record PersonalizedEvaluationRequest(
+public record PersonalizedEvaluationRequestDTO(
 
         @NotNull
         Long appointmentId,

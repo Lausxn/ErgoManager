@@ -18,7 +18,7 @@ import java.util.List;
  * @param employeePosition job position of the employee
  * @param answerList       answers given to every question of the form
  */
-public record SelfEvaluationRequest(
+public record SelfEvaluationRequestDTO(
 
         @NotNull
         Long formId,
@@ -40,5 +40,5 @@ public record SelfEvaluationRequest(
 
         @NotEmpty
         @Valid
-        List<AnswerRequest> answerList) {
+        List<AnswerRequestDTO> answerList) {
 }

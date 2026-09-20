@@ -1,7 +1,7 @@
 package com.mgs.ergomanager.controller;
 
-import com.mgs.ergomanager.dto.auth.LoginRequest;
-import com.mgs.ergomanager.dto.auth.LoginResponse;
+import com.mgs.ergomanager.dto.auth.LoginRequestDTO;
+import com.mgs.ergomanager.dto.auth.LoginResponseDTO;
 import com.mgs.ergomanager.service.AuthService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -37,7 +37,7 @@ public class AuthController {
      * @return token and profile data of the authenticated user
      */
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
         return ResponseEntity.ok(authService.login(request));
     }
 }

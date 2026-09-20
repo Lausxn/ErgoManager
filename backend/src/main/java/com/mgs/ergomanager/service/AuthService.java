@@ -1,7 +1,7 @@
 package com.mgs.ergomanager.service;
 
-import com.mgs.ergomanager.dto.auth.LoginRequest;
-import com.mgs.ergomanager.dto.auth.LoginResponse;
+import com.mgs.ergomanager.dto.auth.LoginRequestDTO;
+import com.mgs.ergomanager.dto.auth.LoginResponseDTO;
 
 /**
  * Sign in operations of the administrators and the ergonomists.
@@ -14,5 +14,5 @@ public interface AuthService {
      * @param request credentials sent by the user
      * @return token and profile data of the authenticated user
      */
-    LoginResponse login(LoginRequest request);
+    LoginResponseDTO login(LoginRequestDTO request);
 }

@@ -12,7 +12,7 @@ import com.mgs.ergomanager.model.enums.Role;
  * @param fullName    display name of the authenticated user
  * @param role        role granted to the authenticated user
  */
-public record LoginResponse(
+public record LoginResponseDTO(
         String token,
         String tokenType,
         long expiresAtMs,

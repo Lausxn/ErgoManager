@@ -1,7 +1,7 @@
 package com.mgs.ergomanager.controller;
 
-import com.mgs.ergomanager.dto.company.CompanyRequest;
-import com.mgs.ergomanager.dto.company.CompanyResponse;
+import com.mgs.ergomanager.dto.company.CompanyRequestDTO;
+import com.mgs.ergomanager.dto.company.CompanyResponseDTO;
 import com.mgs.ergomanager.service.CompanyService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -42,7 +42,7 @@ public class CompanyController {
      * @return list of companies
      */
     @GetMapping
-    public ResponseEntity<List<CompanyResponse>> findAll() {
+    public ResponseEntity<List<CompanyResponseDTO>> findAll() {
         return ResponseEntity.ok(companyService.findAll());
     }
 
@@ -53,7 +53,7 @@ public class CompanyController {
      * @return the company
      */
     @GetMapping("/{id}")
-    public ResponseEntity<CompanyResponse> findById(@PathVariable Long id) {
+    public ResponseEntity<CompanyResponseDTO> findById(@PathVariable Long id) {
         return ResponseEntity.ok(companyService.findById(id));
     }
 
@@ -64,8 +64,8 @@ public class CompanyController {
      * @return the created company
      */
     @PostMapping
-    public ResponseEntity<CompanyResponse> create(@Valid @RequestBody CompanyRequest request) {
-        CompanyResponse created = companyService.create(request);
+    public ResponseEntity<CompanyResponseDTO> create(@Valid @RequestBody CompanyRequestDTO request) {
+        CompanyResponseDTO created = companyService.create(request);
         return ResponseEntity.created(URI.create("/api/companies/" + created.id())).body(created);
     }
 
@@ -77,8 +77,8 @@ public class CompanyController {
      * @return the updated company
      */
     @PutMapping("/{id}")
-    public ResponseEntity<CompanyResponse> update(@PathVariable Long id,
-                                                  @Valid @RequestBody CompanyRequest request) {
+    public ResponseEntity<CompanyResponseDTO> update(@PathVariable Long id,
+                                                  @Valid @RequestBody CompanyRequestDTO request) {
         return ResponseEntity.ok(companyService.update(id, request));
     }
 

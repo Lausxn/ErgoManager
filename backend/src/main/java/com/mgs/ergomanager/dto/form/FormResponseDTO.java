@@ -14,12 +14,12 @@ import java.util.List;
  * @param createdAt       moment the form was created
  * @param questionList    questions that make up the form
  */
-public record FormResponse(
+public record FormResponseDTO(
         Long id,
         String title,
         String description,
         Integer publicationYear,
         boolean active,
         LocalDateTime createdAt,
-        List<QuestionResponse> questionList) {
+        List<QuestionResponseDTO> questionList) {
 }

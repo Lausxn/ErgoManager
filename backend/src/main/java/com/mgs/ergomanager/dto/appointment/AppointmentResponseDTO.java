@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
  * @param status           current state of the appointment
  * @param notes            free text written when the appointment was booked
  */
-public record AppointmentResponse(
+public record AppointmentResponseDTO(
         Long id,
         Long selfEvaluationId,
         Long userId,

@@ -1,7 +1,7 @@
 package com.mgs.ergomanager.service.impl;
 
-import com.mgs.ergomanager.dto.personalizedevaluation.PersonalizedEvaluationRequest;
-import com.mgs.ergomanager.dto.personalizedevaluation.PersonalizedEvaluationResponse;
+import com.mgs.ergomanager.dto.personalizedevaluation.PersonalizedEvaluationRequestDTO;
+import com.mgs.ergomanager.dto.personalizedevaluation.PersonalizedEvaluationResponseDTO;
 import com.mgs.ergomanager.repository.PersonalizedEvaluationRepository;
 import com.mgs.ergomanager.service.PersonalizedEvaluationService;
 import java.util.List;
@@ -25,19 +25,19 @@ public class PersonalizedEvaluationServiceImpl implements PersonalizedEvaluation
     }
 
     @Override
-    public PersonalizedEvaluationResponse create(PersonalizedEvaluationRequest request) {
+    public PersonalizedEvaluationResponseDTO create(PersonalizedEvaluationRequestDTO request) {
         // TODO: store the evaluation and close the related appointment.
         throw new UnsupportedOperationException("PersonalizedEvaluationService.create is not implemented yet");
     }
 
     @Override
-    public PersonalizedEvaluationResponse findById(Long id) {
+    public PersonalizedEvaluationResponseDTO findById(Long id) {
         // TODO: read the evaluation or raise ResourceNotFoundException.
         throw new UnsupportedOperationException("PersonalizedEvaluationService.findById is not implemented yet");
     }
 
     @Override
-    public List<PersonalizedEvaluationResponse> findByErgonomist(Long userId) {
+    public List<PersonalizedEvaluationResponseDTO> findByErgonomist(Long userId) {
         // TODO: read the evaluations written by the ergonomist.
         throw new UnsupportedOperationException(
                 "PersonalizedEvaluationService.findByErgonomist is not implemented yet");

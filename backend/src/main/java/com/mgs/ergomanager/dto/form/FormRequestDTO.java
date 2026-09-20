@@ -16,7 +16,7 @@ import java.util.List;
  * @param publicationYear year the form is published for
  * @param questionList    questions that make up the form
  */
-public record FormRequest(
+public record FormRequestDTO(
 
         @NotBlank
         @Size(max = 150)
@@ -31,5 +31,5 @@ public record FormRequest(
 
         @NotEmpty
         @Valid
-        List<QuestionRequest> questionList) {
+        List<QuestionRequestDTO> questionList) {
 }

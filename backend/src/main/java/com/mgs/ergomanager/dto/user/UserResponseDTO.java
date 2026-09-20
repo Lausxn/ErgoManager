@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * @param active         false when the user was deactivated
  * @param createdAt      moment the user was registered
  */
-public record UserResponse(
+public record UserResponseDTO(
         Long id,
         String firstName,
         String firstLastName,

@@ -1,7 +1,7 @@
 package com.mgs.ergomanager.service;
 
-import com.mgs.ergomanager.dto.user.UserRequest;
-import com.mgs.ergomanager.dto.user.UserResponse;
+import com.mgs.ergomanager.dto.user.UserRequestDTO;
+import com.mgs.ergomanager.dto.user.UserResponseDTO;
 import java.util.List;
 
 /**
@@ -14,7 +14,7 @@ public interface UserService {
      *
      * @return list of users
      */
-    List<UserResponse> findAll();
+    List<UserResponseDTO> findAll();
 
     /**
      * Returns a single user.
@@ -22,7 +22,7 @@ public interface UserService {
      * @param id identifier of the user
      * @return the user
      */
-    UserResponse findById(Long id);
+    UserResponseDTO findById(Long id);
 
     /**
      * Registers a new user and hashes the received password.
@@ -30,7 +30,7 @@ public interface UserService {
      * @param request data of the user
      * @return the created user
      */
-    UserResponse create(UserRequest request);
+    UserResponseDTO create(UserRequestDTO request);
 
     /**
      * Updates the data of an existing user.
@@ -39,7 +39,7 @@ public interface UserService {
      * @param request new data of the user
      * @return the updated user
      */
-    UserResponse update(Long id, UserRequest request);
+    UserResponseDTO update(Long id, UserRequestDTO request);
 
     /**
      * Deactivates a user so it can no longer sign in.

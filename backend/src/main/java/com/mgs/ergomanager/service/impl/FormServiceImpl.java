@@ -1,7 +1,7 @@
 package com.mgs.ergomanager.service.impl;
 
-import com.mgs.ergomanager.dto.form.FormRequest;
-import com.mgs.ergomanager.dto.form.FormResponse;
+import com.mgs.ergomanager.dto.form.FormRequestDTO;
+import com.mgs.ergomanager.dto.form.FormResponseDTO;
 import com.mgs.ergomanager.repository.FormRepository;
 import com.mgs.ergomanager.repository.QuestionRepository;
 import com.mgs.ergomanager.service.FormService;
@@ -30,31 +30,31 @@ public class FormServiceImpl implements FormService {
     }
 
     @Override
-    public List<FormResponse> findAll() {
-        // TODO: read every form and map it to FormResponse.
+    public List<FormResponseDTO> findAll() {
+        // TODO: read every form and map it to FormResponseDTO.
         throw new UnsupportedOperationException("FormService.findAll is not implemented yet");
     }
 
     @Override
-    public List<FormResponse> findActive() {
+    public List<FormResponseDTO> findActive() {
         // TODO: read the active forms together with their questions.
         throw new UnsupportedOperationException("FormService.findActive is not implemented yet");
     }
 
     @Override
-    public FormResponse findById(Long id) {
+    public FormResponseDTO findById(Long id) {
         // TODO: read the form or raise ResourceNotFoundException.
         throw new UnsupportedOperationException("FormService.findById is not implemented yet");
     }
 
     @Override
-    public FormResponse create(FormRequest request) {
+    public FormResponseDTO create(FormRequestDTO request) {
         // TODO: store the form and its questions in a single transaction.
         throw new UnsupportedOperationException("FormService.create is not implemented yet");
     }
 
     @Override
-    public FormResponse update(Long id, FormRequest request) {
+    public FormResponseDTO update(Long id, FormRequestDTO request) {
         // TODO: copy the request over the stored form and its questions.
         throw new UnsupportedOperationException("FormService.update is not implemented yet");
     }
