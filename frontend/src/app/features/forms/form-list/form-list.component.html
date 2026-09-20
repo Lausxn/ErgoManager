@@ -1,0 +1,36 @@
+<section>
+  <h2>Forms</h2>
+
+  <a routerLink="/forms/new">New form</a>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Year</th>
+        <th>Questions</th>
+        <th>Active</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (form of formList(); track form.id) {
+        <tr>
+          <td><a [routerLink]="['/forms', form.id]">{{ form.title }}</a></td>
+          <td>{{ form.publicationYear }}</td>
+          <td>{{ form.questionList.length }}</td>
+          <td>{{ form.active ? 'Yes' : 'No' }}</td>
+          <td>
+            @if (form.active) {
+              <button type="button" (click)="deactivate(form.id)">Deactivate</button>
+            }
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="5">No form created yet.</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</section>

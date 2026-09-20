@@ -1,0 +1,35 @@
+<section>
+  <h2>Form</h2>
+
+  <form [formGroup]="formDetail" (ngSubmit)="submit()">
+    <label for="title">Title</label>
+    <input id="title" type="text" formControlName="title" />
+
+    <label for="description">Description</label>
+    <textarea id="description" formControlName="description" rows="3"></textarea>
+
+    <label for="publicationYear">Publication year</label>
+    <input id="publicationYear" type="number" formControlName="publicationYear" />
+
+    <h3>Questions</h3>
+
+    <div formArrayName="questionList">
+      @for (question of questionList.controls; track $index) {
+        <fieldset [formGroupName]="$index">
+          <legend>Question {{ $index + 1 }}</legend>
+
+          <label [for]="'statement-' + $index">Statement</label>
+          <input [id]="'statement-' + $index" type="text" formControlName="statement" />
+
+          <label [for]="'weight-' + $index">Weight</label>
+          <input [id]="'weight-' + $index" type="number" formControlName="weight" />
+
+          <button type="button" (click)="removeQuestion($index)">Remove</button>
+        </fieldset>
+      }
+    </div>
+
+    <button type="button" (click)="addQuestion()">Add question</button>
+    <button type="submit" [disabled]="isSubmitting()">Save</button>
+  </form>
+</section>

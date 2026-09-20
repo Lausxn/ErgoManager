@@ -1,0 +1,32 @@
+<section>
+  <h2>History</h2>
+
+  <form [formGroup]="searchForm" (ngSubmit)="search()">
+    <label for="companyId">Company</label>
+    <input id="companyId" type="number" formControlName="companyId" />
+    <button type="submit">Search</button>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Employee</th>
+        <th>Description</th>
+        <th>Registered at</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (history of historyList(); track history.id) {
+        <tr>
+          <td>{{ history.employeeEmail }}</td>
+          <td>{{ history.description }}</td>
+          <td>{{ history.registeredAt }}</td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="3">No history entry found.</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</section>

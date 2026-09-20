@@ -1,0 +1,61 @@
+package com.mgs.ergomanager.service.impl;
+
+import com.mgs.ergomanager.dto.user.UserRequest;
+import com.mgs.ergomanager.dto.user.UserResponse;
+import com.mgs.ergomanager.repository.UserRepository;
+import com.mgs.ergomanager.service.UserService;
+import java.util.List;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+/**
+ * Default implementation of {@link UserService}.
+ */
+@Service
+public class UserServiceImpl implements UserService {
+
+    private final UserRepository userRepository;
+
+    private final PasswordEncoder passwordEncoder;
+
+    /**
+     * Builds the service with its collaborators.
+     *
+     * @param userRepository  repository of application users
+     * @param passwordEncoder encoder used to hash the passwords
+     */
+    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    @Override
+    public List<UserResponse> findAll() {
+        // TODO: read every user and map it to UserResponse.
+        throw new UnsupportedOperationException("UserService.findAll is not implemented yet");
+    }
+
+    @Override
+    public UserResponse findById(Long id) {
+        // TODO: read the user or raise ResourceNotFoundException.
+        throw new UnsupportedOperationException("UserService.findById is not implemented yet");
+    }
+
+    @Override
+    public UserResponse create(UserRequest request) {
+        // TODO: reject a duplicated email and hash the password before saving.
+        throw new UnsupportedOperationException("UserService.create is not implemented yet");
+    }
+
+    @Override
+    public UserResponse update(Long id, UserRequest request) {
+        // TODO: copy the request over the stored user, rehashing the password.
+        throw new UnsupportedOperationException("UserService.update is not implemented yet");
+    }
+
+    @Override
+    public void deactivate(Long id) {
+        // TODO: set the active flag to false, never delete the row.
+        throw new UnsupportedOperationException("UserService.deactivate is not implemented yet");
+    }
+}
