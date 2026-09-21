@@ -3,18 +3,19 @@
 .layout-sidebar {
     position: fixed;
     width: 20rem;
-    height: calc(100vh - 8rem);
+    height: calc(100vh - var(--layout-topbar-height) - 4rem);
     z-index: 999;
     overflow-y: auto;
     user-select: none;
-    top: 6rem;
+    top: calc(var(--layout-topbar-height) + 2rem);
     left: 2rem;
     transition:
         transform var(--layout-section-transition-duration),
         left var(--layout-section-transition-duration);
     background-color: var(--surface-overlay);
-    border-radius: var(--content-border-radius);
-    padding: 0.5rem 1.5rem;
+    border: 1px solid var(--surface-border);
+    border-radius: 12px;
+    padding: 0.5rem 1.25rem;
 }
 
 .layout-menu {
@@ -24,11 +25,12 @@
 
     .layout-root-menuitem {
         > .layout-menuitem-root-text {
-            font-size: 0.857rem;
+            font-size: 0.8rem;
             text-transform: uppercase;
-            font-weight: 700;
-            color: var(--text-color);
-            margin: 0.75rem 0;
+            letter-spacing: 0.06em;
+            font-weight: 600;
+            color: var(--text-color-secondary);
+            margin: 1.25rem 0 0.5rem 0;
         }
 
         > a {
@@ -84,7 +86,9 @@
 
             &.active-route {
                 font-weight: 700;
-                color: var(--primary-color);
+                color: var(--heading-color);
+                background-color: var(--surface-hover);
+                box-shadow: inset 3px 0 0 var(--mgs-wine);
             }
 
             &:hover {

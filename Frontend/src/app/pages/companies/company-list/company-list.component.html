@@ -1,0 +1,60 @@
+<app-page-header eyebrow="Administración" title="Empresas" subtitle="Empresas cliente que reciben las evaluaciones ergonómicas.">
+    <p-button label="Nueva empresa" icon="pi pi-plus" routerLink="/companies/new" />
+</app-page-header>
+
+<div class="mgs-card !p-0 overflow-hidden">
+    <p-table
+        #table
+        [value]="companyList()"
+        [loading]="isLoading()"
+        [paginator]="true"
+        [rows]="10"
+        [rowsPerPageOptions]="[10, 25, 50]"
+        [globalFilterFields]="['businessName', 'taxId', 'contactEmail']"
+        [rowHover]="true"
+        dataKey="id"
+        responsiveLayout="scroll"
+    >
+        <ng-template #caption>
+            <div class="flex flex-wrap items-center justify-between gap-4 p-2">
+                <span class="mgs-section-title !m-0">Empresas registradas</span>
+                <p-iconfield>
+                    <p-inputicon class="pi pi-search" />
+                    <input pInputText type="text" (input)="filterTable(table, $event)" placeholder="Buscar empresa" aria-label="Buscar empresa" />
+                </p-iconfield>
+            </div>
+        </ng-template>
+        <ng-template #header>
+            <tr>
+                <th pSortableColumn="businessName">Razón social <p-sortIcon field="businessName" /></th>
+                <th pSortableColumn="taxId">Cédula jurídica <p-sortIcon field="taxId" /></th>
+                <th>Correo de contacto</th>
+                <th>Teléfono</th>
+                <th pSortableColumn="active">Estado <p-sortIcon field="active" /></th>
+                <th class="w-32"></th>
+            </tr>
+        </ng-template>
+        <ng-template #body let-company>
+            <tr>
+                <td class="font-semibold">{{ company.businessName }}</td>
+                <td>{{ company.taxId }}</td>
+                <td>{{ company.contactEmail }}</td>
+                <td>{{ company.phoneNumber || '—' }}</td>
+                <td>
+                    <p-tag [value]="company.active ? 'Activa' : 'Inactiva'" [styleClass]="company.active ? activeTagClasses.active : activeTagClasses.inactive" />
+                </td>
+                <td class="text-right whitespace-nowrap">
+                    <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="secondary" [routerLink]="['/companies', company.id]" pTooltip="Editar" ariaLabel="Editar" />
+                    @if (company.active) {
+                        <p-button icon="pi pi-ban" [rounded]="true" [text]="true" (onClick)="confirmDeactivate(company)" pTooltip="Desactivar" ariaLabel="Desactivar" />
+                    }
+                </td>
+            </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+            <tr>
+                <td colspan="6" class="text-center py-10 text-muted-color">Todavía no hay empresas registradas.</td>
+            </tr>
+        </ng-template>
+    </p-table>
+</div>

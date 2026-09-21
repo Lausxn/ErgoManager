@@ -2,13 +2,14 @@
 
 .layout-topbar {
     position: fixed;
-    height: 4rem;
+    height: var(--layout-topbar-height);
     z-index: 997;
     left: 0;
     top: 0;
     width: 100%;
     padding: 0 2rem;
     background-color: var(--surface-card);
+    border-bottom: 1px solid var(--surface-border);
     transition: left var(--layout-section-transition-duration);
     display: flex;
     align-items: center;
@@ -22,14 +23,22 @@
     .layout-topbar-logo {
         display: inline-flex;
         align-items: center;
-        font-size: 1.5rem;
         border-radius: var(--content-border-radius);
         color: var(--text-color);
-        font-weight: 500;
-        gap: 0.5rem;
 
-        svg {
-            width: 3rem;
+        /* Full signature when there is width, symbol only on compact screens (page 18). */
+        .layout-topbar-logo-symbol {
+            display: none;
+        }
+
+        @media (max-width: 575px) {
+            .layout-topbar-logo-full {
+                display: none;
+            }
+
+            .layout-topbar-logo-symbol {
+                display: inline-flex;
+            }
         }
 
         &:focus-visible {
@@ -67,8 +76,12 @@
         }
 
         &.layout-topbar-action-highlight {
-            background-color: var(--primary-color);
-            color: var(--primary-contrast-color);
+            background-color: var(--mgs-wine);
+            color: #ffffff;
+
+            &:hover {
+                background-color: var(--mgs-dark-wine);
+            }
         }
     }
 
@@ -83,7 +96,25 @@
     .layout-topbar-actions {
         margin-left: auto;
         display: flex;
+        align-items: center;
         gap: 1rem;
+    }
+
+    .layout-topbar-user {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        line-height: 1.2;
+
+        .layout-topbar-user-name {
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        .layout-topbar-user-role {
+            font-size: 0.8rem;
+            color: var(--text-color-secondary);
+        }
     }
 
     .layout-topbar-menu-content {
@@ -99,7 +130,11 @@
 
 @media (max-width: 991px) {
     .layout-topbar {
-        padding: 0 2rem;
+        padding: 0 1rem;
+
+        .layout-topbar-user {
+            display: none;
+        }
 
         .layout-topbar-logo-container {
             width: auto;
@@ -125,7 +160,7 @@
             border-radius: var(--content-border-radius);
             padding: 1rem;
             right: 2rem;
-            top: 4rem;
+            top: var(--layout-topbar-height);
             min-width: 15rem;
             border: 1px solid var(--surface-border);
 

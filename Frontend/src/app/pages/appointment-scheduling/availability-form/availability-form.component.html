@@ -1,0 +1,43 @@
+<app-page-header eyebrow="Agenda" title="Nueva disponibilidad" subtitle="Publique un espacio de tiempo que los colaboradores podrán reservar." />
+
+<form [formGroup]="availabilityForm" (ngSubmit)="submit()" class="mgs-card max-w-3xl" novalidate>
+    <div class="mgs-form-grid">
+        <div class="mgs-field mgs-field--half">
+            <label for="startDateTime">Inicio</label>
+            <p-datepicker inputId="startDateTime" formControlName="startDateTime" [showTime]="true" hourFormat="12" [minDate]="today" [showIcon]="true" [fluid]="true" dateFormat="dd/mm/yy" [stepMinute]="15" />
+            @if (isInvalid('startDateTime')) {
+                <small class="mgs-field__error">Elija la fecha y hora de inicio.</small>
+            }
+        </div>
+
+        <div class="mgs-field mgs-field--half">
+            <label for="endDateTime">Fin</label>
+            <p-datepicker
+                inputId="endDateTime"
+                formControlName="endDateTime"
+                [showTime]="true"
+                hourFormat="12"
+                [minDate]="availabilityForm.controls.startDateTime.value ?? today"
+                [showIcon]="true"
+                [fluid]="true"
+                dateFormat="dd/mm/yy"
+                [stepMinute]="15"
+            />
+            @if (isInvalid('endDateTime')) {
+                <small class="mgs-field__error">Elija la fecha y hora de fin.</small>
+            }
+        </div>
+    </div>
+
+    @if (availabilityForm.hasError('invalidRange') && availabilityForm.dirty) {
+        <div class="mgs-alert mt-5" role="alert">
+            <i class="pi pi-exclamation-circle"></i>
+            <span>La hora de fin debe ser posterior a la de inicio.</span>
+        </div>
+    }
+
+    <div class="mgs-form-actions">
+        <p-button label="Cancelar" severity="secondary" [outlined]="true" routerLink="/appointments" />
+        <p-button type="submit" label="Publicar" icon="pi pi-check" [loading]="isSubmitting()" />
+    </div>
+</form>

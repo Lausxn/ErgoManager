@@ -5,10 +5,10 @@ h4,
 h5,
 h6 {
     margin: 1.5rem 0 1rem 0;
-    font-family: inherit;
+    font-family: var(--mgs-font-display);
     font-weight: 700;
-    line-height: 1.5;
-    color: var(--text-color);
+    line-height: 1.2;
+    color: var(--heading-color);
 
     &:first-child {
         margin-top: 0;
@@ -40,7 +40,8 @@ h6 {
 }
 
 mark {
-    background: #fff8e1;
+    background: var(--p-primary-50);
+    color: var(--p-primary-800);
     padding: 0.25rem 0.4rem;
     border-radius: var(--content-border-radius);
     font-family: monospace;
@@ -49,7 +50,7 @@ mark {
 blockquote {
     margin: 1rem 0;
     padding: 0 2rem;
-    border-left: 4px solid #90a4ae;
+    border-left: 4px solid var(--primary-color);
 }
 
 hr {
