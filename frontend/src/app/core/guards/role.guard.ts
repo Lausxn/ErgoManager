@@ -6,19 +6,20 @@ import { AuthService } from '../services/auth.service';
 
 /**
  * Builds a guard that only lets through the users holding one of the roles.
+ * The others land on the access denied page.
  *
  * @param allowedRoles roles that can reach the route
  * @returns guard ready to be used in the canActivate array of a route
  */
 export function roleGuard(allowedRoles: readonly Role[]): CanActivateFn {
-  return () => {
-    const authService = inject(AuthService);
-    const router = inject(Router);
+    return () => {
+        const authService = inject(AuthService);
+        const router = inject(Router);
 
-    if (authService.hasAnyRole(allowedRoles)) {
-      return true;
-    }
+        if (authService.hasAnyRole(allowedRoles)) {
+            return true;
+        }
 
-    return router.createUrlTree(['/login']);
-  };
+        return router.createUrlTree(['/auth/access']);
+    };
 }

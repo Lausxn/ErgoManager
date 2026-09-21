@@ -8,12 +8,13 @@ import { AuthService } from '../services/auth.service';
  * page, keeping the requested url so it can be reopened afterwards.
  */
 export const authGuard: CanActivateFn = (_route, state) => {
-  const authService = inject(AuthService);
-  const router = inject(Router);
+    const authService = inject(AuthService);
+    const router = inject(Router);
 
-  if (authService.isAuthenticated()) {
-    return true;
-  }
+    if (authService.isAuthenticated()) {
+        return true;
+    }
 
-  return router.createUrlTree(['/login'], { queryParams: { redirectTo: state.url } });
+    authService.logout();
+    return router.createUrlTree(['/auth/login'], { queryParams: { redirectTo: state.url } });
 };

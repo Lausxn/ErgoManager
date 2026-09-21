@@ -10,13 +10,11 @@ const AUTHORIZATION_HEADER = 'Authorization';
  * authenticate it.
  */
 export const jwtInterceptor: HttpInterceptorFn = (request, next) => {
-  const token = inject(AuthService).getToken();
+    const token = inject(AuthService).getToken();
 
-  if (token === null) {
-    return next(request);
-  }
+    if (token === null) {
+        return next(request);
+    }
 
-  return next(
-    request.clone({ setHeaders: { [AUTHORIZATION_HEADER]: `Bearer ${token}` } }),
-  );
+    return next(request.clone({ setHeaders: { [AUTHORIZATION_HEADER]: `Bearer ${token}` } }));
 };

@@ -1,13 +1,27 @@
 <!doctype html>
 <html lang="es">
-<head>
-  <meta charset="utf-8">
-  <title>ErgoManager</title>
-  <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-</head>
-<body>
-  <app-root></app-root>
-</body>
+    <head>
+        <meta charset="utf-8" />
+        <title>ErgoManager · Madrigal Group Solutions</title>
+        <base href="/" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="description" content="ErgoManager, sistema de gestión ergonómica de Madrigal Group Solutions." />
+        <link rel="icon" type="image/png" href="favicon.png" />
+        <script>
+            // Applies the stored theme and page size before Angular starts, so the page does not flash.
+            (function () {
+                var fontSizes = { small: 12, normal: 14, large: 16, extraLarge: 18 };
+                var preferences = {};
+                try {
+                    preferences = JSON.parse(localStorage.getItem('ergomanager.preferences') || '{}');
+                } catch (error) {}
+                if (preferences.darkTheme !== false) document.documentElement.classList.add('app-dark');
+                document.documentElement.style.fontSize = (fontSizes[preferences.pageSize] || 14) + 'px';
+            })();
+        </script>
+    </head>
+
+    <body>
+        <app-root></app-root>
+    </body>
 </html>
