@@ -1,0 +1,36 @@
+<section>
+  <h2>Agenda</h2>
+
+  <a routerLink="/appointments/availabilities/new">Publish availability</a>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Employee</th>
+        <th>Starts</th>
+        <th>Ends</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (appointment of appointmentList(); track appointment.id) {
+        <tr>
+          <td>{{ appointment.employeeName }}</td>
+          <td>{{ appointment.startDateTime }}</td>
+          <td>{{ appointment.endDateTime }}</td>
+          <td>{{ appointment.status }}</td>
+          <td>
+            @if (appointment.status !== 'CANCELLED') {
+              <button type="button" (click)="cancel(appointment.id)">Cancel</button>
+            }
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="5">No appointment booked yet.</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</section>

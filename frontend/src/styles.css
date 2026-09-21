@@ -1,0 +1,20 @@
+/* Global styles of ErgoManager. Component specific rules belong to the .css
+   file of each component. */
+
+:root {
+  --color-primary: #1f6feb;
+  --color-danger: #d1242f;
+  --color-text: #1f2328;
+  --color-border: #d0d7de;
+  --spacing-unit: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: var(--color-text);
+}
