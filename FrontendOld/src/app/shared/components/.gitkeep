@@ -1,2 +1,0 @@
-Reusable presentation components (buttons, tables, modals) live here.
-Generate them with: ng generate component shared/components/<name>
