@@ -45,7 +45,7 @@ Los dos roles del sistema son `ADMIN` y `ERGONOMIST` (el termino en ingles de
 
 | Capa | Tecnologia |
 |---|---|
-| Backend | Java 21, Spring Boot 4.1.1, Spring Security 7, Spring Data JPA (Hibernate 7) |
+| Backend | Java 25, Spring Boot 4.1.1, Spring Security 7, Spring Data JPA (Hibernate 7) |
 | Base de datos | MySQL, esquema `ergo_manager_db` |
 | Autenticacion | JWT (JJWT 0.13.0) |
 | Documentacion API | springdoc-openapi 3.1.1 (Swagger UI) |
@@ -53,7 +53,7 @@ Los dos roles del sistema son `ADMIN` y `ERGONOMIST` (el termino en ingles de
 
 ## Requisitos previos
 
-- **JDK 21 o superior** (probado con JDK 26). Es necesario definir la variable
+- **JDK 25 o superior** (probado con JDK 25). Es necesario definir la variable
   de entorno `JAVA_HOME` apuntando a la carpeta del JDK; el wrapper de Maven no
   arranca sin ella.
 - **Node.js 22 o superior** con npm, para el frontend.
