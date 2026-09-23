@@ -9,6 +9,7 @@ import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputTextModule } from 'primeng/inputtext';
 
 import { AuthService } from '../../../core/services/auth.service';
+import { AppPreferences } from '../../../layout/component/app.preferences';
 import { BrandLogoComponent } from '../../../shared/components/brand-logo/brand-logo.component';
 import { isControlInvalid, markFormAsDirty } from '../../../shared/utils/form';
 import { PASSWORD_RULES, PASSWORD_STRENGTH_LABELS, compareFieldsValidator, getPasswordStrength, strongPasswordValidator } from '../../../shared/utils/password';
@@ -28,7 +29,7 @@ const STRENGTH_SEGMENTS = [1, 2, 3, 4] as const;
 @Component({
     selector: 'app-update-password',
     standalone: true,
-    imports: [ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, InputGroupModule, InputGroupAddonModule, BrandLogoComponent],
+    imports: [ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, InputGroupModule, InputGroupAddonModule, AppPreferences, BrandLogoComponent],
     templateUrl: './update-password.component.html'
 })
 export class UpdatePasswordComponent {
