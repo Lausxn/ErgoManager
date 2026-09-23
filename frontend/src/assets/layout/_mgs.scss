@@ -506,3 +506,315 @@
         background: transparent;
     }
 }
+
+/* Account security page (update password): own header, centered card and a wine diagonal like the sign in panel. */
+.mgs-security {
+    --mgs-security-glow: color-mix(in srgb, var(--mgs-wine), transparent 90%);
+
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background:
+        linear-gradient(115deg, transparent 58%, var(--mgs-security-glow) 58.1%, transparent 88%),
+        radial-gradient(ellipse at 0% 100%, var(--mgs-security-glow), transparent 50%),
+        var(--surface-ground);
+
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        min-height: var(--layout-topbar-height, 4rem);
+        padding: 0 1.5rem;
+        border-bottom: 1px solid var(--surface-border);
+    }
+
+    &__brand {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        min-width: 0;
+    }
+
+    &__breadcrumb {
+        display: flex;
+        gap: 0.35rem;
+        padding-left: 1rem;
+        border-left: 1px solid var(--surface-border);
+        font-size: 0.85rem;
+        color: var(--text-color-secondary);
+        white-space: nowrap;
+
+        strong {
+            color: var(--heading-color);
+            font-weight: 700;
+        }
+
+        @media (max-width: 767px) {
+            display: none;
+        }
+    }
+
+    &__back {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-color);
+        white-space: nowrap;
+
+        i {
+            font-size: 0.8rem;
+        }
+
+        &:hover {
+            color: var(--mgs-accent-text);
+        }
+    }
+
+    &__content {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem 1rem;
+    }
+
+    &__card {
+        width: 100%;
+        max-width: 27rem;
+        border: 1px solid var(--surface-border);
+        border-top: 3px solid var(--mgs-wine);
+        border-radius: 6px;
+        background: var(--surface-card);
+        box-shadow: 0 18px 40px rgba(11, 11, 13, 0.18);
+    }
+
+    /* Badge and eyebrow share the first row; title and lead span below them. */
+    &__intro {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        align-items: center;
+        gap: 1rem 0.75rem;
+        padding: 1.75rem 1.75rem 1.5rem;
+        border-bottom: 1px solid var(--surface-border);
+    }
+
+    &__badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 4px;
+        background: var(--mgs-wine);
+        color: #ffffff;
+    }
+
+    &__eyebrow {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--mgs-accent-text);
+    }
+
+    &__title {
+        grid-column: 1 / -1;
+        margin: 0;
+        font-family: var(--mgs-font-display);
+        font-size: 1.75rem;
+        font-weight: 700;
+        line-height: 1.15;
+        color: var(--heading-color);
+    }
+
+    &__lead {
+        grid-column: 1 / -1;
+        margin: -0.5rem 0 0;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        color: var(--text-color-secondary);
+    }
+
+    &__body {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        padding: 1.5rem 1.75rem;
+    }
+
+    &__field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+
+        > label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-color-secondary);
+        }
+
+        small.mgs-field__error {
+            color: var(--mgs-accent-text);
+            font-weight: 600;
+        }
+
+        .p-inputtext {
+            font-size: 0.9rem;
+        }
+
+        .p-inputgroupaddon {
+            padding: 0;
+        }
+    }
+
+    /* "Mostrar / Ocultar" text button inside the input group. */
+    &__toggle {
+        align-self: stretch;
+        min-width: 5.5rem;
+        padding: 0 0.9rem;
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-color);
+        transition: color var(--element-transition-duration, 0.2s);
+
+        &:hover {
+            color: var(--mgs-accent-text);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--mgs-accent-text);
+            outline-offset: -2px;
+        }
+    }
+
+    &__strength {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    &__meter {
+        display: grid;
+        flex: 1;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.25rem;
+
+        span {
+            height: 3px;
+            border-radius: 2px;
+            background: var(--surface-border);
+            transition: background-color 0.25s;
+
+            &.is-filled {
+                background: var(--mgs-accent-text);
+            }
+        }
+    }
+
+    &__strength-label {
+        min-width: 4.5rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-align: right;
+        text-transform: uppercase;
+        color: var(--text-color-secondary);
+    }
+
+    &__strength:not([data-level='0']) &__strength-label {
+        color: var(--mgs-accent-text);
+    }
+
+    &__rules {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.45rem 1rem;
+        margin: 0;
+        padding: 0.85rem 1rem;
+        border: 1px solid var(--surface-border);
+        border-radius: 4px;
+        list-style: none;
+        font-size: 0.8rem;
+        color: var(--text-color-secondary);
+
+        @media (max-width: 480px) {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        li {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+
+            i {
+                font-size: 0.8rem;
+            }
+
+            &.is-met {
+                color: var(--text-color);
+
+                i {
+                    color: var(--mgs-accent-text);
+                }
+            }
+        }
+    }
+
+    &__actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-top: 0.5rem;
+    }
+
+    .mgs-alert {
+        font-size: 0.85rem;
+    }
+
+    /* Label on the left and icon on the right, as in the mockup. */
+    .p-button.mgs-security__action {
+        justify-content: space-between;
+        padding: 0.8rem 1rem;
+
+        .p-button-label {
+            flex: 0 1 auto;
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+    }
+
+    &__note {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.6rem;
+        padding: 1rem 1.75rem;
+        border-top: 1px solid var(--surface-border);
+        font-size: 0.78rem;
+        line-height: 1.5;
+        color: var(--text-color-secondary);
+
+        i {
+            margin-top: 0.15rem;
+            color: var(--mgs-accent-text);
+        }
+
+        p {
+            margin: 0;
+        }
+    }
+}
+
+.app-dark .mgs-security {
+    --mgs-security-glow: color-mix(in srgb, var(--mgs-wine), transparent 70%);
+}

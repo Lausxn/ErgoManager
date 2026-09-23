@@ -3,7 +3,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { LoginRequest, LoginResponse } from '../../shared/models/auth.model';
+import { ChangePasswordRequest, LoginRequest, LoginResponse } from '../../shared/models/auth.model';
 import { Role } from '../../shared/models/role.model';
 
 const SESSION_STORAGE_KEY = 'ergomanager.session';
@@ -69,6 +69,23 @@ export class AuthService {
      */
     login(request: LoginRequest): Observable<LoginResponse> {
         return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, request).pipe(tap((session) => this.storeSession(session)));
+    }
+
+    /**
+     * Replaces the password of the signed in user.
+     *
+     * Contract expected from the backend (pending, see HU-019):
+     * - PUT /api/auth/password with a ChangePasswordRequest body and the JWT.
+     * - 200 with a LoginResponse holding a new token: the tokens issued before
+     *   the change stop working, so the current session is replaced here.
+     * - 400 when the current password is wrong or the new one breaks the rules.
+     *   It must not be 401, because the error interceptor signs the user out.
+     *
+     * @param request current and new passwords
+     * @returns the new session issued by the backend
+     */
+    changePassword(request: ChangePasswordRequest): Observable<LoginResponse> {
+        return this.http.put<LoginResponse>(`${environment.apiUrl}/auth/password`, request).pipe(tap((session) => this.storeSession(session)));
     }
 
     /**
