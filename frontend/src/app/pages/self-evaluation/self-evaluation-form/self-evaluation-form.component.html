@@ -1,0 +1,111 @@
+<app-floating-configurator />
+
+<div class="mgs-public">
+    <header class="mgs-public__header">
+        <app-brand-logo variant="full" />
+    </header>
+
+    <main class="mgs-public__content">
+        @if (result(); as selfEvaluation) {
+            <section class="mgs-card flex flex-col items-center text-center gap-4 py-12">
+                <span class="mgs-eyebrow">Autoevaluación enviada</span>
+                <h1 class="mgs-title">Gracias, {{ selfEvaluation.employeeName }}</h1>
+                <p class="mgs-subtitle max-w-xl">Sus respuestas fueron registradas. Este es el nivel de riesgo ergonómico calculado:</p>
+                <p-tag [value]="'Riesgo ' + riskLevelLabels[selfEvaluation.riskLevel]" [styleClass]="riskLevelTagClasses[selfEvaluation.riskLevel] + ' !text-lg !px-5 !py-2'" />
+                <div class="mt-2">
+                    <span class="mgs-eyebrow">Puntaje total</span>
+                    <div class="mgs-kpi mt-1">{{ selfEvaluation.totalScore }}</div>
+                </div>
+                <p class="text-muted-color max-w-xl mt-4">Si el resultado lo requiere, el equipo de MGS le contactará para agendar una evaluación personalizada.</p>
+            </section>
+        } @else if (isLoading()) {
+            <div class="flex justify-center py-20">
+                <p-progress-spinner ariaLabel="Cargando" strokeWidth="4" styleClass="!w-12 !h-12" />
+            </div>
+        } @else if (activeForm()) {
+            @let form = activeForm()!;
+            <app-page-header eyebrow="Autoevaluación ergonómica" [title]="form.title" [subtitle]="form.description || 'Responda según su experiencia en las últimas semanas.'" />
+
+            <form [formGroup]="employeeForm" (ngSubmit)="submit()" class="flex flex-col gap-6" novalidate>
+                <section class="mgs-card">
+                    <h2 class="mgs-section-title">Sus datos</h2>
+                    <div class="mgs-form-grid">
+                        <div class="mgs-field mgs-field--half">
+                            <label for="employeeName">Nombre completo</label>
+                            <input pInputText id="employeeName" formControlName="employeeName" autocomplete="name" />
+                            @if (isInvalid('employeeName')) {
+                                <small class="mgs-field__error">Escriba su nombre.</small>
+                            }
+                        </div>
+                        <div class="mgs-field mgs-field--half">
+                            <label for="employeeEmail">Correo electrónico</label>
+                            <input pInputText id="employeeEmail" type="email" formControlName="employeeEmail" autocomplete="email" />
+                            @if (isInvalid('employeeEmail')) {
+                                <small class="mgs-field__error">Escriba un correo válido.</small>
+                            }
+                        </div>
+                        <div class="mgs-field mgs-field--half">
+                            <label for="employeePosition">Puesto <span class="text-muted-color font-normal">(opcional)</span></label>
+                            <input pInputText id="employeePosition" formControlName="employeePosition" autocomplete="organization-title" />
+                        </div>
+                        @if (!hasCompanyInLink()) {
+                            <div class="mgs-field mgs-field--half">
+                                <label for="companyId">Número de empresa</label>
+                                <p-inputnumber inputId="companyId" formControlName="companyId" [useGrouping]="false" [min]="1" [fluid]="true" placeholder="Lo encuentra en la invitación" />
+                                @if (isInvalid('companyId')) {
+                                    <small class="mgs-field__error">Indique el número de su empresa.</small>
+                                }
+                            </div>
+                        }
+                    </div>
+                </section>
+
+                <section class="mgs-card">
+                    <h2 class="mgs-section-title">Preguntas</h2>
+                    <ol class="flex flex-col m-0 p-0 list-none" formArrayName="answerList">
+                        @for (question of questionList(); track question.id; let index = $index) {
+                            <li class="py-5 border-b border-surface last:border-b-0">
+                                <p class="font-semibold mb-3">{{ index + 1 }}. {{ question.statement }}</p>
+                                <div class="flex flex-wrap gap-x-6 gap-y-3" role="radiogroup" [attr.aria-label]="question.statement">
+                                    @for (option of answerOptions; track option.score) {
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <p-radiobutton [formControl]="answerList.at(index)" [value]="option.score" [inputId]="'q' + question.id + '-' + option.score" />
+                                            <span>{{ option.label }}</span>
+                                        </label>
+                                    }
+                                </div>
+                                @if (isInvalid('answerList.' + index)) {
+                                    <small class="mgs-field__error block mt-2 text-[var(--mgs-accent-text)] font-semibold">Elija una respuesta.</small>
+                                }
+                            </li>
+                        } @empty {
+                            <li class="text-muted-color">Este formulario todavía no tiene preguntas.</li>
+                        }
+                    </ol>
+
+                    @if (errorMessage(); as message) {
+                        <div class="mgs-alert mt-4" role="alert">
+                            <i class="pi pi-exclamation-circle"></i>
+                            <span>{{ message }}</span>
+                        </div>
+                    }
+
+                    <div class="mgs-form-actions">
+                        <p-button type="submit" label="Enviar autoevaluación" icon="pi pi-send" iconPos="right" [loading]="isSubmitting()" [disabled]="questionList().length === 0" />
+                    </div>
+                </section>
+            </form>
+        } @else {
+            <section class="mgs-card flex flex-col items-center text-center gap-3 py-12">
+                <span class="mgs-eyebrow">Autoevaluación</span>
+                @if (hasLoadError()) {
+                    <h1 class="mgs-title">No se pudo cargar el formulario</h1>
+                    <p class="mgs-subtitle">Revise su conexión e intente de nuevo en unos minutos.</p>
+                } @else {
+                    <h1 class="mgs-title">No hay un formulario activo</h1>
+                    <p class="mgs-subtitle">Por ahora no hay autoevaluaciones abiertas. Intente de nuevo más tarde.</p>
+                }
+            </section>
+        }
+    </main>
+</div>

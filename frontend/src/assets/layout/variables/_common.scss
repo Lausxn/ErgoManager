@@ -1,0 +1,32 @@
+:root {
+    --primary-color: var(--p-primary-color);
+    --primary-contrast-color: var(--p-primary-contrast-color);
+    --text-color: var(--p-text-color);
+    --text-color-secondary: var(--p-text-muted-color);
+    --surface-border: var(--p-content-border-color);
+    --surface-card: var(--p-content-background);
+    --surface-hover: var(--p-content-hover-background);
+    --surface-overlay: var(--p-overlay-popover-background);
+    --transition-duration: var(--p-transition-duration);
+    --maskbg: var(--p-mask-background);
+    --content-border-radius: var(--p-content-border-radius);
+    --layout-section-transition-duration: 0.2s;
+    /* Tall enough for the full logo at its 200 px minimum plus its clear space. */
+    --layout-topbar-height: max(4.5rem, 64px);
+    --element-transition-duration: var(--p-transition-duration);
+    --focus-ring-width: var(--p-focus-ring-width);
+    --focus-ring-style: var(--p-focus-ring-style);
+    --focus-ring-color: var(--p-focus-ring-color);
+    --focus-ring-offset: var(--p-focus-ring-offset);
+    --focus-ring-shadow: var(--p-focus-ring-shadow);
+
+    /* Corporate typefaces; Arial is the substitute approved by the brand book (page 14). */
+    --mgs-font-display: 'Aptos Display', 'Aptos', Arial, Helvetica, sans-serif;
+    --mgs-font-body: 'Aptos', Arial, Helvetica, sans-serif;
+    --mgs-wine: #7a1022;
+    --mgs-dark-wine: #4c0815;
+    --mgs-graphite: #2e3035;
+    --mgs-gray: #6e737a;
+    --mgs-paper: #f7f5f2;
+    --mgs-black: #0b0b0d;
+}
