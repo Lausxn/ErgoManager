@@ -2,6 +2,7 @@ package com.mgs.ergomanager.controller;
 
 import com.mgs.ergomanager.dto.user.UserRequestDTO;
 import com.mgs.ergomanager.dto.user.UserResponseDTO;
+import com.mgs.ergomanager.dto.user.UserUpdateRequestDTO;
 import com.mgs.ergomanager.service.UserService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -77,7 +78,7 @@ public class UserController {
      * @return the updated user
      */
     @PutMapping("/{id}")
-    public ResponseEntity<UserResponseDTO> update(@PathVariable Long id, @Valid @RequestBody UserRequestDTO request) {
+    public ResponseEntity<UserResponseDTO> update(@PathVariable Long id, @Valid @RequestBody UserUpdateRequestDTO request) {
         return ResponseEntity.ok(userService.update(id, request));
     }
 

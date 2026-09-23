@@ -3,6 +3,10 @@ package com.mgs.ergomanager.service.impl;
 import com.mgs.ergomanager.dto.user.UserRequestDTO;
 import com.mgs.ergomanager.dto.user.UserResponseDTO;
 import com.mgs.ergomanager.repository.UserRepository;
+import com.mgs.ergomanager.dto.user.UserUpdateRequestDTO;
+import com.mgs.ergomanager.exception.DuplicateResourceException;
+import com.mgs.ergomanager.exception.ResourceNotFoundException;
+import com.mgs.ergomanager.model.User;
 import com.mgs.ergomanager.service.UserService;
 import java.util.List;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -48,9 +52,35 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserResponseDTO update(Long id, UserRequestDTO request) {
-        // TODO: copy the request over the stored user, rehashing the password.
-        throw new UnsupportedOperationException("UserService.update is not implemented yet");
+    public UserResponseDTO update(Long id, UserUpdateRequestDTO request) {
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", id));
+
+        userRepository.findByEmail(request.email())
+                .filter(existingUser -> !existingUser.getId().equals(id))
+                .ifPresent(existingUser -> {
+                    throw new DuplicateResourceException(
+                            "Email is already registered: " + request.email());
+                });
+
+        user.setFirstName(request.firstName());
+        user.setFirstLastName(request.firstLastName());
+        user.setSecondLastName(request.secondLastName());
+        user.setEmail(request.email());
+        user.setRole(request.role());
+
+        User updatedUser = userRepository.save(user);
+
+        return new UserResponseDTO(
+                updatedUser.getId(),
+                updatedUser.getFirstName(),
+                updatedUser.getFirstLastName(),
+                updatedUser.getSecondLastName(),
+                updatedUser.getEmail(),
+                updatedUser.getRole(),
+                updatedUser.isActive(),
+                updatedUser.getCreatedAt());
     }
 
     @Override
