@@ -1,0 +1,2 @@
+Este folder se puede eliminar, las imagenes ya van en el folder `frontend`
+estan en `frontend/public/brand`
