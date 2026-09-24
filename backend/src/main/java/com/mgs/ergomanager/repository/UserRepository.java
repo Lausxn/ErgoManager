@@ -2,9 +2,13 @@ package com.mgs.ergomanager.repository;
 
 import com.mgs.ergomanager.model.User;
 import com.mgs.ergomanager.model.enums.Role;
+import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -20,6 +24,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @return the user when it exists
      */
     Optional<User> findByEmail(String email);
+
+    /**
+     * Serializes password changes so an old password cannot be reused concurrently.
+     *
+     * @param email email of the authenticated user
+     * @return user locked until the password transaction completes
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select user from User user where user.email = :email")
+    Optional<User> findByEmailForUpdate(@Param("email") String email);
 
     /**
      * Checks whether the email is already taken.
