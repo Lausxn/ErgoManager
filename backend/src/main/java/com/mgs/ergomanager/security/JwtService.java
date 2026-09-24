@@ -18,6 +18,8 @@ public class JwtService {
 
     private static final String ROLE_CLAIM = "role";
 
+    private static final String VERSION_CLAIM = "tokenVersion";
+
     private final SecretKey signingKey;
 
     private final long expirationMs;
@@ -39,14 +41,16 @@ public class JwtService {
      *
      * @param email email used as subject of the token
      * @param role  role stored as an extra claim
+     * @param tokenVersion persisted session version of the user
      * @return compact representation of the token
      */
-    public String generateToken(String email, String role) {
+    public String generateToken(String email, String role, long tokenVersion) {
         Date issuedAt = new Date();
         Date expiration = new Date(issuedAt.getTime() + expirationMs);
         return Jwts.builder()
                 .subject(email)
                 .claim(ROLE_CLAIM, role)
+                .claim(VERSION_CLAIM, tokenVersion)
                 .issuedAt(issuedAt)
                 .expiration(expiration)
                 .signWith(signingKey)
@@ -84,7 +88,13 @@ public class JwtService {
     public boolean isTokenValid(String token, UserDetails userDetails) {
         Claims claims = extractClaims(token);
         boolean sameUser = claims.getSubject().equals(userDetails.getUsername());
-        return sameUser && claims.getExpiration().after(new Date());
+        Number version = claims.get(VERSION_CLAIM, Number.class);
+        // Tokens from Task 77 remain valid only until the first password change.
+        long tokenVersion = version == null ? 0 : version.longValue();
+        return sameUser && userDetails.isEnabled()
+                && userDetails instanceof UserPrincipal principal
+                && tokenVersion == principal.getTokenVersion()
+                && claims.getExpiration().after(new Date());
     }
 
     /**
