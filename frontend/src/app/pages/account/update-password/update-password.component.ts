@@ -4,13 +4,13 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { InputGroupModule } from 'primeng/inputgroup';
-import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputTextModule } from 'primeng/inputtext';
+import { TooltipModule } from 'primeng/tooltip';
 
 import { AuthService } from '../../../core/services/auth.service';
-import { AppPreferences } from '../../../layout/component/app.preferences';
+import { LayoutService } from '../../../layout/service/layout.service';
 import { BrandLogoComponent } from '../../../shared/components/brand-logo/brand-logo.component';
+import { SidebarNavComponent } from '../../../shared/components/sidebar-nav/sidebar-nav.component';
 import { isControlInvalid, markFormAsDirty } from '../../../shared/utils/form';
 import { PASSWORD_RULES, PASSWORD_STRENGTH_LABELS, compareFieldsValidator, getPasswordStrength, strongPasswordValidator } from '../../../shared/utils/password';
 
@@ -29,7 +29,7 @@ const STRENGTH_SEGMENTS = [1, 2, 3, 4] as const;
 @Component({
     selector: 'app-update-password',
     standalone: true,
-    imports: [ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, InputGroupModule, InputGroupAddonModule, AppPreferences, BrandLogoComponent],
+    imports: [ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, TooltipModule, BrandLogoComponent, SidebarNavComponent],
     templateUrl: './update-password.component.html'
 })
 export class UpdatePasswordComponent {
@@ -38,6 +38,19 @@ export class UpdatePasswordComponent {
     private readonly authService = inject(AuthService);
 
     private readonly router = inject(Router);
+
+    protected readonly layoutService = inject(LayoutService);
+
+    /** Desktop: the side navigation was hidden with the menu button. */
+    protected readonly isSidebarCollapsed = computed(() => !!this.layoutService.layoutState().staticMenuDesktopInactive);
+
+    /** Phones: the side navigation is open over the page. */
+    protected readonly isSidebarOpen = computed(() => !!this.layoutService.layoutState().staticMenuMobileActive);
+
+    /** Whether the side navigation is on screen, for the aria-expanded of the button. */
+    protected isSidebarVisible(): boolean {
+        return this.layoutService.isDesktop() ? !this.isSidebarCollapsed() : this.isSidebarOpen();
+    }
 
     protected readonly passwordForm = this.formBuilder.nonNullable.group(
         {
@@ -70,6 +83,11 @@ export class UpdatePasswordComponent {
     protected readonly strength = computed(() => getPasswordStrength(this.newPassword()));
 
     protected readonly strengthLabel = computed(() => PASSWORD_STRENGTH_LABELS[this.strength()]);
+
+    private readonly confirmPassword = toSignal(this.passwordForm.controls.confirmPassword.valueChanges, { initialValue: '' });
+
+    /** Positive feedback under the confirmation, shown as soon as both values are equal. */
+    protected readonly passwordsMatch = computed(() => this.confirmPassword() !== '' && this.confirmPassword() === this.newPassword());
 
     /** Keys of the rules the new password already meets. */
     protected readonly metRules = computed(() => new Set(PASSWORD_RULES.filter((rule) => rule.test(this.newPassword())).map((rule) => rule.key)));
@@ -147,6 +165,13 @@ export class UpdatePasswordComponent {
                 this.errorMessage.set(error.status === BAD_REQUEST_STATUS ? 'La contraseña actual no es correcta o la nueva no cumple los requisitos.' : 'No se pudo actualizar la contraseña. Intente de nuevo en unos minutos.');
             }
         });
+    }
+
+    /**
+     * Closes the side navigation opened over the page on phones.
+     */
+    protected closeSidebar(): void {
+        this.layoutService.layoutState.update((state) => ({ ...state, staticMenuMobileActive: false }));
     }
 
     /**

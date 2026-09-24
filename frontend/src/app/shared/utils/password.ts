@@ -27,7 +27,7 @@ export type PasswordStrength = 0 | 1 | 2 | 3 | 4;
 
 /** Label shown next to the strength meter for each level. */
 export const PASSWORD_STRENGTH_LABELS: Record<PasswordStrength, string> = {
-    0: 'Sin datos',
+    0: 'Aún no evaluada',
     1: 'Débil',
     2: 'Media',
     3: 'Buena',
