@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, input, numberAttribute, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -49,32 +49,17 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
 }
 
 /**
- * Screen used to register a new administrator or ergonomist, or to edit one.
+ * Screen used to register a new administrator or ergonomist.
  * Groups the data asked to identify the user, their access and their role,
  * and shows a summary of the account while it is typed.
  */
 @Component({
     selector: 'app-user-form',
     standalone: true,
-    imports: [
-        ReactiveFormsModule,
-        RouterLink,
-        AvatarModule,
-        ButtonModule,
-        CardModule,
-        DividerModule,
-        IconFieldModule,
-        InputIconModule,
-        InputTextModule,
-        MessageModule,
-        PasswordModule,
-        RadioButtonModule,
-        TagModule,
-        PageHeaderComponent
-    ],
+    imports: [ReactiveFormsModule, RouterLink, AvatarModule, ButtonModule, CardModule, DividerModule, IconFieldModule, InputIconModule, InputTextModule, MessageModule, PasswordModule, RadioButtonModule, TagModule, PageHeaderComponent],
     templateUrl: './user-form.component.html'
 })
-export class UserFormComponent implements OnInit {
+export class UserFormComponent {
     private readonly formBuilder = inject(FormBuilder);
 
     private readonly userService = inject(UserService);
@@ -82,9 +67,6 @@ export class UserFormComponent implements OnInit {
     private readonly messageService = inject(MessageService);
 
     private readonly router = inject(Router);
-
-    /** Identifier of the user being edited, absent when creating a new one. */
-    readonly id = input<number | undefined, unknown>(undefined, { transform: numberAttribute });
 
     protected readonly maxNameLength = MAX_NAME_LENGTH;
 
@@ -115,7 +97,10 @@ export class UserFormComponent implements OnInit {
     /** Name shown in the summary card while the form is typed. */
     protected readonly previewName = computed(() => {
         const { firstName, firstLastName, secondLastName } = this.formValue();
-        return [firstName, firstLastName, secondLastName].map((part) => part?.trim()).filter(Boolean).join(' ');
+        return [firstName, firstLastName, secondLastName]
+            .map((part) => part?.trim())
+            .filter(Boolean)
+            .join(' ');
     });
 
     protected readonly previewInitials = computed(() => {
@@ -128,17 +113,6 @@ export class UserFormComponent implements OnInit {
     protected readonly previewRole = computed(() => ROLE_LABELS[this.formValue().role ?? 'ERGONOMIST']);
 
     protected readonly isSubmitting = signal(false);
-
-    protected readonly isEditing = signal(false);
-
-    ngOnInit(): void {
-        const userId = this.id();
-        if (userId === undefined || Number.isNaN(userId)) {
-            return;
-        }
-        this.isEditing.set(true);
-        this.userService.findById(userId).subscribe((user) => this.userForm.patchValue(user));
-    }
 
     /**
      * Checks whether a field has to show its error message.
@@ -161,7 +135,7 @@ export class UserFormComponent implements OnInit {
     }
 
     /**
-     * Sends the form to the backend, creating or updating the user.
+     * Sends the form to the backend, creating the user.
      */
     protected submit(): void {
         if (this.userForm.invalid) {
@@ -172,13 +146,10 @@ export class UserFormComponent implements OnInit {
         this.isSubmitting.set(true);
         const { firstName, firstLastName, secondLastName, email, password, role } = this.userForm.getRawValue();
         const request: UserRequest = { firstName, firstLastName, secondLastName: secondLastName || undefined, email, password, role };
-        const userId = this.id();
-        const saved$ = this.isEditing() && userId !== undefined ? this.userService.update(userId, request) : this.userService.create(request);
-
-        saved$.subscribe({
+        this.userService.create(request).subscribe({
             next: () => {
                 this.isSubmitting.set(false);
-                this.messageService.add({ severity: 'success', summary: this.isEditing() ? 'Usuario actualizado' : 'Usuario creado', detail: request.email });
+                this.messageService.add({ severity: 'success', summary: 'Usuario creado', detail: request.email });
                 void this.router.navigate(['/users']);
             },
             error: () => {

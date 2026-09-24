@@ -1,4 +1,4 @@
-<app-page-header eyebrow="Gestión de usuarios" [title]="isEditing() ? 'Editar usuario' : 'Creación de usuario'" subtitle="Datos para identificar a la persona, su acceso y su rol dentro de ErgoManager.">
+<app-page-header eyebrow="Gestión de usuarios" title="Creación de usuario" subtitle="Datos para identificar a la persona, su acceso y su rol dentro de ErgoManager.">
     <p-button label="Volver a usuarios" icon="pi pi-arrow-left" severity="secondary" [text]="true" routerLink="/users" />
 </app-page-header>
 
@@ -90,7 +90,7 @@
             <div class="flex flex-wrap items-center justify-end gap-3">
                 <span class="mr-auto text-sm text-muted-color"><span class="mgs-required">*</span> Campos obligatorios</span>
                 <p-button label="Cancelar" severity="secondary" [outlined]="true" routerLink="/users" />
-                <p-button type="submit" [label]="isEditing() ? 'Guardar cambios' : 'Crear usuario'" icon="pi pi-check" [loading]="isSubmitting()" />
+                <p-button type="submit" label="Crear usuario" icon="pi pi-check" [loading]="isSubmitting()" />
             </div>
         </ng-template>
     </p-card>
@@ -107,9 +107,7 @@
             <span class="text-muted-color break-all">{{ previewEmail() || 'correo@empresa.com' }}</span>
             <p-tag [value]="previewRole()" icon="pi pi-id-card" styleClass="mgs-tag mgs-tag--strong" />
         </div>
-        @if (!isEditing()) {
-            <p-divider />
-            <p-message severity="secondary" size="small" icon="pi pi-info-circle">La cuenta quedará activa y podrá iniciar sesión en cuanto se cree.</p-message>
-        }
+        <p-divider />
+        <p-message severity="secondary" size="small" icon="pi pi-info-circle">La cuenta quedará activa y podrá iniciar sesión en cuanto se cree.</p-message>
     </p-card>
 </form>

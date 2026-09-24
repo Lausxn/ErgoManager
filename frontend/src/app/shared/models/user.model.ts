@@ -6,7 +6,8 @@ export interface UserRequest {
     firstLastName: string;
     secondLastName?: string;
     email: string;
-    password: string;
+    /** Required on create; left out on update to keep the current password. */
+    password?: string;
     role: Role;
 }
 
