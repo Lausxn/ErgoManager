@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
- * Data needed to create or update an administrator or an ergonomist.
+ * Data needed to create an administrator or an ergonomist.
  *
  * @param firstName      given name of the user
  * @param firstLastName  first surname of the user
