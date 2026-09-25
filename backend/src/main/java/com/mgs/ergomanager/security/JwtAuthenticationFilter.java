@@ -1,5 +1,6 @@
 package com.mgs.ergomanager.security;
 
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -12,6 +13,7 @@ import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -28,6 +30,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String AUTHORIZATION_HEADER = "Authorization";
 
     private static final String BEARER_PREFIX = "Bearer ";
+
+    /**
+     * Request attribute holding the reason a token was rejected, read by
+     * {@link RestSecurityErrorHandler} to explain the HTTP 401 to the user.
+     */
+    public static final String TOKEN_ERROR_ATTRIBUTE = JwtAuthenticationFilter.class.getName() + ".TOKEN_ERROR";
+
+    static final String EXPIRED_SESSION_MESSAGE = "Su sesión expiró. Inicie sesión nuevamente.";
+
+    static final String INVALID_SESSION_MESSAGE = "La sesión no es válida. Inicie sesión nuevamente.";
 
     private final JwtService jwtService;
 
@@ -71,8 +83,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     /**
      * Validates the token and stores the authentication in the context. An
-     * invalid token is only logged, so the request continues as anonymous and
-     * the entry point answers with HTTP 401.
+     * invalid token is only logged and its reason kept as a request attribute,
+     * so the request continues as anonymous and the entry point answers with
+     * HTTP 401.
      *
      * @param token   token carried by the request
      * @param request request being processed
@@ -85,9 +98,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         userDetails, null, userDetails.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+            } else {
+                // Revoked by a password change, or the account was deactivated.
+                request.setAttribute(TOKEN_ERROR_ATTRIBUTE, INVALID_SESSION_MESSAGE);
             }
-        } catch (JwtException exception) {
+        } catch (ExpiredJwtException exception) {
+            request.setAttribute(TOKEN_ERROR_ATTRIBUTE, EXPIRED_SESSION_MESSAGE);
+        } catch (JwtException | IllegalArgumentException | UsernameNotFoundException exception) {
+            // Blank or tampered tokens, and tokens of users that were deleted or changed their email.
             LOGGER.warn("Rejected token on {}: {}", request.getRequestURI(), exception.getMessage());
+            request.setAttribute(TOKEN_ERROR_ATTRIBUTE, INVALID_SESSION_MESSAGE);
         }
     }
 }

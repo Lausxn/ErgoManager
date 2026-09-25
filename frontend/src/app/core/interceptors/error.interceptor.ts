@@ -3,7 +3,13 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 
+import { getApiErrorMessage } from '../../shared/utils/api-error';
 import { AuthService } from '../services/auth.service';
+
+/** Navigation state key the login page reads to explain why the session ended. */
+export const SESSION_MESSAGE_STATE_KEY = 'sessionMessage';
+
+const SESSION_ENDED_MESSAGE = 'Su sesión terminó. Inicie sesión nuevamente.';
 
 const UNAUTHORIZED_STATUS = 401;
 
@@ -29,7 +35,11 @@ export const errorInterceptor: HttpInterceptorFn = (request, next) => {
             }
             if (error.status === UNAUTHORIZED_STATUS && !request.url.endsWith(LOGIN_URL_SUFFIX)) {
                 authService.logout();
-                void router.navigate(['/auth/login'], { queryParams: { redirectTo: router.url } });
+                // The login page explains why the session ended, for example because it expired.
+                void router.navigate(['/auth/login'], {
+                    queryParams: { redirectTo: router.url },
+                    state: { [SESSION_MESSAGE_STATE_KEY]: getApiErrorMessage(error, SESSION_ENDED_MESSAGE) }
+                });
             } else if (error.status === FORBIDDEN_STATUS) {
                 void router.navigate(['/auth/access']);
             }

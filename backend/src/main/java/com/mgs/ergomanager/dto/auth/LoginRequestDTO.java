@@ -12,12 +12,14 @@ import jakarta.validation.constraints.Size;
  */
 public record LoginRequestDTO(
 
-        @NotBlank
-        @Email
-        @Size(max = 120)
+        @NotBlank(message = "El correo es obligatorio.")
+        @Email(message = "El correo no tiene un formato válido.")
+        @Size(max = 120, message = "El correo no puede superar los 120 caracteres.")
         String email,
 
-        @NotBlank
-        @Size(min = 8, max = 100)
+        // No minimum length: a short password is answered as wrong credentials,
+        // so the sign in form does not disclose the password policy.
+        @NotBlank(message = "La contraseña es obligatoria.")
+        @Size(max = 100, message = "La contraseña no puede superar los 100 caracteres.")
         String password) {
 }

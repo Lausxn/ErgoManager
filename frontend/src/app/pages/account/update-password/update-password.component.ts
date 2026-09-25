@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -11,12 +10,13 @@ import { AuthService } from '../../../core/services/auth.service';
 import { LayoutService } from '../../../layout/service/layout.service';
 import { BrandLogoComponent } from '../../../shared/components/brand-logo/brand-logo.component';
 import { SidebarNavComponent } from '../../../shared/components/sidebar-nav/sidebar-nav.component';
+import { getApiErrorMessage, getApiFieldErrors } from '../../../shared/utils/api-error';
 import { isControlInvalid, markFormAsDirty } from '../../../shared/utils/form';
 import { PASSWORD_RULES, PASSWORD_STRENGTH_LABELS, compareFieldsValidator, getPasswordStrength, strongPasswordValidator } from '../../../shared/utils/password';
 
 type PasswordField = 'currentPassword' | 'newPassword' | 'confirmPassword';
 
-const BAD_REQUEST_STATUS = 400;
+const UPDATE_FAILED_MESSAGE = 'No se pudo actualizar la contraseña. Intente de nuevo en unos minutos.';
 
 /** Number of segments of the strength meter, one per level above zero. */
 const STRENGTH_SEGMENTS = [1, 2, 3, 4] as const;
@@ -160,9 +160,11 @@ export class UpdatePasswordComponent {
                 this.passwordForm.reset();
                 this.isUpdated.set(true);
             },
-            error: (error: HttpErrorResponse) => {
+            error: (error: unknown) => {
                 this.isSubmitting.set(false);
-                this.errorMessage.set(error.status === BAD_REQUEST_STATUS ? 'La contraseña actual no es correcta o la nueva no cumple los requisitos.' : 'No se pudo actualizar la contraseña. Intente de nuevo en unos minutos.');
+                // A field message is more precise than the general "check the data" one.
+                const [firstFieldError] = Object.values(getApiFieldErrors(error));
+                this.errorMessage.set(firstFieldError ?? getApiErrorMessage(error, UPDATE_FAILED_MESSAGE));
             }
         });
     }

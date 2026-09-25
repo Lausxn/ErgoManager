@@ -68,17 +68,18 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmailForUpdate(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User", email));
         if (!user.isActive()) {
-            throw new BusinessException("User is inactive");
+            throw new BusinessException("La cuenta está desactivada. Contacte al administrador.");
         }
         if (request.currentPassword().getBytes(StandardCharsets.UTF_8).length > 72
                 || !passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
-            throw new BusinessException("Current password is incorrect");
+            throw new BusinessException("La contraseña actual es incorrecta.");
         }
         if (request.newPassword().getBytes(StandardCharsets.UTF_8).length > 72) {
-            throw new BusinessException("New password must not exceed 72 UTF-8 bytes");
+            // BCrypt only reads 72 bytes, and accented letters or ñ take two bytes each.
+            throw new BusinessException("La nueva contraseña es demasiado larga. Use menos caracteres con tilde o ñ.");
         }
         if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
-            throw new BusinessException("New password must differ from the current password");
+            throw new BusinessException("La nueva contraseña debe ser diferente a la actual.");
         }
         user.setPassword(passwordEncoder.encode(request.newPassword()));
         user.setTokenVersion(user.getTokenVersion() + 1);

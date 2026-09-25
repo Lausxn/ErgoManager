@@ -118,7 +118,7 @@ class ChangePasswordIntegrationTests {
     void rejectsWrongCurrentPasswordWithoutSigningOut() throws Exception {
         String token = login(CURRENT_PASSWORD);
         change(token, "Incorrect1!", NEW_PASSWORD).andExpect(status().isBadRequest())
-                .andExpect(jsonPath("message").value("Current password is incorrect"));
+                .andExpect(jsonPath("message").value("La contraseña actual es incorrecta."));
         assertUnchanged();
         change(token, CURRENT_PASSWORD, NEW_PASSWORD).andExpect(status().isOk());
     }
