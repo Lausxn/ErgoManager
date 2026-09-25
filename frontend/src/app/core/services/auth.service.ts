@@ -18,7 +18,8 @@ const PREVIEW_SESSION: LoginResponse = {
     expiresAtMs: Number.MAX_SAFE_INTEGER,
     userId: 0,
     fullName: 'Vista previa',
-    role: 'ADMIN'
+    role: 'ADMIN',
+    mustChangePassword: false
 };
 
 /**

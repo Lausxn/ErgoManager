@@ -21,4 +21,5 @@ export interface LoginResponse {
     userId: number;
     fullName: string;
     role: Role;
+    mustChangePassword: boolean;
 }

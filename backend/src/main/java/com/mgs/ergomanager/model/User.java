@@ -43,6 +43,9 @@ public class User {
     @Column(name = "token_version", nullable = false, columnDefinition = "bigint default 0")
     private long tokenVersion;
 
+    @Column(name = "must_change_password", nullable = false, columnDefinition = "boolean default true")
+    private boolean mustChangePassword = true;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 20)
     private Role role;
@@ -102,14 +105,32 @@ public class User {
         this.password = password;
     }
 
-    /** @return current session version used to revoke older tokens */
+    /**
+     * @return current session version used to revoke older tokens
+     */
     public long getTokenVersion() {
         return tokenVersion;
     }
 
-    /** @param tokenVersion session version after a password change */
+    /**
+     * @param tokenVersion session version after a password change
+     */
     public void setTokenVersion(long tokenVersion) {
         this.tokenVersion = tokenVersion;
+    }
+
+    /**
+     * @return true when the user must replace the temporary password
+     */
+    public boolean isMustChangePassword() {
+        return mustChangePassword;
+    }
+
+    /**
+     * @param mustChangePassword whether the temporary password must be replaced
+     */
+    public void setMustChangePassword(boolean mustChangePassword) {
+        this.mustChangePassword = mustChangePassword;
     }
 
     public Role getRole() {

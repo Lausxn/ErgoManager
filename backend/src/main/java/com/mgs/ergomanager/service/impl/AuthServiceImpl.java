@@ -81,6 +81,7 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException("New password must differ from the current password");
         }
         user.setPassword(passwordEncoder.encode(request.newPassword()));
+        user.setMustChangePassword(false);
         user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
         return buildSession(user);
@@ -96,7 +97,14 @@ public class AuthServiceImpl implements AuthService {
         String token = jwtService.generateToken(user.getEmail(), user.getRole().name(), user.getTokenVersion());
         long expiresAtMs = System.currentTimeMillis() + jwtService.getExpirationMs();
 
-        return new LoginResponseDTO(token, TOKEN_TYPE, expiresAtMs, user.getId(), buildFullName(user), user.getRole());
+        return new LoginResponseDTO(
+        token,
+        TOKEN_TYPE,
+        expiresAtMs,
+        user.getId(),
+        buildFullName(user),
+        user.getRole(),
+        user.isMustChangePassword());
     }
 
     /**
