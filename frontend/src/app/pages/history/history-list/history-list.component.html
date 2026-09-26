@@ -1,0 +1,62 @@
+<app-page-header eyebrow="Evaluación" title="Historial" subtitle="Registro de las autoevaluaciones y evaluaciones personalizadas." />
+
+<form [formGroup]="searchForm" (ngSubmit)="search()" class="mgs-card mb-6" novalidate>
+    <div class="flex flex-col gap-5">
+        <p-selectbutton [options]="searchModeOptions" [ngModel]="searchMode()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="changeMode($event)" optionLabel="label" optionValue="value" [allowEmpty]="false" />
+
+        <div class="flex flex-wrap items-end gap-4">
+            @if (searchMode() === 'company') {
+                <div class="mgs-field grow max-w-xl">
+                    <label for="companyId">Empresa</label>
+                    @if (isAdmin()) {
+                        <p-select
+                            inputId="companyId"
+                            formControlName="companyId"
+                            [options]="companyList()"
+                            optionLabel="businessName"
+                            optionValue="id"
+                            [filter]="true"
+                            filterBy="businessName,taxId"
+                            placeholder="Seleccione una empresa"
+                            [fluid]="true"
+                        />
+                    } @else {
+                        <p-inputnumber inputId="companyId" formControlName="companyId" [useGrouping]="false" [min]="1" placeholder="Número de empresa" [fluid]="true" />
+                    }
+                </div>
+            } @else {
+                <div class="mgs-field grow max-w-xl">
+                    <label for="employeeEmail">Correo del colaborador</label>
+                    <input pInputText id="employeeEmail" type="email" formControlName="employeeEmail" placeholder="nombre@empresa.com" />
+                </div>
+            }
+            <p-button type="submit" label="Buscar" icon="pi pi-search" [loading]="isLoading()" />
+        </div>
+    </div>
+</form>
+
+<div class="mgs-card !p-0 overflow-hidden">
+    <p-table [value]="historyList()" [loading]="isLoading()" [paginator]="historyList().length > 10" [rows]="10" [rowHover]="true" dataKey="id" sortField="registeredAt" [sortOrder]="-1">
+        <ng-template #header>
+            <tr>
+                <th pSortableColumn="registeredAt" class="w-56">Fecha <p-sortIcon field="registeredAt" /></th>
+                <th pSortableColumn="employeeEmail">Colaborador <p-sortIcon field="employeeEmail" /></th>
+                <th>Descripción</th>
+            </tr>
+        </ng-template>
+        <ng-template #body let-history>
+            <tr>
+                <td>{{ history.registeredAt | date: 'd MMM y, h:mm a' }}</td>
+                <td class="font-semibold">{{ history.employeeEmail }}</td>
+                <td>{{ history.description }}</td>
+            </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+            <tr>
+                <td colspan="3" class="text-center py-10 text-muted-color">
+                    {{ hasSearched() ? 'No se encontraron registros para esta búsqueda.' : 'Elija una empresa o un colaborador para ver su historial.' }}
+                </td>
+            </tr>
+        </ng-template>
+    </p-table>
+</div>

@@ -1,0 +1,53 @@
+<app-page-header eyebrow="Evaluación" title="Agenda" [subtitle]="'Citas de los próximos ' + daysShownAhead + ' días.'">
+    @if (isErgonomist()) {
+        <p-button label="Publicar disponibilidad" icon="pi pi-calendar-plus" routerLink="/appointments/availabilities/new" />
+    }
+</app-page-header>
+
+<div class="grid grid-cols-12 gap-6 mb-6">
+    <div class="col-span-12 sm:col-span-6 xl:col-span-3 mgs-card">
+        <span class="mgs-eyebrow">Citas en agenda</span>
+        <div class="mgs-kpi mt-2">{{ appointmentList().length }}</div>
+    </div>
+    <div class="col-span-12 sm:col-span-6 xl:col-span-3 mgs-card">
+        <span class="mgs-eyebrow">Pendientes</span>
+        <div class="mgs-kpi mt-2">{{ pendingCount() }}</div>
+    </div>
+</div>
+
+<div class="mgs-card !p-0 overflow-hidden">
+    <p-table [value]="appointmentList()" [loading]="isLoading()" [paginator]="true" [rows]="10" [rowHover]="true" dataKey="id" sortField="startDateTime" [sortOrder]="1">
+        <ng-template #header>
+            <tr>
+                <th pSortableColumn="employeeName">Colaborador <p-sortIcon field="employeeName" /></th>
+                <th pSortableColumn="startDateTime">Fecha <p-sortIcon field="startDateTime" /></th>
+                <th>Horario</th>
+                <th pSortableColumn="status">Estado <p-sortIcon field="status" /></th>
+                <th class="w-20"></th>
+            </tr>
+        </ng-template>
+        <ng-template #body let-appointment>
+            <tr>
+                <td>
+                    <div class="font-semibold">{{ appointment.employeeName }}</div>
+                    @if (appointment.notes) {
+                        <div class="text-sm text-muted-color line-clamp-1">{{ appointment.notes }}</div>
+                    }
+                </td>
+                <td>{{ appointment.startDateTime | date: 'EEEE d MMM y' }}</td>
+                <td>{{ appointment.startDateTime | date: 'shortTime' }} – {{ appointment.endDateTime | date: 'shortTime' }}</td>
+                <td><p-tag [value]="statusLabels[appointment.status]" [styleClass]="statusTagClasses[appointment.status]" /></td>
+                <td class="text-right">
+                    @if (appointment.status === 'SCHEDULED' || appointment.status === 'CONFIRMED') {
+                        <p-button icon="pi pi-times" [rounded]="true" [text]="true" (onClick)="confirmCancel(appointment)" pTooltip="Cancelar cita" ariaLabel="Cancelar cita" />
+                    }
+                </td>
+            </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+            <tr>
+                <td colspan="5" class="text-center py-10 text-muted-color">No hay citas agendadas en este periodo.</td>
+            </tr>
+        </ng-template>
+    </p-table>
+</div>

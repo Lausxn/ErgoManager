@@ -1,0 +1,195 @@
+@use 'mixins' as *;
+
+.layout-topbar {
+    position: fixed;
+    height: var(--layout-topbar-height);
+    z-index: 997;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0 2rem;
+    background-color: var(--surface-card);
+    border-bottom: 1px solid var(--surface-border);
+    transition: left var(--layout-section-transition-duration);
+    display: flex;
+    align-items: center;
+
+    .layout-topbar-logo-container {
+        width: 20rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .layout-topbar-logo {
+        display: inline-flex;
+        align-items: center;
+        border-radius: var(--content-border-radius);
+        color: var(--text-color);
+
+        /* Full signature when there is width, symbol only on compact screens (page 18). */
+        .layout-topbar-logo-symbol {
+            display: none;
+        }
+
+        @media (max-width: 575px) {
+            .layout-topbar-logo-full {
+                display: none;
+            }
+
+            .layout-topbar-logo-symbol {
+                display: inline-flex;
+            }
+        }
+
+        &:focus-visible {
+            @include focused();
+        }
+    }
+
+    .layout-topbar-action {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        color: var(--text-color-secondary);
+        border-radius: 50%;
+        width: 2.5rem;
+        height: 2.5rem;
+        color: var(--text-color);
+        transition: background-color var(--element-transition-duration);
+        cursor: pointer;
+
+        &:hover {
+            background-color: var(--surface-hover);
+        }
+
+        &:focus-visible {
+            @include focused();
+        }
+
+        i {
+            font-size: 1.25rem;
+        }
+
+        span {
+            font-size: 1rem;
+            display: none;
+        }
+
+        &.layout-topbar-action-highlight {
+            background-color: var(--mgs-wine);
+            color: #ffffff;
+
+            &:hover {
+                background-color: var(--mgs-dark-wine);
+            }
+        }
+    }
+
+    .layout-menu-button {
+        margin-right: 0.5rem;
+    }
+
+    .layout-topbar-menu-button {
+        display: none;
+    }
+
+    .layout-topbar-actions {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .layout-topbar-user {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        line-height: 1.2;
+
+        .layout-topbar-user-name {
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        .layout-topbar-user-role {
+            font-size: 0.8rem;
+            color: var(--text-color-secondary);
+        }
+    }
+
+    .layout-topbar-menu-content {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .layout-config-menu {
+        display: flex;
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 991px) {
+    .layout-topbar {
+        padding: 0 1rem;
+
+        .layout-topbar-user {
+            display: none;
+        }
+
+        .layout-topbar-logo-container {
+            width: auto;
+        }
+
+        .layout-menu-button {
+            margin-left: 0;
+            margin-right: 0.5rem;
+        }
+
+        .layout-topbar-menu-button {
+            display: inline-flex;
+        }
+
+        .layout-topbar-menu {
+            position: absolute;
+            background-color: var(--surface-overlay);
+            transform-origin: top;
+            box-shadow:
+                0px 3px 5px rgba(0, 0, 0, 0.02),
+                0px 0px 2px rgba(0, 0, 0, 0.05),
+                0px 1px 4px rgba(0, 0, 0, 0.08);
+            border-radius: var(--content-border-radius);
+            padding: 1rem;
+            right: 2rem;
+            top: var(--layout-topbar-height);
+            min-width: 15rem;
+            border: 1px solid var(--surface-border);
+
+            .layout-topbar-menu-content {
+                gap: 0.5rem;
+            }
+
+            .layout-topbar-action {
+                display: flex;
+                width: 100%;
+                height: auto;
+                justify-content: flex-start;
+                border-radius: var(--content-border-radius);
+                padding: 0.5rem 1rem;
+
+                i {
+                    font-size: 1rem;
+                    margin-right: 0.5rem;
+                }
+
+                span {
+                    font-weight: medium;
+                    display: block;
+                }
+            }
+        }
+
+        .layout-topbar-menu-content {
+            flex-direction: column;
+        }
+    }
+}

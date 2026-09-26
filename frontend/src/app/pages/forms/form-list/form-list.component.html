@@ -1,0 +1,43 @@
+<app-page-header eyebrow="Administración" title="Formularios" subtitle="Formularios de autoevaluación que responden los colaboradores.">
+    <p-button label="Nuevo formulario" icon="pi pi-plus" routerLink="/forms/new" />
+</app-page-header>
+
+<div class="mgs-card !p-0 overflow-hidden">
+    <p-table [value]="formList()" [loading]="isLoading()" [paginator]="true" [rows]="10" [rowHover]="true" dataKey="id" sortField="publicationYear" [sortOrder]="-1">
+        <ng-template #header>
+            <tr>
+                <th pSortableColumn="title">Título <p-sortIcon field="title" /></th>
+                <th pSortableColumn="publicationYear">Año <p-sortIcon field="publicationYear" /></th>
+                <th>Preguntas</th>
+                <th pSortableColumn="active">Estado <p-sortIcon field="active" /></th>
+                <th class="w-32"></th>
+            </tr>
+        </ng-template>
+        <ng-template #body let-form>
+            <tr>
+                <td>
+                    <div class="font-semibold">{{ form.title }}</div>
+                    @if (form.description) {
+                        <div class="text-sm text-muted-color line-clamp-1">{{ form.description }}</div>
+                    }
+                </td>
+                <td>{{ form.publicationYear }}</td>
+                <td>{{ form.questionList.length }}</td>
+                <td>
+                    <p-tag [value]="form.active ? 'Activo' : 'Inactivo'" [styleClass]="form.active ? activeTagClasses.active : activeTagClasses.inactive" />
+                </td>
+                <td class="text-right whitespace-nowrap">
+                    <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="secondary" [routerLink]="['/forms', form.id]" pTooltip="Editar" ariaLabel="Editar" />
+                    @if (form.active) {
+                        <p-button icon="pi pi-ban" [rounded]="true" [text]="true" (onClick)="confirmDeactivate(form)" pTooltip="Desactivar" ariaLabel="Desactivar" />
+                    }
+                </td>
+            </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+            <tr>
+                <td colspan="5" class="text-center py-10 text-muted-color">Todavía no hay formularios creados.</td>
+            </tr>
+        </ng-template>
+    </p-table>
+</div>
