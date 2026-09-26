@@ -6,6 +6,7 @@ import com.mgs.ergomanager.model.enums.Role;
 import com.mgs.ergomanager.repository.UserRepository;
 import jakarta.validation.Validator;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -79,11 +80,13 @@ public class ErgonomistInitializer implements ApplicationRunner {
      * @return validated configuration without default credentials
      */
     private UserRequestDTO readRequest() {
+        String email = readTrimmedProperty("email");
+        String secondLastName = readTrimmedProperty("second-last-name");
         UserRequestDTO request = new UserRequestDTO(
-                environment.getProperty(PROPERTY_PREFIX + "first-name"),
-                environment.getProperty(PROPERTY_PREFIX + "first-last-name"),
-                environment.getProperty(PROPERTY_PREFIX + "second-last-name"),
-                environment.getProperty(PROPERTY_PREFIX + "email"),
+                readTrimmedProperty("first-name"),
+                readTrimmedProperty("first-last-name"),
+                secondLastName == null || secondLastName.isBlank() ? null : secondLastName,
+                email == null ? null : email.toLowerCase(Locale.ROOT),
                 environment.getProperty(PROPERTY_PREFIX + "password"), Role.ERGONOMIST);
         if (!validator.validate(request).isEmpty()) {
             throw new IllegalStateException(
@@ -93,5 +96,17 @@ public class ErgonomistInitializer implements ApplicationRunner {
             throw new IllegalStateException("Ergonomist bootstrap password must not exceed 72 UTF-8 bytes");
         }
         return request;
+    }
+
+    /**
+     * Trims profile values before validation and lookup, preserving missing values.
+     * Passwords must not pass through this helper.
+     *
+     * @param name property name relative to the bootstrap prefix
+     * @return trimmed value, or null when not configured
+     */
+    private String readTrimmedProperty(String name) {
+        String value = environment.getProperty(PROPERTY_PREFIX + name);
+        return value == null ? null : value.trim();
     }
 }

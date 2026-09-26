@@ -6,9 +6,11 @@ import com.mgs.ergomanager.model.User;
 import com.mgs.ergomanager.model.enums.Role;
 import com.mgs.ergomanager.repository.UserRepository;
 import jakarta.validation.Validator;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -84,6 +86,48 @@ class ErgonomistInitializerTests {
     }
 
     @Test
+    void normalizesProfileBeforeValidationAndPreservesPasswordWhitespace() {
+        String password = "  TestPassword2!  ";
+        runWith(configuration().withProperty(PREFIX + "first-name", "  Ana  ")
+                .withProperty(PREFIX + "first-last-name", "  Mora  ")
+                .withProperty(PREFIX + "second-last-name", "  Rojas  ")
+                .withProperty(PREFIX + "email", "  ANA.NORMALIZED@EXAMPLE.TEST  ")
+                .withProperty(PREFIX + "password", password));
+        User saved = userRepository.findByEmail("ana.normalized@example.test").orElseThrow();
+        assertThat(saved.getFirstName()).isEqualTo("Ana");
+        assertThat(saved.getFirstLastName()).isEqualTo("Mora");
+        assertThat(saved.getSecondLastName()).isEqualTo("Rojas");
+        assertThat(passwordEncoder.matches(password, saved.getPassword())).isTrue();
+        assertThat(passwordEncoder.matches(password.trim(), saved.getPassword())).isFalse();
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"   ", "\t"})
+    void absentOrBlankSecondSurnameIsStoredAsNull(String surname) {
+        String email = UUID.randomUUID() + "@example.test";
+        MockEnvironment environment = configuration().withProperty(PREFIX + "email", email);
+        if (surname != null) {
+            environment.withProperty(PREFIX + "second-last-name", surname);
+        }
+        runWith(environment);
+        assertThat(userRepository.findByEmail(email).orElseThrow().getSecondLastName()).isNull();
+    }
+
+    @Test
+    void normalizedEmailFindsExistingAccountWithoutOverwritingIt() {
+        User before = userRepository.findByEmail(EMAIL).orElseThrow();
+        long count = userRepository.count();
+        runWith(configuration().withProperty(PREFIX + "email", "  ERGONOMIST@EXAMPLE.TEST  ")
+                .withProperty(PREFIX + "first-name", "Different"));
+        User after = userRepository.findByEmail(EMAIL).orElseThrow();
+        assertThat(userRepository.count()).isEqualTo(count);
+        assertThat(after.getId()).isEqualTo(before.getId());
+        assertThat(after.getFirstName()).isEqualTo(before.getFirstName());
+        assertThat(after.getPassword()).isEqualTo(before.getPassword());
+    }
+
+    @Test
     void existingDisabledAccountRetainsPasswordAndProfile() {
         User existing = createExisting("disabled@example.test", Role.ERGONOMIST);
         existing.setActive(false);
@@ -98,7 +142,7 @@ class ErgonomistInitializerTests {
     @Test
     void rejectsEmailOwnedByAdministratorWithoutChangingIt() {
         User admin = createExisting("admin@example.test", Role.ADMIN);
-        assertThatThrownBy(() -> runWith(configuration().withProperty(PREFIX + "email", admin.getEmail())))
+        assertThatThrownBy(() -> runWith(configuration().withProperty(PREFIX + "email", "  ADMIN@EXAMPLE.TEST  ")))
                 .isInstanceOf(IllegalStateException.class).hasMessageContaining("different role");
         User after = userRepository.findById(admin.getId()).orElseThrow();
         assertThat(after.getRole()).isEqualTo(Role.ADMIN);
