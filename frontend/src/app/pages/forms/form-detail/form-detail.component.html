@@ -1,0 +1,68 @@
+<app-page-header eyebrow="Formularios" [title]="isEditing() ? 'Editar formulario' : 'Nuevo formulario'" subtitle="Defina el formulario y las preguntas que responderán los colaboradores." />
+
+<form [formGroup]="formDetail" (ngSubmit)="submit()" class="flex flex-col gap-6" novalidate>
+    <section class="mgs-card">
+        <h2 class="mgs-section-title">Información general</h2>
+        <div class="mgs-form-grid">
+            <div class="mgs-field">
+                <label for="title">Título</label>
+                <input pInputText id="title" formControlName="title" />
+                @if (isInvalid('title')) {
+                    <small class="mgs-field__error">El título es obligatorio.</small>
+                }
+            </div>
+
+            <div class="mgs-field">
+                <label for="description">Descripción <span class="text-muted-color font-normal">(opcional)</span></label>
+                <textarea pTextarea id="description" formControlName="description" rows="3" [autoResize]="true"></textarea>
+            </div>
+
+            <div class="mgs-field mgs-field--half">
+                <label for="publicationYear">Año de publicación</label>
+                <p-inputnumber inputId="publicationYear" formControlName="publicationYear" [useGrouping]="false" [min]="firstPublicationYear" [showButtons]="true" [fluid]="true" />
+                @if (isInvalid('publicationYear')) {
+                    <small class="mgs-field__error">El año debe ser {{ firstPublicationYear }} o posterior.</small>
+                }
+            </div>
+        </div>
+    </section>
+
+    <section class="mgs-card">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+            <div>
+                <h2 class="mgs-section-title !mb-1">Preguntas</h2>
+                <p class="text-muted-color m-0">{{ questionList.length }} pregunta(s). El peso multiplica el puntaje de la respuesta.</p>
+            </div>
+            <p-button type="button" label="Agregar pregunta" icon="pi pi-plus" severity="secondary" [outlined]="true" (onClick)="addQuestion()" />
+        </div>
+
+        <div formArrayName="questionList" class="flex flex-col gap-4">
+            @for (question of questionList.controls; track question; let index = $index) {
+                <div [formGroupName]="index" class="grid grid-cols-12 gap-4 items-start p-4 rounded-border border border-surface">
+                    <div class="col-span-12 md:col-span-1 flex md:justify-center">
+                        <span class="mgs-kpi !text-2xl">{{ index + 1 }}</span>
+                    </div>
+                    <div class="mgs-field col-span-12 md:col-span-8">
+                        <label [for]="'statement-' + index">Enunciado</label>
+                        <input pInputText [id]="'statement-' + index" formControlName="statement" />
+                        @if (isInvalid('questionList.' + index + '.statement')) {
+                            <small class="mgs-field__error">El enunciado es obligatorio.</small>
+                        }
+                    </div>
+                    <div class="mgs-field col-span-8 md:col-span-2">
+                        <label [for]="'weight-' + index">Peso</label>
+                        <p-inputnumber [inputId]="'weight-' + index" formControlName="weight" [min]="1" [showButtons]="true" [fluid]="true" />
+                    </div>
+                    <div class="col-span-4 md:col-span-1 flex justify-end md:pt-7">
+                        <p-button type="button" icon="pi pi-trash" [rounded]="true" [text]="true" severity="secondary" (onClick)="removeQuestion(index)" [disabled]="questionList.length === 1" pTooltip="Quitar pregunta" ariaLabel="Quitar pregunta" />
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="mgs-form-actions">
+            <p-button label="Cancelar" severity="secondary" [outlined]="true" routerLink="/forms" />
+            <p-button type="submit" label="Guardar formulario" icon="pi pi-check" [loading]="isSubmitting()" />
+        </div>
+    </section>
+</form>
