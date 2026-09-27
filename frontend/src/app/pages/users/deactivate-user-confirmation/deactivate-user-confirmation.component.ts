@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { MessageService } from 'primeng/api';
 import { UserService } from '../user.service';
 
 @Component({
@@ -18,7 +20,8 @@ export class DeactivateUserConfirmationComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private userService: UserService
+    private userService: UserService,
+    private messageService: MessageService
   ) {}
 
   ngOnInit(): void {
@@ -30,13 +33,18 @@ export class DeactivateUserConfirmationComponent implements OnInit {
     if (!this.userId) return;
 
     this.isLoading = true;
-    this.userService.deactivate(Number(this.userId)).subscribe({  // ← CAMBIO AQUÍ
+    this.userService.deactivate(Number(this.userId)).subscribe({
       next: () => {
+        this.messageService.add({ severity: 'success', summary: 'Usuario desactivado', detail: this.userName });
         this.router.navigate(['/users']);
       },
-      error: (err) => {
-        console.error('Error desactivando usuario:', err);
+      error: (error: HttpErrorResponse) => {
         this.isLoading = false;
+        this.messageService.add({
+          severity: 'error',
+          summary: 'No se pudo desactivar',
+          detail: error.error?.message ?? 'Intente de nuevo más tarde.'
+        });
       }
     });
   }
