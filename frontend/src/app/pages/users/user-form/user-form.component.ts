@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, input, numberAttribute, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -43,7 +43,7 @@ export class UserFormComponent implements OnInit {
         firstName: ['', [Validators.required]],
         firstLastName: ['', [Validators.required]],
         secondLastName: [''],
-        email: ['', [Validators.required, Validators.email]],
+        email: ['', [Validators.required, Validators.email], [this.emailDuplicateValidator.bind(this)]],
         password: ['', [Validators.required, Validators.minLength(MIN_PASSWORD_LENGTH)]],
         role: ['ERGONOMIST' as Role, [Validators.required]]
     });
@@ -52,13 +52,71 @@ export class UserFormComponent implements OnInit {
 
     protected readonly isEditing = signal(false);
 
+    private currentUserId: number | undefined;
+
     ngOnInit(): void {
         const userId = this.id();
         if (userId === undefined || Number.isNaN(userId)) {
             return;
         }
         this.isEditing.set(true);
+        this.currentUserId = userId;
         this.userService.findById(userId).subscribe((user) => this.userForm.patchValue(user));
+    }
+
+    /**
+     * Validador asincrónico para verificar si el email ya existe.
+     */
+    emailDuplicateValidator(control: AbstractControl): Promise<ValidationErrors | null> {
+        if (!control.value) {
+            return Promise.resolve(null);
+        }
+
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                this.userService.findAll().subscribe({
+                    next: (users) => {
+                        const emailExists = users.some(
+                            (user) => user.email.toLowerCase() === control.value.trim().toLowerCase() && user.id !== this.currentUserId
+                        );
+                        resolve(emailExists ? { emailDuplicate: true } : null);
+                    },
+                    // Without the list the backend still rejects a duplicate with HTTP 409 on save.
+                    error: () => resolve(null)
+                });
+            }, 500);
+        });
+    }
+
+    /**
+     * Obtiene el mensaje de error para un campo.
+     */
+    protected getErrorMessage(field: string): string {
+        const control = this.userForm.get(field);
+        if (!control || !control.errors) {
+            return '';
+        }
+
+        if (control.hasError('required')) {
+            if (field === 'firstName') return 'El nombre es obligatorio.';
+            if (field === 'firstLastName') return 'El primer apellido es obligatorio.';
+            if (field === 'email') return 'El correo es obligatorio.';
+            if (field === 'password') return 'La contraseña es obligatoria.';
+        }
+
+        if (field === 'email' && control.hasError('email')) {
+            return 'Ingrese un correo válido.';
+        }
+
+        if (field === 'email' && control.hasError('emailDuplicate')) {
+            return 'Este correo ya está registrado.';
+        }
+
+        if (field === 'password' && control.hasError('minlength')) {
+            return 'La contraseña debe tener al menos 8 caracteres.';
+        }
+
+        return 'Este campo no es válido.';
     }
 
     /**
@@ -91,9 +149,17 @@ export class UserFormComponent implements OnInit {
                 this.messageService.add({ severity: 'success', summary: 'Usuario guardado', detail: request.email });
                 void this.router.navigate(['/users']);
             },
-            error: () => {
+            error: (error) => {
                 this.isSubmitting.set(false);
-                this.messageService.add({ severity: 'error', summary: 'No se pudo guardar', detail: 'Revise los datos e intente de nuevo.' });
+                let errorMessage = 'Revise los datos e intente de nuevo.';
+
+                if (error.status === 409) {
+                    errorMessage = 'El correo ya está registrado.';
+                } else if (error.error?.message) {
+                    errorMessage = error.error.message;
+                }
+
+                this.messageService.add({ severity: 'error', summary: 'No se pudo guardar', detail: errorMessage });
             }
         });
     }
