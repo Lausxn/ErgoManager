@@ -1,6 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
@@ -27,11 +26,9 @@ import { UserService } from '../user.service';
 export class UserListComponent {
     private readonly userService = inject(UserService);
 
-    private readonly confirmationService = inject(ConfirmationService);
-
-    private readonly messageService = inject(MessageService);
-
     private readonly authService = inject(AuthService);
+
+    private readonly router = inject(Router);
 
     protected readonly userList = signal<UserResponse[]>([]);
 
@@ -81,24 +78,12 @@ export class UserListComponent {
     }
 
     /**
-     * Asks for confirmation and deactivates the user, who can no longer sign in.
+     * Opens the page that asks for confirmation before deactivating the user.
      *
      * @param user user to deactivate
      */
-    protected confirmDeactivate(user: UserResponse): void {
+    protected goToDeactivateConfirmation(user: UserResponse): void {
         const fullName = `${user.firstName} ${user.firstLastName}`;
-        this.confirmationService.confirm({
-            header: 'Desactivar usuario',
-            message: `¿Desea desactivar a ${fullName}? Ya no podrá iniciar sesión.`,
-            icon: 'pi pi-exclamation-triangle',
-            acceptLabel: 'Desactivar',
-            rejectLabel: 'Cancelar',
-            rejectButtonProps: { severity: 'secondary', outlined: true },
-            accept: () =>
-                this.userService.deactivate(user.id).subscribe(() => {
-                    this.messageService.add({ severity: 'success', summary: 'Usuario desactivado', detail: fullName });
-                    this.loadUsers();
-                })
-        });
+        void this.router.navigate(['/users/deactivate-confirmation'], { queryParams: { id: user.id, name: fullName } });
     }
 }

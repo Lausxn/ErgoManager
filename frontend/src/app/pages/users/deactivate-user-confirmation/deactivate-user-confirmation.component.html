@@ -1,0 +1,39 @@
+<div class="deactivation-container">
+  <!-- HEADER -->
+  <div class="deactivation-header">
+    <div class="header-content">
+      <h1 class="header-title">Desactivar acceso</h1>
+      <p class="header-subtitle">La cuenta pierde acceso, pero su información histórica se conserva.</p>
+    </div>
+    <div class="header-logo">
+      <img src="/brand/logo.svg" alt="ErgoManager" />
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="deactivation-content">
+    <!-- WARNING BOX -->
+    <div class="warning-box">
+      <div class="warning-icon">⚠️</div>
+      <div class="warning-text">
+        <strong>Importante:</strong> Los usuarios no se eliminan de forma permanente. La desactivación revoca el inicio de sesión y conserva las evaluaciones y registros anteriores.
+      </div>
+    </div>
+
+    <!-- ACTION BUTTONS -->
+    <div class="action-buttons">
+      <button 
+        class="btn-deactivate" 
+        (click)="deactivateUser()"
+        [disabled]="isLoading">
+        {{ isLoading ? 'Desactivando...' : 'Desactivar usuario' }}
+      </button>
+      <button 
+        class="btn-cancel" 
+        (click)="cancel()"
+        [disabled]="isLoading">
+        Cancelar
+      </button>
+    </div>
+  </div>
+</div>

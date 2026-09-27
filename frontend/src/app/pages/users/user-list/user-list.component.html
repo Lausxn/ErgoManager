@@ -33,7 +33,7 @@
                 <td class="text-right whitespace-nowrap">
                     <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="secondary" [routerLink]="['/users', user.id]" pTooltip="Editar" ariaLabel="Editar" />
                     @if (user.active && !isCurrentUser(user)) {
-                        <p-button icon="pi pi-ban" [rounded]="true" [text]="true" (onClick)="confirmDeactivate(user)" pTooltip="Desactivar" ariaLabel="Desactivar" />
+                        <p-button icon="pi pi-ban" [rounded]="true" [text]="true" (click)="goToDeactivateConfirmation(user)" pTooltip="Desactivar" ariaLabel="Desactivar" />
                     }
                 </td>
             </tr>
