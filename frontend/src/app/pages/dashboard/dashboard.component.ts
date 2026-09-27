@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule } from '@angular/router';
 import { Observable } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { CompanyService } from '../companies/company.service';
@@ -15,6 +15,8 @@ export interface FunctionCard {
   id: number;
   title: string;
   description: string;
+  /** PrimeIcons class shown next to the title. */
+  icon: string;
   color: 'red' | 'gray';
   route: string | null;
 }
@@ -27,11 +29,14 @@ export interface StatCard {
   label: string;
   value: number | null;
   isLoading: boolean;
+  /** Shows the value in the brand color. */
+  highlight?: boolean;
 }
 
 /** Figure that is read from the backend. */
 interface ConnectedStat {
   label: string;
+  highlight?: boolean;
   load: () => Observable<{ active: boolean }[]>;
 }
 
@@ -47,45 +52,37 @@ export class DashboardComponent implements OnInit {
   private readonly userService = inject(UserService);
   private readonly companyService = inject(CompanyService);
   private readonly formService = inject(FormService);
-  private readonly router = inject(Router);
 
   /** First name of the signed in user, shown in the greeting. */
   userName = computed(() => this.authService.session()?.fullName.split(' ')[0] ?? '');
   currentHour = new Date().getHours();
 
   functionCards: FunctionCard[] = [
-    { id: 1, title: 'Formularios', description: 'Cree, edite y desactive los formularios.', color: 'red', route: '/forms' },
-    { id: 2, title: 'Citas', description: 'Programe visitas y evaluaciones.', color: 'gray', route: '/appointments' },
-    { id: 3, title: 'Perfiles de clientes', description: 'Cree y gestione empresas cliente.', color: 'red', route: '/companies' },
+    { id: 1, title: 'Formularios', description: 'Cree, edite y desactive los formularios del sistema.', icon: 'pi pi-file', color: 'red', route: '/forms' },
+    { id: 2, title: 'Citas', description: 'Programe visitas y evaluaciones presenciales con los clientes.', icon: 'pi pi-calendar-plus', color: 'gray', route: '/appointments' },
+    { id: 3, title: 'Perfiles de clientes', description: 'Cree y gestione los perfiles de todas las empresas cliente.', icon: 'pi pi-building', color: 'red', route: '/companies' },
     // The backend has no report function for the administrator yet.
-    { id: 4, title: 'Reportes', description: 'Genere informes ergonómicos.', color: 'gray', route: null },
-    { id: 5, title: 'Gestión de usuarios', description: 'Cree cuentas de Admin y Ergonomista.', color: 'red', route: '/users' }
+    { id: 4, title: 'Reportes', description: 'Genere y descargue los informes de resultados ergonómicos.', icon: 'pi pi-chart-bar', color: 'gray', route: null },
+    { id: 5, title: 'Gestión de usuarios', description: 'Cree, edite y desactive cuentas de Administrador y Ergonomista.', icon: 'pi pi-users', color: 'red', route: '/users' }
   ];
 
   /** Figures read from the backend, counting only the active records. */
   private readonly connectedStats: ConnectedStat[] = [
     { label: 'Clientes activos', load: () => this.companyService.findAll() },
-    { label: 'Usuarios activos', load: () => this.userService.findAll() },
+    { label: 'Usuarios activos', highlight: true, load: () => this.userService.findAll() },
     { label: 'Formularios activos', load: () => this.formService.findActive() }
   ];
 
   readonly stats = signal<StatCard[]>([
     // The backend only reads the agenda of one ergonomist, not every appointment.
     { label: 'Citas programadas', value: null, isLoading: false },
-    ...this.connectedStats.map((stat) => ({ label: stat.label, value: null, isLoading: true }))
+    ...this.connectedStats.map((stat) => ({ label: stat.label, value: null, isLoading: true, highlight: stat.highlight }))
   ]);
 
   getGreeting(): string {
     if (this.currentHour < 12) return 'Buenos días';
     if (this.currentHour < 18) return 'Buenas tardes';
     return 'Buenas noches';
-  }
-
-  navigateTo(route: string | null): void {
-    if (route === null) {
-      return;
-    }
-    void this.router.navigate([route]);
   }
 
   ngOnInit(): void {
@@ -104,6 +101,6 @@ export class DashboardComponent implements OnInit {
    * @param value number of active records, or null when it could not be read
    */
   private setStat(label: string, value: number | null): void {
-    this.stats.update((stats) => stats.map((stat) => (stat.label === label ? { label, value, isLoading: false } : stat)));
+    this.stats.update((stats) => stats.map((stat) => (stat.label === label ? { ...stat, value, isLoading: false } : stat)));
   }
 }

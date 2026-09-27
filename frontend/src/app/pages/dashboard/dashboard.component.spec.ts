@@ -54,7 +54,8 @@ describe('DashboardComponent', () => {
             providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()]
         });
         httpTesting = TestBed.inject(HttpTestingController);
-        navigateSpy = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+        // The options are router links, which navigate through navigateByUrl.
+        navigateSpy = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
         fixture = TestBed.createComponent(DashboardComponent);
         component = fixture.componentInstance;
         fixture.detectChanges();
@@ -106,16 +107,21 @@ describe('DashboardComponent', () => {
         it('abre la pantalla de cada opción al hacer clic', () => {
             for (const card of component.functionCards.filter((option) => option.route !== null)) {
                 navigateSpy.calls.reset();
-                fixture.nativeElement.querySelector(`[data-card="${card.title}"]`).click();
-                expect(navigateSpy).withContext(card.title).toHaveBeenCalledOnceWith([card.route]);
+                const option: HTMLAnchorElement = fixture.nativeElement.querySelector(`[data-card="${card.title}"]`);
+                option.click();
+
+                expect(option.getAttribute('href')).withContext(card.title).toBe(card.route);
+                expect(navigateSpy).withContext(card.title).toHaveBeenCalledTimes(1);
+                expect(navigateSpy.calls.mostRecent().args[0].toString()).withContext(card.title).toBe(card.route!);
             }
         });
 
         it('marca como Próximamente la opción sin función en el backend y no navega', () => {
-            const reports: HTMLElement = fixture.nativeElement.querySelector('[data-card="Reportes"]');
+            const reports: HTMLAnchorElement = fixture.nativeElement.querySelector('[data-card="Reportes"]');
             reports.click();
 
             expect(navigateSpy).not.toHaveBeenCalled();
+            expect(reports.hasAttribute('href')).toBeFalse();
             expect(reports.getAttribute('aria-disabled')).toBe('true');
             expect(reports.textContent).toContain('Próximamente');
         });
@@ -123,7 +129,7 @@ describe('DashboardComponent', () => {
 
     describe('estadísticas', () => {
         it('saluda con el nombre del usuario de la sesión', () => {
-            expect(fixture.nativeElement.querySelector('.greeting-title').textContent).toContain('Admin.');
+            expect(fixture.nativeElement.querySelector('.dashboard-title').textContent).toContain('Admin.');
         });
 
         it('lee cada cifra de su endpoint y cuenta solo los registros activos', () => {
