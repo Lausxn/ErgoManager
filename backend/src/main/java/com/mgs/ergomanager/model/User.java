@@ -40,10 +40,16 @@ public class User {
     @Column(name = "password", nullable = false, length = 100)
     private String password;
 
-    @Column(name = "token_version", nullable = false, columnDefinition = "bigint default 0")
+    @Column(
+            name = "token_version",
+            nullable = false,
+            columnDefinition = "bigint default 0")
     private long tokenVersion;
 
-    @Column(name = "must_change_password", nullable = false, columnDefinition = "boolean default true")
+    @Column(
+            name = "must_change_password",
+            nullable = false,
+            columnDefinition = "boolean default false")
     private boolean mustChangePassword = true;
 
     @Enumerated(EnumType.STRING)
