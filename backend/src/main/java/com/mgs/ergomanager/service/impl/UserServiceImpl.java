@@ -2,12 +2,13 @@ package com.mgs.ergomanager.service.impl;
 
 import com.mgs.ergomanager.dto.user.UserRequestDTO;
 import com.mgs.ergomanager.dto.user.UserResponseDTO;
+import com.mgs.ergomanager.event.UserCreatedEvent;
 import com.mgs.ergomanager.exception.DuplicateResourceException;
 import com.mgs.ergomanager.model.User;
 import com.mgs.ergomanager.repository.UserRepository;
-import com.mgs.ergomanager.service.EmailService;
 import com.mgs.ergomanager.service.UserService;
 import java.util.List;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,23 +24,23 @@ public class UserServiceImpl implements UserService {
 
     private final PasswordEncoder passwordEncoder;
 
-    private final EmailService emailService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * Builds the service with its collaborators.
      *
      * @param userRepository  repository of application users
      * @param passwordEncoder encoder used to hash the passwords
-     * @param emailService    service used to send temporary credentials
+     * @param eventPublisher  publisher used to notify that a user was created
      */
     public UserServiceImpl(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            EmailService emailService) {
+            ApplicationEventPublisher eventPublisher) {
 
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        this.emailService = emailService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -60,8 +61,8 @@ public class UserServiceImpl implements UserService {
      * Creates a new administrator or ergonomist.
      *
      * <p>The supplied password is treated as the temporary password. It is
-     * hashed before being persisted and the original value is sent to the
-     * user's email address.</p>
+     * hashed before being persisted and the original value is delivered by
+     * email after the database transaction commits successfully.</p>
      *
      * @param request data required to create the user
      * @return created user without exposing the password
@@ -76,7 +77,7 @@ public class UserServiceImpl implements UserService {
 
         if (userRepository.existsByEmail(normalizedEmail)) {
             throw new DuplicateResourceException(
-                    "Email is already registered: " + normalizedEmail);
+                    "El correo ya está registrado");
         }
 
         User user = new User();
@@ -86,33 +87,41 @@ public class UserServiceImpl implements UserService {
 
         if (request.secondLastName() != null
                 && !request.secondLastName().isBlank()) {
-            user.setSecondLastName(request.secondLastName().trim());
+            user.setSecondLastName(
+                    request.secondLastName().trim());
         } else {
             user.setSecondLastName(null);
         }
 
         user.setEmail(normalizedEmail);
-        user.setPassword(passwordEncoder.encode(request.password()));
+        user.setPassword(
+                passwordEncoder.encode(
+                        request.password()));
         user.setRole(request.role());
         user.setActive(true);
 
         try {
-            User createdUser = userRepository.saveAndFlush(user);
+            User createdUser =
+                    userRepository.saveAndFlush(user);
 
-            emailService.sendTemporaryCredentials(
-                    normalizedEmail,
-                    request.password());
+            eventPublisher.publishEvent(
+                    new UserCreatedEvent(
+                            normalizedEmail,
+                            request.password()));
 
             return toResponse(createdUser);
 
         } catch (DataIntegrityViolationException exception) {
             throw new DuplicateResourceException(
-                    "Email is already registered: " + normalizedEmail);
+                    "El correo ya está registrado");
         }
     }
 
     @Override
-    public UserResponseDTO update(Long id, UserRequestDTO request) {
+    public UserResponseDTO update(
+            Long id,
+            UserRequestDTO request) {
+
         // TODO: copy the request over the stored user, rehashing the password.
         throw new UnsupportedOperationException(
                 "UserService.update is not implemented yet");

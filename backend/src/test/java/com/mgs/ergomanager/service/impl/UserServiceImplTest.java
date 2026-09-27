@@ -11,11 +11,11 @@ import static org.mockito.Mockito.when;
 
 import com.mgs.ergomanager.dto.user.UserRequestDTO;
 import com.mgs.ergomanager.dto.user.UserResponseDTO;
+import com.mgs.ergomanager.event.UserCreatedEvent;
 import com.mgs.ergomanager.exception.DuplicateResourceException;
 import com.mgs.ergomanager.model.User;
 import com.mgs.ergomanager.model.enums.Role;
 import com.mgs.ergomanager.repository.UserRepository;
-import com.mgs.ergomanager.service.EmailService;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,6 +23,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 /**
@@ -38,7 +39,7 @@ class UserServiceImplTest {
     private PasswordEncoder passwordEncoder;
 
     @Mock
-    private EmailService emailService;
+    private ApplicationEventPublisher eventPublisher;
 
     private UserServiceImpl userService;
 
@@ -50,15 +51,15 @@ class UserServiceImplTest {
         userService = new UserServiceImpl(
                 userRepository,
                 passwordEncoder,
-                emailService);
+                eventPublisher);
     }
 
     /**
      * Verifies that a valid user is created, the password is hashed and the
-     * temporary credentials are sent by email.
+     * user-created event is published.
      */
     @Test
-    void createShouldSaveUserAndSendTemporaryCredentials() {
+    void createShouldSaveUserAndPublishUserCreatedEvent() {
 
         UserRequestDTO request = new UserRequestDTO(
                 "Carlos",
@@ -109,9 +110,20 @@ class UserServiceImplTest {
 
         verify(passwordEncoder).encode("Temporary123");
 
-        verify(emailService).sendTemporaryCredentials(
+        ArgumentCaptor<UserCreatedEvent> eventCaptor =
+                ArgumentCaptor.forClass(UserCreatedEvent.class);
+
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+        UserCreatedEvent publishedEvent = eventCaptor.getValue();
+
+        assertEquals(
                 "carlos@example.com",
-                "Temporary123");
+                publishedEvent.email());
+
+        assertEquals(
+                "Temporary123",
+                publishedEvent.temporaryPassword());
     }
 
     /**
@@ -200,7 +212,7 @@ class UserServiceImplTest {
 
     /**
      * Verifies that an already registered email is rejected before attempting
-     * to save the user.
+     * to save the user or publish an event.
      */
     @Test
     void createShouldRejectDuplicatedEmail() {
@@ -216,13 +228,21 @@ class UserServiceImplTest {
         when(userRepository.existsByEmail("carlos@example.com"))
                 .thenReturn(true);
 
-        assertThrows(
+        DuplicateResourceException exception = assertThrows(
                 DuplicateResourceException.class,
                 () -> userService.create(request));
 
-        verify(userRepository, never()).saveAndFlush(any(User.class));
-        verify(passwordEncoder, never()).encode(any());
-        verify(emailService, never())
-                .sendTemporaryCredentials(any(), any());
+        assertEquals(
+                "El correo ya está registrado",
+                exception.getMessage());
+
+        verify(userRepository, never())
+                .saveAndFlush(any(User.class));
+
+        verify(passwordEncoder, never())
+                .encode(any());
+
+        verify(eventPublisher, never())
+                .publishEvent(any());
     }
 }
