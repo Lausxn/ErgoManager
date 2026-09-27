@@ -8,14 +8,17 @@
 
   <div class="greeting-section">
     <h1 class="greeting-title">{{ getGreeting() }}, {{ userName() }}.</h1>
-    <p class="greeting-subtitle">Estas son las cinco funciones habilitadas para su perfil.</p>
+    <p class="greeting-subtitle">Estas son las funciones de su perfil.</p>
   </div>
 
   <div class="functions-section">
     <div class="functions-grid">
-      <div *ngFor="let card of functionCards" 
-           class="function-card" 
-           [ngClass]="'color-' + card.color"
+      <div *ngFor="let card of functionCards"
+           class="function-card"
+           [ngClass]="['color-' + card.color, card.route === null ? 'is-disabled' : '']"
+           [attr.role]="card.route === null ? null : 'link'"
+           [attr.aria-disabled]="card.route === null"
+           [attr.data-card]="card.title"
            (click)="navigateTo(card.route)">
         <div class="card-number" [ngClass]="'bg-' + card.color">
           {{ card.id | number: '2.0-0' }}
@@ -23,8 +26,9 @@
         <div class="card-content">
           <h3 class="card-title">{{ card.title }}</h3>
           <p class="card-description">{{ card.description }}</p>
+          <span *ngIf="card.route === null" class="card-pending">Próximamente</span>
         </div>
-        <div class="card-arrow">→</div>
+        <div *ngIf="card.route !== null" class="card-arrow">→</div>
       </div>
     </div>
   </div>
@@ -32,9 +36,11 @@
   <div class="stats-section">
     <h2 class="stats-title">Estadísticas del Sistema</h2>
     <div class="stats-grid">
-      <div *ngFor="let stat of stats" class="stat-card">
+      <div *ngFor="let stat of stats()" class="stat-card" [attr.data-stat]="stat.label">
         <p class="stat-label">{{ stat.label }}</p>
-        <h2 class="stat-value">{{ stat.value }}</h2>
+        <h2 *ngIf="stat.isLoading" class="stat-value stat-value--muted">…</h2>
+        <h2 *ngIf="!stat.isLoading && stat.value !== null" class="stat-value">{{ stat.value }}</h2>
+        <p *ngIf="!stat.isLoading && stat.value === null" class="stat-unavailable">No disponible</p>
       </div>
     </div>
   </div>

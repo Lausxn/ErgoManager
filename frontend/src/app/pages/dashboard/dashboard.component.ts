@@ -1,19 +1,38 @@
-import { Component, OnInit, computed, inject } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
+import { Observable } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
+import { CompanyService } from '../companies/company.service';
+import { FormService } from '../forms/form.service';
+import { UserService } from '../users/user.service';
 
-interface FunctionCard {
+/**
+ * Option of the dashboard. A null route marks an option whose function does
+ * not exist in the backend yet, so it is shown disabled.
+ */
+export interface FunctionCard {
   id: number;
   title: string;
   description: string;
   color: 'red' | 'gray';
-  route: string;
+  route: string | null;
 }
 
-interface StatCard {
+/**
+ * Figure of the dashboard. A null value means that it could not be read: the
+ * backend has no function for it yet, or the request failed.
+ */
+export interface StatCard {
   label: string;
-  value: number;
+  value: number | null;
+  isLoading: boolean;
+}
+
+/** Figure that is read from the backend. */
+interface ConnectedStat {
+  label: string;
+  load: () => Observable<{ active: boolean }[]>;
 }
 
 @Component({
@@ -25,6 +44,10 @@ interface StatCard {
 })
 export class DashboardComponent implements OnInit {
   private readonly authService = inject(AuthService);
+  private readonly userService = inject(UserService);
+  private readonly companyService = inject(CompanyService);
+  private readonly formService = inject(FormService);
+  private readonly router = inject(Router);
 
   /** First name of the signed in user, shown in the greeting. */
   userName = computed(() => this.authService.session()?.fullName.split(' ')[0] ?? '');
@@ -34,18 +57,23 @@ export class DashboardComponent implements OnInit {
     { id: 1, title: 'Formularios', description: 'Cree, edite y desactive los formularios.', color: 'red', route: '/forms' },
     { id: 2, title: 'Citas', description: 'Programe visitas y evaluaciones.', color: 'gray', route: '/appointments' },
     { id: 3, title: 'Perfiles de clientes', description: 'Cree y gestione empresas cliente.', color: 'red', route: '/companies' },
-    { id: 4, title: 'Reportes', description: 'Genere informes ergonómicos.', color: 'gray', route: '/history' },
+    // The backend has no report function for the administrator yet.
+    { id: 4, title: 'Reportes', description: 'Genere informes ergonómicos.', color: 'gray', route: null },
     { id: 5, title: 'Gestión de usuarios', description: 'Cree cuentas de Admin y Ergonomista.', color: 'red', route: '/users' }
   ];
 
-  stats: StatCard[] = [
-    { label: 'Citas programadas', value: 3 },
-    { label: 'Clientes activos', value: 28 },
-    { label: 'Usuarios activos', value: 4 },
-    { label: 'Formularios activos', value: 5 }
+  /** Figures read from the backend, counting only the active records. */
+  private readonly connectedStats: ConnectedStat[] = [
+    { label: 'Clientes activos', load: () => this.companyService.findAll() },
+    { label: 'Usuarios activos', load: () => this.userService.findAll() },
+    { label: 'Formularios activos', load: () => this.formService.findActive() }
   ];
 
-  constructor(private router: Router) {}
+  readonly stats = signal<StatCard[]>([
+    // The backend only reads the agenda of one ergonomist, not every appointment.
+    { label: 'Citas programadas', value: null, isLoading: false },
+    ...this.connectedStats.map((stat) => ({ label: stat.label, value: null, isLoading: true }))
+  ]);
 
   getGreeting(): string {
     if (this.currentHour < 12) return 'Buenos días';
@@ -53,9 +81,29 @@ export class DashboardComponent implements OnInit {
     return 'Buenas noches';
   }
 
-  navigateTo(route: string): void {
-    this.router.navigate([route]);
+  navigateTo(route: string | null): void {
+    if (route === null) {
+      return;
+    }
+    void this.router.navigate([route]);
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    for (const stat of this.connectedStats) {
+      stat.load().subscribe({
+        next: (records) => this.setStat(stat.label, records.filter((record) => record.active).length),
+        error: () => this.setStat(stat.label, null)
+      });
+    }
+  }
+
+  /**
+   * Stores the value of a figure once its request finished.
+   *
+   * @param label label of the figure
+   * @param value number of active records, or null when it could not be read
+   */
+  private setStat(label: string, value: number | null): void {
+    this.stats.update((stats) => stats.map((stat) => (stat.label === label ? { label, value, isLoading: false } : stat)));
+  }
 }

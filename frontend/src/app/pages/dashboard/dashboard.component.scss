@@ -124,6 +124,27 @@
     color: #8B1538;
     transform: translateX(4px);
   }
+
+  .card-pending {
+    display: inline-block;
+    margin-top: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.25rem;
+    background-color: #eee;
+    color: #666;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  &.is-disabled {
+    cursor: default;
+    opacity: 0.6;
+
+    &:hover {
+      transform: none;
+      box-shadow: none;
+    }
+  }
 }
 
 .stats-section {
@@ -168,6 +189,17 @@
     &:nth-child(2) {
       color: #8B1538;
     }
+
+    &.stat-value--muted {
+      color: #ccc;
+    }
+  }
+
+  .stat-unavailable {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #999;
+    margin: 0.75rem 0 0;
   }
 }
 
