@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './app/core/guards/auth.guard';
-import { homeRedirect } from './app/core/guards/home.redirect';
+import { homeRedirect } from './app/core/guards/redirect-to-home';
 import { roleGuard } from './app/core/guards/role.guard';
 import { AppLayout } from './app/layout/component/app.layout';
 import { Notfound } from './app/pages/notfound/notfound';
@@ -18,6 +18,11 @@ export const appRoutes: Routes = [
         canActivateChild: [authGuard],
         children: [
             { path: '', pathMatch: 'full', redirectTo: homeRedirect },
+            {
+                path: 'dashboard',
+                canActivate: [roleGuard(['ADMIN'])],
+                loadChildren: () => import('./app/pages/dashboard/dashboard.routes').then((m) => m.dashboardRoutes)
+            },
             {
                 path: 'companies',
                 canActivate: [roleGuard(['ADMIN'])],
@@ -47,6 +52,12 @@ export const appRoutes: Routes = [
                 loadChildren: () => import('./app/pages/history/history.routes').then((m) => m.historyRoutes)
             }
         ]
+    },
+    {
+        // Full screen pages of the signed in user, outside the main layout.
+        path: 'account',
+        canActivate: [authGuard],
+        loadChildren: () => import('./app/pages/account/account.routes').then((m) => m.accountRoutes)
     },
     {
         path: 'self-evaluation',
