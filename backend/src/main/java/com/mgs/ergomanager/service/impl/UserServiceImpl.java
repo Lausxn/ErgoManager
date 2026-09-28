@@ -63,7 +63,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponseDTO update(Long id, UserUpdateRequestDTO request) {
 
-        User user = userRepository.findById(id)
+        User user = userRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", id));
 
         String normalizedEmail = request.email()
@@ -92,7 +92,10 @@ public class UserServiceImpl implements UserService {
         user.setFirstLastName(request.firstLastName());
         user.setSecondLastName(request.secondLastName());
         user.setEmail(normalizedEmail);
-        user.setRole(request.role());
+        if (user.getRole() != request.role()) {
+            user.setTokenVersion(user.getTokenVersion() + 1);
+            user.setRole(request.role());
+        }
 
         try {
             User updatedUser = userRepository.saveAndFlush(user);
