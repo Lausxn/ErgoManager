@@ -49,6 +49,10 @@ export class AppMenu {
             {
                 label: 'Empleados',
                 items: [{ label: 'Autoevaluación pública', icon: 'pi pi-fw pi-external-link', url: '/self-evaluation', target: '_blank' }]
+            },
+            {
+                label: 'Cuenta',
+                items: [{ label: 'Cambiar contraseña', icon: 'pi pi-fw pi-key', routerLink: ['/account/password'] }]
             }
         ];
     });
