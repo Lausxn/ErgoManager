@@ -21,6 +21,7 @@ import { createIdentityControls, toIdentityRequest } from '../shared/user-fields
 import { UserIdentityFieldsComponent } from '../shared/user-identity-fields.component';
 import { UserRoleFieldComponent } from '../shared/user-role-field.component';
 import { UserService } from '../user.service';
+import { ApiError } from '../../../shared/models/api-error.model';
 
 const CONNECTION_ERROR = 'No fue posible conectar con el servidor. Revise su conexión e intente de nuevo.';
 
@@ -79,9 +80,11 @@ export class UserEditComponent implements OnInit, HasUnsavedChanges {
 
     protected readonly profile = computed(() => {
         const user = this.user();
+
         if (user === null) {
             return null;
         }
+
         return {
             fullName: [user.firstName, user.firstLastName, user.secondLastName].filter(Boolean).join(' '),
             initials: `${user.firstName.charAt(0)}${user.firstLastName.charAt(0)}`.toUpperCase(),
@@ -92,15 +95,19 @@ export class UserEditComponent implements OnInit, HasUnsavedChanges {
     /** True when the form holds something different from the stored user. */
     protected readonly hasChanges = computed(() => {
         const user = this.user();
+
         if (user === null) {
             return false;
         }
+
         const edited = toIdentityRequest(this.formValue());
+
         return edited.firstName !== user.firstName || edited.firstLastName !== user.firstLastName || (edited.secondLastName ?? '') !== (user.secondLastName ?? '') || edited.email !== user.email.toLowerCase() || edited.role !== user.role;
     });
 
     protected readonly isRoleChanged = computed(() => {
         const user = this.user();
+
         return user !== null && this.selectedRole() !== user.role;
     });
 
@@ -116,7 +123,9 @@ export class UserEditComponent implements OnInit, HasUnsavedChanges {
                 next: (user) => this.showUser(user),
                 error: (error: HttpErrorResponse) => {
                     const detail = error.status === 0 ? CONNECTION_ERROR : 'Puede que ya no exista.';
+
                     this.toastService.error('No se encontró el usuario', detail);
+
                     void this.router.navigate(['/users']);
                 }
             });
@@ -132,7 +141,9 @@ export class UserEditComponent implements OnInit, HasUnsavedChanges {
         if (!this.hasChanges()) {
             return true;
         }
+
         this.alertUnsavedChanges();
+
         return false;
     }
 
@@ -153,6 +164,7 @@ export class UserEditComponent implements OnInit, HasUnsavedChanges {
      */
     protected discardChanges(): void {
         const user = this.user();
+
         if (user !== null) {
             this.showUser(user);
         }
@@ -163,16 +175,21 @@ export class UserEditComponent implements OnInit, HasUnsavedChanges {
      */
     protected submit(): void {
         const user = this.user();
+
         if (user === null || this.isSaving() || !this.hasChanges()) {
             return;
         }
+
         if (this.userForm.invalid) {
             markFormAsDirty(this.userForm);
             return;
         }
 
         this.isSaving.set(true);
+
         const request = toIdentityRequest(this.userForm.getRawValue());
+
+        const ownRoleChange = this.profile()?.isOwnAccount === true && this.isRoleChanged();
 
         this.userService
             .update(user.id, request)
@@ -180,12 +197,28 @@ export class UserEditComponent implements OnInit, HasUnsavedChanges {
             .subscribe({
                 next: (updated) => {
                     this.isSaving.set(false);
+
+                    if (ownRoleChange) {
+                        this.authService.logout();
+
+                        void this.router.navigate(['/auth/login'], {
+                            queryParams: {
+                                reason: 'role-changed'
+                            }
+                        });
+
+                        return;
+                    }
+
                     this.showUser(updated);
+
                     this.toastService.success('Usuario actualizado', updated.email);
+
                     void this.router.navigate(['/users']);
                 },
                 error: (error: HttpErrorResponse) => {
                     this.isSaving.set(false);
+
                     this.handleSaveError(error, user);
                 }
             });
@@ -198,6 +231,7 @@ export class UserEditComponent implements OnInit, HasUnsavedChanges {
      */
     private showUser(user: UserResponse): void {
         this.user.set(user);
+
         this.userForm.reset({
             firstName: user.firstName,
             firstLastName: user.firstLastName,
@@ -211,36 +245,44 @@ export class UserEditComponent implements OnInit, HasUnsavedChanges {
      * Explains why the backend rejected the changes.
      *
      * @param error answer of the backend
-     * @param user  user as it was before the changes
+     * @param user user as it was before the changes
      */
-    private handleSaveError(error: HttpErrorResponse, user: UserResponse): void {
+    private handleSaveError(error: HttpErrorResponse, _user: UserResponse): void {
+        const apiMessage = (error.error as ApiError | null)?.message;
+
         switch (error.status) {
             case HttpStatusCode.Conflict: {
                 const email = this.userForm.controls.email;
+
                 email.setErrors({ duplicated: true });
                 email.markAsTouched();
+
                 return;
             }
+
             case HttpStatusCode.BadRequest:
-                if (user.role === 'ADMIN' && this.selectedRole() === 'ERGONOMIST') {
-                    this.toastService.error('No se puede cambiar el rol', 'Es el único administrador activo. Asigne otro administrador antes de cambiarlo.');
-                    return;
-                }
-                this.toastService.error('No se pudo guardar', 'Revise los datos e intente de nuevo.');
+                this.toastService.error('No se pudo guardar', apiMessage ?? 'Revise los datos e intente de nuevo.');
+
                 return;
+
             case HttpStatusCode.NotFound:
-                this.toastService.error('No se encontró el usuario', 'Puede que ya no exista.');
+                this.toastService.error('No se encontró el usuario', apiMessage ?? 'Puede que ya no exista.');
+
                 this.user.set(null);
+
                 void this.router.navigate(['/users']);
+
                 return;
+
             case 0:
                 this.toastService.error('No se pudo guardar', CONNECTION_ERROR);
+
                 return;
+
             default:
-                this.toastService.error('No se pudo guardar', 'Intente de nuevo en unos minutos.');
+                this.toastService.error('No se pudo guardar', apiMessage ?? 'Intente de nuevo en unos minutos.');
         }
     }
-
     /**
      * Shakes the save bar and paints it in the alert color. Removing the class
      * first and adding it back on the next frame restarts the animation when
@@ -248,9 +290,12 @@ export class UserEditComponent implements OnInit, HasUnsavedChanges {
      */
     private alertUnsavedChanges(): void {
         clearTimeout(this.alertTimer);
+
         this.isAlerting.set(false);
+
         requestAnimationFrame(() => {
             this.isAlerting.set(true);
+
             this.alertTimer = setTimeout(() => this.isAlerting.set(false), ALERT_DURATION_MS);
         });
     }

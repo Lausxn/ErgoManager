@@ -1,13 +1,13 @@
 <app-floating-configurator />
 
 <div class="mgs-auth">
-    <!-- Dark impact panel: white logo on black, wine only as accent. -->
     <aside class="mgs-auth__impact" aria-hidden="true">
         <app-brand-logo variant="full" tone="white" [size]="220" />
 
         <div class="mgs-auth__impact-body">
             <span class="mgs-auth__impact-eyebrow">ErgoManager</span>
             <p class="mgs-auth__impact-title">Ergonomía que protege a cada colaborador.</p>
+
             <ul class="mgs-auth__highlights">
                 @for (highlight of highlightList; track highlight.text) {
                     <li>
@@ -24,7 +24,6 @@
         </div>
     </aside>
 
-    <!-- Working panel with the form. -->
     <main class="mgs-auth__panel">
         <div class="mgs-auth__form-wrapper">
             <app-brand-logo class="mgs-auth__mobile-logo" variant="full" />
@@ -35,23 +34,42 @@
                 <p class="mgs-subtitle">Ingrese con su cuenta de administrador o ergonomista.</p>
             </div>
 
+            @if (reason() === 'session-expired') {
+                <div class="mgs-alert mb-5" role="alert">
+                    <i class="pi pi-clock"></i>
+                    <span> Su sesión terminó. Inicie sesión nuevamente. </span>
+                </div>
+            }
+
+            @if (reason() === 'role-changed') {
+                <div class="mgs-alert mb-5" role="status">
+                    <i class="pi pi-info-circle"></i>
+                    <span> Su rol fue actualizado. Inicie sesión nuevamente para aplicar sus nuevos permisos. </span>
+                </div>
+            }
+
             <form [formGroup]="loginForm" (ngSubmit)="submit()" class="flex flex-col gap-5" novalidate>
                 <div class="mgs-field">
                     <label for="email">Correo electrónico</label>
+
                     <p-iconfield>
                         <p-inputicon class="pi pi-envelope" />
+
                         <input pInputText id="email" type="email" formControlName="email" autocomplete="username" placeholder="nombre@empresa.com" class="w-full" />
                     </p-iconfield>
+
                     @if (isInvalid('email')) {
-                        <small class="mgs-field__error">Escriba un correo válido.</small>
+                        <small class="mgs-field__error"> Escriba un correo válido. </small>
                     }
                 </div>
 
                 <div class="mgs-field">
                     <label for="password">Contraseña</label>
+
                     <p-password inputId="password" formControlName="password" [toggleMask]="true" [feedback]="false" [fluid]="true" autocomplete="current-password" placeholder="Mínimo 8 caracteres" />
+
                     @if (isInvalid('password')) {
-                        <small class="mgs-field__error">La contraseña debe tener al menos 8 caracteres.</small>
+                        <small class="mgs-field__error"> La contraseña debe tener al menos 8 caracteres. </small>
                     }
                 </div>
 
@@ -67,7 +85,7 @@
 
             <p class="mgs-auth__employee-link">
                 ¿Es colaborador de una empresa cliente?
-                <a routerLink="/self-evaluation" class="mgs-link">Responda la autoevaluación</a>
+                <a routerLink="/self-evaluation" class="mgs-link"> Responda la autoevaluación </a>
             </p>
         </div>
     </main>

@@ -14,11 +14,6 @@ import { isControlInvalid, markFormAsDirty } from '../../../shared/utils/form';
 
 const MIN_PASSWORD_LENGTH = 8;
 
-/**
- * Sign in screen of the administrators and the ergonomists. After a valid
- * sign in it reopens the page the guard interrupted, or the home page of the
- * role.
- */
 @Component({
     selector: 'app-login',
     standalone: true,
@@ -32,8 +27,11 @@ export class LoginComponent {
 
     private readonly router = inject(Router);
 
-    /** Url requested before the sign in, bound from the query string. */
+    /** Url requested before signing in. */
     readonly redirectTo = input<string | undefined>(undefined);
+
+    /** Reason why the application redirected the user to login. */
+    readonly reason = input<string | undefined>(undefined);
 
     protected readonly loginForm = this.formBuilder.nonNullable.group({
         email: ['', [Validators.required, Validators.email]],
@@ -47,25 +45,24 @@ export class LoginComponent {
     protected readonly currentYear = new Date().getFullYear();
 
     protected readonly highlightList = [
-        { icon: 'pi pi-check-square', text: 'Autoevaluaciones con nivel de riesgo inmediato' },
-        { icon: 'pi pi-calendar', text: 'Agenda de citas con el ergonomista' },
-        { icon: 'pi pi-file-pdf', text: 'Evaluaciones personalizadas y reportes en PDF' }
+        {
+            icon: 'pi pi-check-square',
+            text: 'Autoevaluaciones con nivel de riesgo inmediato'
+        },
+        {
+            icon: 'pi pi-calendar',
+            text: 'Agenda de citas con el ergonomista'
+        },
+        {
+            icon: 'pi pi-file-pdf',
+            text: 'Evaluaciones personalizadas y reportes en PDF'
+        }
     ];
 
-    /**
-     * Checks whether a field was touched and holds an invalid value.
-     *
-     * @param field name of the control
-     * @returns true when the error has to be shown
-     */
     protected isInvalid(field: 'email' | 'password'): boolean {
         return isControlInvalid(this.loginForm.controls[field]);
     }
 
-    /**
-     * Sends the credentials to the backend and opens the application when they
-     * are accepted.
-     */
     protected submit(): void {
         if (this.loginForm.invalid) {
             markFormAsDirty(this.loginForm);
@@ -87,15 +84,11 @@ export class LoginComponent {
         });
     }
 
-    /**
-     * Picks the page to open after the sign in. Only internal urls are
-     * accepted, so the query string cannot send the user to another site.
-     *
-     * @returns url to navigate to
-     */
     private resolveTargetUrl(): string {
         const redirectTo = this.redirectTo();
+
         const isInternal = redirectTo?.startsWith('/') && !redirectTo.startsWith('//') && !redirectTo.startsWith('/auth');
+
         return isInternal ? redirectTo! : this.authService.getHomeUrl();
     }
 }
