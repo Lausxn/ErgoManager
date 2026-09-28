@@ -7,6 +7,7 @@ import com.mgs.ergomanager.service.UserService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.security.Principal;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -85,12 +86,13 @@ public class UserController {
     /**
      * Deactivates a user so it can no longer sign in.
      *
-     * @param id identifier of the user
+     * @param id        identifier of the user
+     * @param principal authenticated administrator, who cannot deactivate themselves
      * @return empty response with HTTP status 204
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deactivate(@PathVariable Long id) {
-        userService.deactivate(id);
+    public ResponseEntity<Void> deactivate(@PathVariable Long id, Principal principal) {
+        userService.deactivate(id, principal.getName());
         return ResponseEntity.noContent().build();
     }
 }
