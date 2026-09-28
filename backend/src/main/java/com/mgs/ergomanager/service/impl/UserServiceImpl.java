@@ -8,6 +8,9 @@ import com.mgs.ergomanager.model.User;
 import com.mgs.ergomanager.repository.UserRepository;
 import com.mgs.ergomanager.service.UserService;
 import java.util.List;
+import java.util.Locale;
+import java.nio.charset.StandardCharsets;
+import com.mgs.ergomanager.exception.BusinessException;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -73,11 +76,15 @@ public class UserServiceImpl implements UserService {
 
         String normalizedEmail = request.email()
                 .trim()
-                .toLowerCase();
+                .toLowerCase(Locale.ROOT);
 
         if (userRepository.existsByEmail(normalizedEmail)) {
             throw new DuplicateResourceException(
                     "El correo ya está registrado");
+        }
+
+        if (request.password().getBytes(StandardCharsets.UTF_8).length > 72) {
+            throw new BusinessException("La contraseña no puede superar 72 bytes UTF-8.");
         }
 
         User user = new User();
