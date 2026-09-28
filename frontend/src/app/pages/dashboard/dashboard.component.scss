@@ -1,143 +1,49 @@
+// Header, cards, labels and figures come from the shared styles (_mgs.scss);
+// only the layout of the options and figures lives here. Every color is a
+// brand or theme token, so the light and dark themes need no overrides.
 :host {
-  --dashboard-bg: var(--mgs-paper);
-  --dashboard-surface: #fff;
-  --dashboard-ink: #111;
-  --dashboard-muted: var(--mgs-gray);
-  --dashboard-line: #111;
-  --dashboard-soft-line: #d9d6d1;
-  --dashboard-wine-tint: color-mix(in srgb, var(--mgs-wine), #fff 88%);
-  --dashboard-gray-tint: #ebebeb;
-  --dashboard-accent: var(--mgs-wine);
-  --dashboard-graphite: var(--mgs-graphite);
-
   display: block;
 }
 
-:host-context(.app-dark) {
-  --dashboard-bg: var(--surface-ground, #121316);
-  --dashboard-surface: var(--surface-card);
-  --dashboard-ink: var(--text-color);
-  --dashboard-muted: var(--text-color-secondary);
-  --dashboard-line: var(--text-color-secondary);
-  --dashboard-soft-line: var(--surface-border);
-  --dashboard-wine-tint: color-mix(in srgb, var(--mgs-wine), transparent 70%);
-  --dashboard-gray-tint: color-mix(in srgb, var(--text-color), transparent 88%);
-  --dashboard-accent: color-mix(in srgb, var(--mgs-wine), #fff 55%);
-  --dashboard-graphite: color-mix(in srgb, var(--text-color), transparent 35%);
-}
-
-.dashboard {
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
-  background-color: var(--dashboard-bg);
-  color: var(--dashboard-ink);
-  font-family: var(--mgs-font-body);
-}
-
-// Breadcrumb and profile strip.
-.dashboard-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.9rem 1.5rem;
-  background-color: var(--dashboard-surface);
-  border-bottom: 1px solid var(--dashboard-soft-line);
-}
-
-.dashboard-breadcrumb {
-  display: flex;
-  gap: 0.3rem;
-  font-size: 0.8rem;
-  color: var(--dashboard-muted);
-
-  &__current {
-    font-weight: 700;
-    color: var(--dashboard-accent);
-  }
-}
-
-.dashboard-profile {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--dashboard-accent);
-}
-
-.dashboard-body {
-  flex: 1;
-  padding: 2rem 1.5rem 2.5rem;
-}
-
-.dashboard-eyebrow {
-  margin: 0 0 0.35rem;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--dashboard-accent);
-}
-
-.dashboard-title {
-  margin: 0 0 0.6rem;
-  font-family: var(--mgs-font-display);
-  font-size: clamp(1.8rem, 3.4vw, 2.5rem);
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.01em;
-  color: var(--dashboard-ink);
-}
-
-.dashboard-subtitle {
-  margin: 0 0 2rem;
-  font-size: 0.9rem;
-  color: var(--dashboard-muted);
-}
-
-// Options: one row per function, as in the mockup.
 .dashboard-options {
-  margin: 0 0 1.25rem;
   padding: 0;
-  list-style: none;
-  border-top: 2px solid var(--dashboard-line);
-  border-bottom: 2px solid var(--dashboard-line);
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
 
   li + li {
-    border-top: 2px solid var(--dashboard-line);
+    border-top: 1px solid var(--surface-border);
   }
 }
 
 .dashboard-option {
-  --option-accent: var(--dashboard-accent);
   --option-block: var(--mgs-wine);
-  --option-tint: var(--dashboard-wine-tint);
 
   display: flex;
   align-items: center;
   gap: 1rem;
-  min-height: 3.1rem;
-  padding-right: 1rem;
-  background-color: var(--dashboard-surface);
-  color: inherit;
+  min-height: 3.5rem;
+  padding-right: 1.25rem;
+  color: var(--text-color);
   text-decoration: none;
   transition: background-color 0.2s ease;
 
   &--gray {
-    --option-accent: var(--dashboard-graphite);
     --option-block: var(--mgs-graphite);
-    --option-tint: var(--dashboard-gray-tint);
   }
 
   &:hover,
   &:focus-visible {
-    background-color: color-mix(in srgb, var(--dashboard-surface), var(--mgs-wine) 5%);
+    background: var(--surface-hover);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--dashboard-accent);
+    outline: 2px solid var(--mgs-wine);
     outline-offset: -2px;
   }
 
@@ -148,24 +54,15 @@
     align-self: stretch;
     flex-shrink: 0;
     width: 3.25rem;
-    background-color: var(--option-block);
+    background: var(--option-block);
     color: #fff;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     font-weight: 700;
-    letter-spacing: 0.08em;
   }
 
   &__icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     flex-shrink: 0;
-    width: 1.9rem;
-    height: 1.9rem;
-    border-radius: 0.25rem;
-    background-color: var(--option-tint);
-    color: var(--option-accent);
-    font-size: 0.9rem;
+    color: var(--mgs-accent-text);
   }
 
   &__text {
@@ -174,25 +71,22 @@
     flex-wrap: wrap;
     align-items: baseline;
     gap: 0.15rem 0.9rem;
-    padding: 0.7rem 0;
     min-width: 0;
+    padding: 0.8rem 0;
   }
 
   &__title {
-    font-size: 1rem;
     font-weight: 700;
-    color: var(--dashboard-ink);
+    color: var(--heading-color);
   }
 
   &__description {
-    font-size: 0.8rem;
-    color: var(--dashboard-muted);
+    font-size: 0.875rem;
+    color: var(--text-color-secondary);
   }
 
   &__arrow {
-    flex-shrink: 0;
-    color: var(--option-accent);
-    font-size: 1.1rem;
+    color: var(--mgs-accent-text);
     transition: transform 0.2s ease;
   }
 
@@ -201,89 +95,52 @@
   }
 
   // Option whose function does not exist in the backend yet.
-  &__pending {
-    flex-shrink: 0;
-    padding: 0.125rem 0.5rem;
-    border-radius: 0.25rem;
-    background-color: var(--dashboard-gray-tint);
-    color: var(--dashboard-muted);
-    font-size: 0.7rem;
-    font-weight: 700;
-  }
-
   &--disabled {
     cursor: default;
+
+    &:hover {
+      background: transparent;
+    }
 
     .dashboard-option__icon,
     .dashboard-option__text {
       opacity: 0.6;
     }
-
-    &:hover {
-      background-color: var(--dashboard-surface);
-    }
   }
 }
 
-// Figures in a single framed strip.
 .dashboard-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  border: 2px solid var(--dashboard-line);
-  background-color: var(--dashboard-surface);
+  gap: 1rem;
 }
 
 .dashboard-stat {
-  padding: 0.9rem 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
 
-  & + & {
-    border-left: 1px solid var(--dashboard-soft-line);
+  p {
+    margin: 0;
   }
 
   &__label {
-    margin: 0 0 0.6rem;
-    font-size: 0.62rem;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--dashboard-muted);
+    color: var(--text-color-secondary);
   }
 
-  &__value {
-    margin: 0;
-    font-family: var(--mgs-font-display);
-    font-size: 1.9rem;
-    font-weight: 700;
-    line-height: 1;
-    color: var(--dashboard-ink);
-
-    &--highlight {
-      color: var(--dashboard-accent);
-    }
-
-    &--muted {
-      color: var(--dashboard-soft-line);
-    }
+  &__value--highlight {
+    color: var(--mgs-accent-text);
   }
 
   &__unavailable {
-    margin: 0.5rem 0 0;
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: var(--dashboard-muted);
+    font-weight: 600;
+    color: var(--text-color-secondary);
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 991px) {
   .dashboard-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .dashboard-stat:nth-child(3) {
-    border-left: none;
-  }
-
-  .dashboard-stat:nth-child(n + 3) {
-    border-top: 1px solid var(--dashboard-soft-line);
   }
 }

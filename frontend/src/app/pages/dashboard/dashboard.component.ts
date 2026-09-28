@@ -1,11 +1,14 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { SkeletonModule } from 'primeng/skeleton';
+import { TagModule } from 'primeng/tag';
 import { Observable } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { CompanyService } from '../companies/company.service';
 import { FormService } from '../forms/form.service';
 import { UserService } from '../users/user.service';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 
 /**
  * Option of the dashboard. A null route marks an option whose function does
@@ -43,7 +46,7 @@ interface ConnectedStat {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TagModule, SkeletonModule, PageHeaderComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })

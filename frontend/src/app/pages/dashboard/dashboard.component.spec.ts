@@ -129,7 +129,7 @@ describe('DashboardComponent', () => {
 
     describe('estadísticas', () => {
         it('saluda con el nombre del usuario de la sesión', () => {
-            expect(fixture.nativeElement.querySelector('.dashboard-title').textContent).toContain('Admin.');
+            expect(fixture.nativeElement.querySelector('.mgs-title').textContent).toContain('Admin.');
         });
 
         it('lee cada cifra de su endpoint y cuenta solo los registros activos', () => {
