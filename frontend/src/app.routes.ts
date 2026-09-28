@@ -1,15 +1,11 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './app/core/guards/auth.guard';
-import { homeRedirect } from './app/core/guards/home.redirect';
+import { homeRedirect } from './app/core/guards/redirect-to-home';
 import { roleGuard } from './app/core/guards/role.guard';
 import { AppLayout } from './app/layout/component/app.layout';
 import { Notfound } from './app/pages/notfound/notfound';
 
-/**
- * Root routes. Everything inside the layout needs a session, and some
- * features also need a role. The self evaluation stays public because the
- * employees answer it without an account.
- */
+/** Root routes of ErgoManager. */
 export const appRoutes: Routes = [
     {
         path: '',
@@ -19,8 +15,13 @@ export const appRoutes: Routes = [
         children: [
             { path: '', pathMatch: 'full', redirectTo: homeRedirect },
             {
+                path: 'dashboard',
+                canActivate: [roleGuard(['ADMIN', 'ERGONOMIST'])],
+                loadChildren: () => import('./app/pages/dashboard/dashboard.routes').then((m) => m.dashboardRoutes)
+            },
+            {
                 path: 'companies',
-                canActivate: [roleGuard(['ADMIN'])],
+                canActivate: [roleGuard(['ADMIN', 'ERGONOMIST'])],
                 loadChildren: () => import('./app/pages/companies/companies.routes').then((m) => m.companiesRoutes)
             },
             {
@@ -30,11 +31,12 @@ export const appRoutes: Routes = [
             },
             {
                 path: 'forms',
-                canActivate: [roleGuard(['ADMIN'])],
+                canActivate: [roleGuard(['ADMIN', 'ERGONOMIST'])],
                 loadChildren: () => import('./app/pages/forms/forms.routes').then((m) => m.formsRoutes)
             },
             {
                 path: 'appointments',
+                canActivate: [roleGuard(['ADMIN', 'ERGONOMIST'])],
                 loadChildren: () => import('./app/pages/appointment-scheduling/appointment-scheduling.routes').then((m) => m.appointmentSchedulingRoutes)
             },
             {
@@ -44,9 +46,15 @@ export const appRoutes: Routes = [
             },
             {
                 path: 'history',
+                canActivate: [roleGuard(['ADMIN', 'ERGONOMIST'])],
                 loadChildren: () => import('./app/pages/history/history.routes').then((m) => m.historyRoutes)
             }
         ]
+    },
+    {
+        path: 'account',
+        canActivate: [authGuard],
+        loadChildren: () => import('./app/pages/account/account.routes').then((m) => m.accountRoutes)
     },
     {
         path: 'self-evaluation',

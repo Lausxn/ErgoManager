@@ -7,12 +7,16 @@ import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 
+import { SESSION_MESSAGE_STATE_KEY } from '../../../core/interceptors/error.interceptor';
 import { AuthService } from '../../../core/services/auth.service';
 import { AppFloatingConfigurator } from '../../../layout/component/app.floatingconfigurator';
 import { BrandLogoComponent } from '../../../shared/components/brand-logo/brand-logo.component';
+import { getApiErrorMessage, getApiFieldErrors } from '../../../shared/utils/api-error';
 import { isControlInvalid, markFormAsDirty } from '../../../shared/utils/form';
 
 const MIN_PASSWORD_LENGTH = 8;
+
+const LOGIN_FAILED_MESSAGE = 'No fue posible iniciar sesión. Intente de nuevo.';
 
 /**
  * Sign in screen of the administrators and the ergonomists. After a valid
@@ -41,6 +45,9 @@ export class LoginComponent {
     });
 
     protected readonly errorMessage = signal<string | null>(null);
+
+    /** Why the previous session ended, sent by the error interceptor. */
+    protected readonly sessionMessage = signal<string | null>(this.readSessionMessage());
 
     protected readonly isSubmitting = signal(false);
 
@@ -74,17 +81,30 @@ export class LoginComponent {
 
         this.isSubmitting.set(true);
         this.errorMessage.set(null);
+        this.sessionMessage.set(null);
 
         this.authService.login(this.loginForm.getRawValue()).subscribe({
             next: () => {
                 this.isSubmitting.set(false);
                 void this.router.navigateByUrl(this.resolveTargetUrl());
             },
-            error: () => {
+            error: (error: unknown) => {
                 this.isSubmitting.set(false);
-                this.errorMessage.set('El correo o la contraseña no son válidos.');
+                // A field message is more precise than the general "check the data" one.
+                const [firstFieldError] = Object.values(getApiFieldErrors(error));
+                this.errorMessage.set(firstFieldError ?? getApiErrorMessage(error, LOGIN_FAILED_MESSAGE));
             }
         });
+    }
+
+    /**
+     * Reads the reason the interceptor attached when it closed the session.
+     *
+     * @returns message to show, or null when the page was opened directly
+     */
+    private readSessionMessage(): string | null {
+        const message = this.router.getCurrentNavigation()?.extras.state?.[SESSION_MESSAGE_STATE_KEY];
+        return typeof message === 'string' ? message : null;
     }
 
     /**
