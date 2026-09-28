@@ -28,7 +28,7 @@
             </div>
         </div>
 
-        <h2 class="mgs-section-title mt-8">Acceso</h2>
+        <h2 class="mgs-section-title mgs-section-title--spaced">Acceso</h2>
         <div class="mgs-form-grid">
             <div class="mgs-field">
                 <label for="email">Correo electrónico</label>
@@ -71,7 +71,7 @@
             </div>
         </div>
 
-        <h2 class="mgs-section-title mt-8">Rol</h2>
+        <h2 class="mgs-section-title mgs-section-title--spaced">Rol</h2>
         <div class="mgs-form-grid" role="radiogroup" aria-label="Rol del usuario">
             @for (choice of roleChoices; track choice.value) {
                 <label class="mgs-field mgs-field--half mgs-choice" [class.mgs-choice--selected]="preview().role === choice.value" [for]="'role-' + choice.value">
@@ -83,11 +83,6 @@
                     </span>
                 </label>
             }
-        </div>
-
-        <div class="mgs-form-actions">
-            <p-button label="Cancelar" severity="secondary" [outlined]="true" routerLink="/users" />
-            <p-button type="submit" [label]="isEditing() ? 'Guardar cambios' : 'Crear usuario'" icon="pi pi-check" [loading]="isSubmitting()" />
         </div>
     </div>
 
@@ -116,4 +111,17 @@
             </div>
         }
     </aside>
+
+    @if (hasChanges()) {
+        <div class="col-span-12 mgs-save-bar" [class.mgs-save-bar--alert]="isAlerting()" role="region" aria-label="Cambios sin guardar" aria-live="polite">
+            <span class="mgs-save-bar__text">
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                {{ isEditing() ? 'Cuidado, tiene cambios sin guardar.' : 'Cuidado, el usuario todavía no se ha creado.' }}
+            </span>
+            <div class="mgs-save-bar__actions">
+                <p-button [label]="isEditing() ? 'Restablecer' : 'Vaciar campos'" [text]="true" [disabled]="isSubmitting()" (onClick)="resetForm()" />
+                <p-button type="submit" [label]="isEditing() ? 'Guardar cambios' : 'Crear usuario'" icon="pi pi-check" [loading]="isSubmitting()" />
+            </div>
+        </div>
+    }
 </form>

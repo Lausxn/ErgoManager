@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, injec
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { map } from 'rxjs';
 import { AvatarModule } from 'primeng/avatar';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -11,6 +12,7 @@ import { ProgressBarModule } from 'primeng/progressbar';
 import { RadioButtonModule } from 'primeng/radiobutton';
 import { TagModule } from 'primeng/tag';
 
+import { HasUnsavedChanges } from '../../../core/guards/unsaved-changes.guard';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { Role } from '../../../shared/models/role.model';
 import { UserRequest } from '../../../shared/models/user.model';
@@ -27,6 +29,9 @@ const MAX_PASSWORD_LENGTH = 100;
 
 /** Rejects values made only of spaces, which required alone lets through. */
 const NOT_BLANK = Validators.pattern(/\S/);
+
+/** Time the save bar stays in its alert state, a bit longer than the shake. */
+const ALERT_DURATION_MS = 900;
 
 /** Fields the user has to fill in before saving. */
 const REQUIRED_FIELDS = ['firstName', 'firstLastName', 'email', 'password', 'confirmPassword'] as const;
@@ -50,9 +55,10 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
     standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [ReactiveFormsModule, RouterLink, AvatarModule, ButtonModule, InputTextModule, PasswordModule, ProgressBarModule, RadioButtonModule, TagModule, PageHeaderComponent],
-    templateUrl: './user-form.component.html'
+    templateUrl: './user-form.component.html',
+    host: { '(window:beforeunload)': 'onBeforeUnload($event)' }
 })
-export class UserFormComponent implements OnInit {
+export class UserFormComponent implements OnInit, HasUnsavedChanges {
     private readonly formBuilder = inject(FormBuilder);
 
     private readonly userService = inject(UserService);
@@ -95,8 +101,26 @@ export class UserFormComponent implements OnInit {
 
     protected readonly isEditing = signal(false);
 
-    /** valueChanges fires after validation, so validity is already current when it emits. */
-    private readonly formValue = toSignal(this.userForm.valueChanges, { initialValue: this.userForm.getRawValue() });
+    /** True while the save bar shakes to remind that there are unsaved changes. */
+    protected readonly isAlerting = signal(false);
+
+    private alertTimer?: ReturnType<typeof setTimeout>;
+
+    /** Values the form started with: empty when creating, the stored user when editing. */
+    private readonly initialValue = signal(this.userForm.getRawValue());
+
+    /**
+     * Every value of the form, typed and complete. valueChanges fires after
+     * validation, so validity is already current when it emits.
+     */
+    private readonly formValue = toSignal(this.userForm.valueChanges.pipe(map(() => this.userForm.getRawValue())), { initialValue: this.userForm.getRawValue() });
+
+    /** True when something was typed that would be lost when leaving. */
+    protected readonly hasChanges = computed(() => {
+        const current = this.formValue();
+        const initial = this.initialValue();
+        return (Object.keys(initial) as (keyof typeof initial)[]).some((field) => current[field] !== initial[field]);
+    });
 
     protected readonly preview = computed(() => {
         const { firstName = '', firstLastName = '', secondLastName = '', email = '', role = 'ERGONOMIST' } = this.formValue();
@@ -122,6 +146,10 @@ export class UserFormComponent implements OnInit {
 
     protected readonly progress = computed(() => Math.round((this.completedCount() / this.requiredCount) * 100));
 
+    constructor() {
+        this.destroyRef.onDestroy(() => clearTimeout(this.alertTimer));
+    }
+
     ngOnInit(): void {
         const userId = this.id();
         if (userId === undefined || Number.isNaN(userId)) {
@@ -132,12 +160,54 @@ export class UserFormComponent implements OnInit {
             .findById(userId)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
-                next: ({ firstName, firstLastName, secondLastName, email, role }) => this.userForm.patchValue({ firstName, firstLastName, secondLastName: secondLastName ?? '', email, role }),
+                next: ({ firstName, firstLastName, secondLastName, email, role }) => {
+                    this.userForm.patchValue({ firstName, firstLastName, secondLastName: secondLastName ?? '', email, role });
+                    this.initialValue.set(this.userForm.getRawValue());
+                },
                 error: () => {
                     this.toastService.error('No se encontró el usuario', 'Puede que ya no exista.');
                     void this.router.navigate(['/users']);
                 }
             });
+    }
+
+    /**
+     * Called by unsavedChangesGuard before leaving the page. With pending
+     * changes it keeps the user here and shakes the save bar, like Discord.
+     *
+     * @returns true when there is nothing to lose
+     */
+    canLeave(): boolean {
+        if (!this.hasChanges()) {
+            return true;
+        }
+        this.alertUnsavedChanges();
+        return false;
+    }
+
+    /**
+     * Asks the browser to confirm before closing or reloading the tab with
+     * unsaved changes. Browsers only allow their own dialog here, so the save
+     * bar also shakes and is waiting in its alert state if the user stays.
+     *
+     * @param event unload event of the window
+     */
+    protected onBeforeUnload(event: BeforeUnloadEvent): void {
+        if (!this.hasChanges()) {
+            return;
+        }
+        event.preventDefault();
+        // Safari and older Chromium versions only show the dialog when returnValue is set.
+        event.returnValue = true;
+        this.alertUnsavedChanges();
+    }
+
+    /**
+     * Empties the form when creating, or puts the stored values back when
+     * editing, and clears the error messages.
+     */
+    protected resetForm(): void {
+        this.userForm.reset(this.initialValue());
     }
 
     /**
@@ -180,6 +250,7 @@ export class UserFormComponent implements OnInit {
         saved$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
             next: () => {
                 this.isSubmitting.set(false);
+                this.initialValue.set(this.userForm.getRawValue());
                 this.toastService.success(this.isEditing() ? 'Usuario actualizado' : 'Usuario creado', request.email);
                 void this.router.navigate(['/users']);
             },
@@ -212,5 +283,19 @@ export class UserFormComponent implements OnInit {
             password,
             role
         };
+    }
+
+    /**
+     * Shakes the save bar and paints it in the alert color. Removing the class
+     * first and adding it back on the next frame restarts the animation when
+     * the user insists.
+     */
+    private alertUnsavedChanges(): void {
+        clearTimeout(this.alertTimer);
+        this.isAlerting.set(false);
+        requestAnimationFrame(() => {
+            this.isAlerting.set(true);
+            this.alertTimer = setTimeout(() => this.isAlerting.set(false), ALERT_DURATION_MS);
+        });
     }
 }
