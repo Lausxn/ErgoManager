@@ -41,7 +41,7 @@
                 <th pSortableColumn="role">Rol <p-sortIcon field="role" /></th>
                 <th pSortableColumn="active">Estado <p-sortIcon field="active" /></th>
                 <th pSortableColumn="createdAt">Registrado <p-sortIcon field="createdAt" /></th>
-                <th class="w-32"></th>
+                <th class="w-40"><span class="sr-only">Acciones</span></th>
             </tr>
         </ng-template>
         <ng-template #body let-row>
@@ -61,7 +61,7 @@
                 </td>
                 <td class="whitespace-nowrap">{{ row.createdAt | date: 'd MMM y' }}</td>
                 <td class="text-right whitespace-nowrap">
-                    <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="secondary" [routerLink]="['/users', row.id]" pTooltip="Editar" ariaLabel="Editar" />
+                    <p-button label="Editar" icon="pi pi-pencil" size="small" [text]="true" severity="secondary" [routerLink]="['/users', row.id]" [ariaLabel]="'Editar a ' + row.fullName" />
                     @if (row.canDeactivate) {
                         <p-button icon="pi pi-ban" [rounded]="true" [text]="true" (onClick)="confirmDeactivate(row)" pTooltip="Desactivar" ariaLabel="Desactivar" />
                     }

@@ -231,6 +231,37 @@
     }
 }
 
+/* Read only label and value pairs, like the stored data of a user. */
+.mgs-details {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    border-top: 1px solid var(--surface-border);
+
+    > div {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--surface-border);
+    }
+
+    dt {
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--text-color-secondary);
+    }
+
+    dd {
+        margin: 0;
+        text-align: right;
+        font-weight: 600;
+        color: var(--text-color);
+    }
+}
+
 /* Side panel that follows the scroll next to a long form. */
 .mgs-sticky {
     @media (min-width: 1200px) {

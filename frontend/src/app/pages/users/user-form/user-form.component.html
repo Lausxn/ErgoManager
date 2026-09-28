@@ -1,46 +1,10 @@
-<app-page-header eyebrow="Gestión de usuarios" [title]="isEditing() ? 'Editar usuario' : 'Creación de usuario'" subtitle="Datos para identificar a la persona, su acceso y su rol dentro de ErgoManager.">
+<app-page-header eyebrow="Gestión de usuarios" title="Creación de usuario" subtitle="Datos para identificar a la persona, su acceso y su rol dentro de ErgoManager.">
     <p-button label="Volver a usuarios" icon="pi pi-arrow-left" severity="secondary" [text]="true" routerLink="/users" />
 </app-page-header>
 
 <form [formGroup]="userForm" (ngSubmit)="submit()" class="grid grid-cols-12 gap-6 items-start" novalidate>
     <div class="col-span-12 xl:col-span-8 mgs-card">
-        <h2 class="mgs-section-title">Datos personales</h2>
-        <div class="mgs-form-grid">
-            <div class="mgs-field">
-                <label for="firstName">Nombre</label>
-                <input pInputText id="firstName" formControlName="firstName" [maxlength]="limits.name" autocomplete="given-name" placeholder="Ej. María Fernanda" />
-                @if (isInvalid('firstName')) {
-                    <small class="mgs-field__error">El nombre es obligatorio (máximo {{ limits.name }} caracteres).</small>
-                }
-            </div>
-
-            <div class="mgs-field mgs-field--half">
-                <label for="firstLastName">Primer apellido</label>
-                <input pInputText id="firstLastName" formControlName="firstLastName" [maxlength]="limits.name" autocomplete="family-name" placeholder="Ej. Madrigal" />
-                @if (isInvalid('firstLastName')) {
-                    <small class="mgs-field__error">El primer apellido es obligatorio (máximo {{ limits.name }} caracteres).</small>
-                }
-            </div>
-
-            <div class="mgs-field mgs-field--half">
-                <label for="secondLastName">Segundo apellido <span class="text-muted-color font-normal">(opcional)</span></label>
-                <input pInputText id="secondLastName" formControlName="secondLastName" [maxlength]="limits.name" placeholder="Ej. Solano" />
-            </div>
-        </div>
-
-        <h2 class="mgs-section-title mt-8">Acceso</h2>
-        <div class="mgs-form-grid">
-            <div class="mgs-field">
-                <label for="email">Correo electrónico</label>
-                <input pInputText id="email" type="email" formControlName="email" [maxlength]="limits.email" autocomplete="off" placeholder="nombre@empresa.com" />
-                <small class="text-muted-color">Es el usuario con el que inicia sesión.</small>
-                @if (userForm.controls.email.hasError('duplicated')) {
-                    <small class="mgs-field__error">Ya existe un usuario con este correo.</small>
-                } @else if (isInvalid('email')) {
-                    <small class="mgs-field__error">Escriba un correo válido (máximo {{ limits.email }} caracteres).</small>
-                }
-            </div>
-
+        <app-user-identity-fields>
             <div class="mgs-field mgs-field--half">
                 <label for="password">Contraseña</label>
                 <p-password
@@ -48,7 +12,7 @@
                     formControlName="password"
                     [toggleMask]="true"
                     [fluid]="true"
-                    [maxLength]="limits.password"
+                    [maxLength]="limits.maxPassword"
                     autocomplete="new-password"
                     weakLabel="Débil"
                     mediumLabel="Media"
@@ -56,7 +20,7 @@
                     promptLabel="Mínimo 8 caracteres"
                 />
                 @if (isInvalid('password')) {
-                    <small class="mgs-field__error">La contraseña debe tener entre 8 y {{ limits.password }} caracteres.</small>
+                    <small class="mgs-field__error">La contraseña debe tener entre {{ limits.minPassword }} y {{ limits.maxPassword }} caracteres.</small>
                 }
             </div>
 
@@ -69,25 +33,13 @@
                     <small class="mgs-field__error">Las contraseñas no coinciden.</small>
                 }
             </div>
-        </div>
+        </app-user-identity-fields>
 
-        <h2 class="mgs-section-title mt-8">Rol</h2>
-        <div class="mgs-form-grid" role="radiogroup" aria-label="Rol del usuario">
-            @for (choice of roleChoices; track choice.value) {
-                <label class="mgs-field mgs-field--half mgs-choice" [class.mgs-choice--selected]="preview().role === choice.value" [for]="'role-' + choice.value">
-                    <p-radiobutton [inputId]="'role-' + choice.value" formControlName="role" [value]="choice.value" />
-                    <i [class]="choice.icon + ' mgs-choice__icon'"></i>
-                    <span class="flex flex-col gap-1">
-                        <span class="font-semibold">{{ roleLabels[choice.value] }}</span>
-                        <span class="text-sm text-muted-color">{{ choice.description }}</span>
-                    </span>
-                </label>
-            }
-        </div>
+        <app-user-role-field [selected]="preview().role" />
 
         <div class="mgs-form-actions">
             <p-button label="Cancelar" severity="secondary" [outlined]="true" routerLink="/users" />
-            <p-button type="submit" [label]="isEditing() ? 'Guardar cambios' : 'Crear usuario'" icon="pi pi-check" [loading]="isSubmitting()" />
+            <p-button type="submit" label="Crear usuario" icon="pi pi-check" [loading]="isSubmitting()" />
         </div>
     </div>
 
@@ -108,12 +60,5 @@
             </div>
             <p-progressbar [value]="progress()" [showValue]="false" styleClass="h-2" />
         </div>
-
-        @if (isEditing()) {
-            <div class="mgs-alert text-sm">
-                <i class="pi pi-info-circle"></i>
-                <span>Para guardar cambios escriba una contraseña: la nueva o la actual.</span>
-            </div>
-        }
     </aside>
 </form>

@@ -1,0 +1,94 @@
+<app-page-header eyebrow="Gestión de usuarios" title="Editar usuario" subtitle="Información registrada del usuario y los datos que puede modificar.">
+    <p-button label="Volver a usuarios" icon="pi pi-arrow-left" severity="secondary" [text]="true" routerLink="/users" />
+</app-page-header>
+
+@if (user(); as user) {
+    <form [formGroup]="userForm" (ngSubmit)="submit()" class="grid grid-cols-12 gap-6 items-start" novalidate>
+        <aside class="col-span-12 xl:col-span-4 mgs-card mgs-sticky flex flex-col gap-6" aria-label="Información del usuario">
+            <div class="flex flex-col items-center text-center gap-3">
+                <p-avatar [label]="profile()?.initials" shape="circle" size="xlarge" styleClass="mgs-avatar" />
+                <div>
+                    <div class="mgs-section-title !m-0">{{ profile()?.fullName }}</div>
+                    <div class="text-sm text-muted-color break-all">{{ user.email }}</div>
+                </div>
+                <div class="flex flex-wrap justify-center gap-2">
+                    <p-tag [value]="roleLabels[user.role]" [styleClass]="roleTagClasses[user.role]" />
+                    <p-tag [value]="user.active ? 'Activo' : 'Inactivo'" [styleClass]="user.active ? activeTagClasses.active : activeTagClasses.inactive" />
+                </div>
+            </div>
+
+            <dl class="mgs-details">
+                <div>
+                    <dt>ID de usuario</dt>
+                    <dd class="tabular-nums">#{{ user.id }}</dd>
+                </div>
+                <div>
+                    <dt>Rol actual</dt>
+                    <dd>{{ roleLabels[user.role] }}</dd>
+                </div>
+                <div>
+                    <dt>Estado</dt>
+                    <dd>{{ user.active ? 'Activo, puede iniciar sesión' : 'Inactivo, no puede iniciar sesión' }}</dd>
+                </div>
+                <div>
+                    <dt>Registrado</dt>
+                    <dd>{{ user.createdAt | date: 'd MMM y, h:mm a' }}</dd>
+                </div>
+            </dl>
+
+            @if (profile()?.isOwnAccount) {
+                <div class="mgs-alert text-sm">
+                    <i class="pi pi-info-circle"></i>
+                    <span>Esta es su propia cuenta.</span>
+                </div>
+            }
+        </aside>
+
+        <div class="col-span-12 xl:col-span-8 mgs-card">
+            @if (!user.active) {
+                <div class="mgs-alert text-sm mb-6">
+                    <i class="pi pi-ban"></i>
+                    <span>Este usuario está inactivo. Puede corregir sus datos, pero seguirá sin poder iniciar sesión.</span>
+                </div>
+            }
+
+            <app-user-identity-fields />
+
+            <app-user-role-field [selected]="selectedRole()" />
+
+            @if (isRoleChanged()) {
+                <div class="mgs-alert text-sm mt-4" role="status">
+                    <i class="pi pi-exclamation-triangle"></i>
+                    <span>
+                        El rol pasará de {{ roleLabels[user.role] }} a {{ roleLabels[selectedRole()] }} y cambiarán sus permisos.
+                        @if (profile()?.isOwnAccount && selectedRole() === 'ERGONOMIST') {
+                            Al ser su propia cuenta, perderá el acceso a la administración.
+                        }
+                    </span>
+                </div>
+            }
+
+            <div class="mgs-form-actions">
+                <p-button label="Cancelar" severity="secondary" [outlined]="true" routerLink="/users" />
+                <p-button label="Descartar cambios" icon="pi pi-undo" severity="secondary" [text]="true" [disabled]="!hasChanges() || isSaving()" (onClick)="discardChanges()" />
+                <p-button type="submit" label="Guardar cambios" icon="pi pi-check" [disabled]="!hasChanges()" [loading]="isSaving()" />
+            </div>
+        </div>
+    </form>
+} @else {
+    <div class="grid grid-cols-12 gap-6" aria-busy="true" aria-label="Cargando usuario">
+        <div class="col-span-12 xl:col-span-4 mgs-card flex flex-col items-center gap-4">
+            <p-skeleton shape="circle" size="4rem" />
+            <p-skeleton width="70%" height="1.5rem" />
+            <p-skeleton width="50%" />
+            <p-skeleton width="100%" height="8rem" />
+        </div>
+        <div class="col-span-12 xl:col-span-8 mgs-card flex flex-col gap-4">
+            <p-skeleton width="30%" height="1.5rem" />
+            <p-skeleton height="2.5rem" />
+            <p-skeleton height="2.5rem" />
+            <p-skeleton width="30%" height="1.5rem" />
+            <p-skeleton height="2.5rem" />
+        </div>
+    </div>
+}
