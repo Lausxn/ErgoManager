@@ -1,0 +1,54 @@
+/*
+ * SweetAlert2 notifications aligned with the MGS brand.
+ * Wine is reserved for warnings/errors and graphite for confirmations.
+ */
+.swal2-container.mgs-swal-container.swal2-top-end {
+    padding-top: calc(var(--layout-topbar-height, 4rem) + 0.5rem);
+}
+
+.swal2-container .swal2-popup.mgs-swal-toast {
+    --mgs-toast-tone: var(--mgs-graphite);
+    --swal2-background: var(--surface-card);
+    --swal2-color: var(--text-color);
+    --swal2-close-button-color: var(--text-color-secondary);
+    --swal2-timer-progress-bar-background: color-mix(in srgb, var(--mgs-toast-tone), transparent 55%);
+    --swal2-toast-border: 1px solid var(--surface-border);
+    --swal2-toast-box-shadow: 0 8px 24px rgba(11, 11, 13, 0.16);
+
+    border-left: 4px solid var(--mgs-toast-tone);
+    border-radius: 10px;
+    font-family: var(--mgs-font-body);
+
+    &.mgs-swal-toast--error,
+    &.mgs-swal-toast--warning {
+        --mgs-toast-tone: var(--mgs-wine);
+    }
+
+    .swal2-title {
+        font-family: var(--mgs-font-display);
+        font-weight: 600;
+        color: var(--text-color);
+    }
+
+    .swal2-html-container {
+        color: var(--text-color-secondary);
+    }
+
+    .swal2-close:focus-visible {
+        box-shadow: 0 0 0 2px var(--mgs-wine);
+    }
+
+    .swal2-icon {
+        border-color: var(--mgs-toast-tone);
+        color: var(--mgs-toast-tone);
+    }
+
+    .swal2-icon .swal2-success-ring {
+        border-color: color-mix(in srgb, var(--mgs-toast-tone), transparent 70%);
+    }
+
+    .swal2-icon [class^='swal2-success-line'],
+    .swal2-icon [class^='swal2-x-mark-line'] {
+        background-color: var(--mgs-toast-tone);
+    }
+}

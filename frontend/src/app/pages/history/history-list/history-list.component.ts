@@ -13,6 +13,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { CompanyResponse } from '../../../shared/models/company.model';
 import { HistoryResponse } from '../../../shared/models/history.model';
+import { ToastService } from '../../../shared/services/toast.service';
 import { markFormAsDirty } from '../../../shared/utils/form';
 import { CompanyService } from '../../companies/company.service';
 import { HistoryService } from '../history.service';
@@ -20,8 +21,7 @@ import { HistoryService } from '../history.service';
 type SearchMode = 'company' | 'employee';
 
 /**
- * Screen where the evaluation history of a client company, or of a single
- * employee, is consulted.
+ * Screen where the evaluation history is consulted.
  */
 @Component({
     selector: 'app-history-list',
@@ -38,7 +38,8 @@ export class HistoryListComponent {
 
     private readonly authService = inject(AuthService);
 
-    /** Only administrators can read the company list, the others type the company number. */
+    private readonly toastService = inject(ToastService);
+
     protected readonly isAdmin = computed(() => this.authService.session()?.role === 'ADMIN');
 
     protected readonly searchModeOptions = [
@@ -63,15 +64,13 @@ export class HistoryListComponent {
 
     constructor() {
         if (this.isAdmin()) {
-            this.companyService.findAll().subscribe((companyList) => this.companyList.set(companyList));
+            this.companyService.findAll().subscribe({
+                next: (companyList) => this.companyList.set(companyList),
+                error: () => this.toastService.error('No se pudieron cargar las empresas', 'Intente nuevamente en unos minutos.')
+            });
         }
     }
 
-    /**
-     * Switches between searching by company and by employee.
-     *
-     * @param mode search mode picked by the user
-     */
     protected changeMode(mode: SearchMode): void {
         this.searchMode.set(mode);
         this.historyList.set([]);
@@ -79,7 +78,7 @@ export class HistoryListComponent {
     }
 
     /**
-     * Reads the history entries of the company or employee typed in the form.
+     * Searches the history through the corresponding backend service.
      */
     protected search(): void {
         const field = this.searchMode() === 'company' ? this.searchForm.controls.companyId : this.searchForm.controls.employeeEmail;
@@ -102,6 +101,7 @@ export class HistoryListComponent {
                 this.historyList.set([]);
                 this.hasSearched.set(true);
                 this.isLoading.set(false);
+                this.toastService.error('No se pudo consultar el historial', 'Verifique los datos o la conexión e intente nuevamente.');
             }
         });
     }

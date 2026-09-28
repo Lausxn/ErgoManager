@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
@@ -11,11 +11,12 @@ import { TooltipModule } from 'primeng/tooltip';
 
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { CompanyResponse } from '../../../shared/models/company.model';
+import { ToastService } from '../../../shared/services/toast.service';
 import { ACTIVE_TAG_CLASSES } from '../../../shared/utils/labels';
 import { CompanyService } from '../company.service';
 
 /**
- * Table of the client companies registered in ErgoManager.
+ * Table of client companies registered in ErgoManager.
  */
 @Component({
     selector: 'app-company-list',
@@ -28,7 +29,7 @@ export class CompanyListComponent {
 
     private readonly confirmationService = inject(ConfirmationService);
 
-    private readonly messageService = inject(MessageService);
+    private readonly toastService = inject(ToastService);
 
     protected readonly companyList = signal<CompanyResponse[]>([]);
 
@@ -41,7 +42,7 @@ export class CompanyListComponent {
     }
 
     /**
-     * Reads the companies shown by the table.
+     * Reads companies from the backend.
      */
     protected loadCompanies(): void {
         this.isLoading.set(true);
@@ -50,22 +51,19 @@ export class CompanyListComponent {
                 this.companyList.set(companyList);
                 this.isLoading.set(false);
             },
-            error: () => this.isLoading.set(false)
+            error: () => {
+                this.isLoading.set(false);
+                this.toastService.error('No se pudieron cargar los clientes', 'Verifique la conexión e intente nuevamente.');
+            }
         });
     }
 
-    /**
-     * Filters the table with the text typed in the search box.
-     *
-     * @param table table to filter
-     * @param event input event of the search box
-     */
     protected filterTable(table: Table, event: Event): void {
         table.filterGlobal((event.target as HTMLInputElement).value, 'contains');
     }
 
     /**
-     * Asks for confirmation and deactivates the company, keeping its history.
+     * Confirms and deactivates a client company.
      *
      * @param company company to deactivate
      */
@@ -78,9 +76,12 @@ export class CompanyListComponent {
             rejectLabel: 'Cancelar',
             rejectButtonProps: { severity: 'secondary', outlined: true },
             accept: () =>
-                this.companyService.deactivate(company.id).subscribe(() => {
-                    this.messageService.add({ severity: 'success', summary: 'Empresa desactivada', detail: company.businessName });
-                    this.loadCompanies();
+                this.companyService.deactivate(company.id).subscribe({
+                    next: () => {
+                        this.toastService.success('Empresa desactivada', company.businessName);
+                        this.loadCompanies();
+                    },
+                    error: () => this.toastService.error('No se pudo desactivar la empresa', 'Intente nuevamente en unos minutos.')
                 })
         });
     }

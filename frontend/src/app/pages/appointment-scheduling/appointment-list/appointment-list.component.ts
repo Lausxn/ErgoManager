@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -10,6 +10,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { AuthService } from '../../../core/services/auth.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { AppointmentResponse } from '../../../shared/models/appointment.model';
+import { ToastService } from '../../../shared/services/toast.service';
 import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_TAG_CLASSES } from '../../../shared/utils/labels';
 import { AppointmentService } from '../appointment.service';
 
@@ -18,7 +19,7 @@ const DAYS_SHOWN_AHEAD = 30;
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
- * Agenda of the signed in ergonomist for the coming weeks.
+ * Agenda of the signed-in ergonomist.
  */
 @Component({
     selector: 'app-appointment-list',
@@ -33,7 +34,7 @@ export class AppointmentListComponent {
 
     private readonly confirmationService = inject(ConfirmationService);
 
-    private readonly messageService = inject(MessageService);
+    private readonly toastService = inject(ToastService);
 
     protected readonly appointmentList = signal<AppointmentResponse[]>([]);
 
@@ -54,12 +55,13 @@ export class AppointmentListComponent {
     }
 
     /**
-     * Reads the appointments of the signed in ergonomist.
+     * Reads the ergonomist agenda from the backend.
      */
     protected loadAgenda(): void {
         const userId = this.authService.session()?.userId;
         if (userId === undefined) {
             this.isLoading.set(false);
+            this.toastService.warning('No se pudo identificar el usuario', 'Inicie sesión nuevamente.');
             return;
         }
 
@@ -72,12 +74,15 @@ export class AppointmentListComponent {
                 this.appointmentList.set(appointmentList);
                 this.isLoading.set(false);
             },
-            error: () => this.isLoading.set(false)
+            error: () => {
+                this.isLoading.set(false);
+                this.toastService.error('No se pudo cargar la agenda', 'Verifique la conexión con el servicio e intente nuevamente.');
+            }
         });
     }
 
     /**
-     * Asks for confirmation, cancels an appointment and refreshes the agenda.
+     * Confirms and cancels an appointment.
      *
      * @param appointment appointment to cancel
      */
@@ -90,9 +95,12 @@ export class AppointmentListComponent {
             rejectLabel: 'Volver',
             rejectButtonProps: { severity: 'secondary', outlined: true },
             accept: () =>
-                this.appointmentService.cancel(appointment.id).subscribe(() => {
-                    this.messageService.add({ severity: 'success', summary: 'Cita cancelada', detail: appointment.employeeName });
-                    this.loadAgenda();
+                this.appointmentService.cancel(appointment.id).subscribe({
+                    next: () => {
+                        this.toastService.success('Cita cancelada', appointment.employeeName);
+                        this.loadAgenda();
+                    },
+                    error: () => this.toastService.error('No se pudo cancelar la cita', 'Intente nuevamente en unos minutos.')
                 })
         });
     }

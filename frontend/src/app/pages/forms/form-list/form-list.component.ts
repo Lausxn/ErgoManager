@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -8,12 +8,12 @@ import { TooltipModule } from 'primeng/tooltip';
 
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { FormResponse } from '../../../shared/models/form.model';
+import { ToastService } from '../../../shared/services/toast.service';
 import { ACTIVE_TAG_CLASSES } from '../../../shared/utils/labels';
 import { FormService } from '../form.service';
 
 /**
- * Table of the self evaluation forms, where the administrator can deactivate
- * the ones that are no longer in use.
+ * Table of the self evaluation forms available to the authorized role.
  */
 @Component({
     selector: 'app-form-list',
@@ -26,7 +26,7 @@ export class FormListComponent {
 
     private readonly confirmationService = inject(ConfirmationService);
 
-    private readonly messageService = inject(MessageService);
+    private readonly toastService = inject(ToastService);
 
     protected readonly formList = signal<FormResponse[]>([]);
 
@@ -39,7 +39,7 @@ export class FormListComponent {
     }
 
     /**
-     * Reads the forms shown by the table.
+     * Reads the forms from the backend.
      */
     protected loadForms(): void {
         this.isLoading.set(true);
@@ -48,13 +48,15 @@ export class FormListComponent {
                 this.formList.set(formList);
                 this.isLoading.set(false);
             },
-            error: () => this.isLoading.set(false)
+            error: () => {
+                this.isLoading.set(false);
+                this.toastService.error('No se pudieron cargar los formularios', 'Verifique la conexión e intente nuevamente.');
+            }
         });
     }
 
     /**
-     * Asks for confirmation and deactivates a form, so it is no longer offered
-     * to the employees.
+     * Confirms and deactivates the selected form.
      *
      * @param form form to deactivate
      */
@@ -67,9 +69,12 @@ export class FormListComponent {
             rejectLabel: 'Cancelar',
             rejectButtonProps: { severity: 'secondary', outlined: true },
             accept: () =>
-                this.formService.deactivate(form.id).subscribe(() => {
-                    this.messageService.add({ severity: 'success', summary: 'Formulario desactivado', detail: form.title });
-                    this.loadForms();
+                this.formService.deactivate(form.id).subscribe({
+                    next: () => {
+                        this.toastService.success('Formulario desactivado', form.title);
+                        this.loadForms();
+                    },
+                    error: () => this.toastService.error('No se pudo desactivar el formulario', 'Intente nuevamente en unos minutos.')
                 })
         });
     }
