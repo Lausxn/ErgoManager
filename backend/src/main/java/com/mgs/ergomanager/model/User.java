@@ -107,7 +107,7 @@ public class User {
         return tokenVersion;
     }
 
-    /** @param tokenVersion session version after a revocation */
+    /** @param tokenVersion session version after a password change */
     public void setTokenVersion(long tokenVersion) {
         this.tokenVersion = tokenVersion;
     }

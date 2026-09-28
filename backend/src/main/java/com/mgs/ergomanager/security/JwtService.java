@@ -89,7 +89,7 @@ public class JwtService {
         Claims claims = extractClaims(token);
         boolean sameUser = claims.getSubject().equals(userDetails.getUsername());
         Number version = claims.get(VERSION_CLAIM, Number.class);
-        // Tokens from Task 77 remain valid only until the first session revocation.
+        // Tokens from Task 77 remain valid only until the first password change.
         long tokenVersion = version == null ? 0 : version.longValue();
         return sameUser && userDetails.isEnabled()
                 && userDetails instanceof UserPrincipal principal

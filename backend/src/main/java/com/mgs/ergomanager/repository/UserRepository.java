@@ -36,6 +36,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
 
     /**
+     * Serializes password changes so an old password cannot be reused concurrently.
+     *
+     * @param email email of the authenticated user
+     * @return user locked until the password transaction completes
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select user from User user where user.email = :email")
+    Optional<User> findByEmailForUpdate(@Param("email") String email);
+
+    /**
      * Checks whether the email is already taken.
      *
      * @param email email to look for
