@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { UserRequest, UserResponse } from '../../shared/models/user.model';
+import { UserRequest, UserResponse, UserUpdateRequest } from '../../shared/models/user.model';
 
 /**
  * HTTP access to the /api/users endpoints.
@@ -50,7 +50,7 @@ export class UserService {
      * @param request data typed in the form
      * @returns the updated user
      */
-    update(id: number, request: UserRequest): Observable<UserResponse> {
+    update(id: number, request: UserUpdateRequest): Observable<UserResponse> {
         return this.http.put<UserResponse>(`${this.baseUrl}/${id}`, request);
     }
 

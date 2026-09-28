@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './app/core/guards/auth.guard';
-import { homeRedirect } from './app/core/guards/home.redirect';
+import { homeRedirect } from './app/core/guards/redirect-to-home';
 import { roleGuard } from './app/core/guards/role.guard';
 import { AppLayout } from './app/layout/component/app.layout';
 import { Notfound } from './app/pages/notfound/notfound';

@@ -39,18 +39,22 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserResponseDTO> findAll() {
-        // TODO: read every user and map it to UserResponseDTO.
-        throw new UnsupportedOperationException(
-                "UserService.findAll is not implemented yet");
-    }
+@Transactional(readOnly = true)
+public List<UserResponseDTO> findAll() {
+    return userRepository.findAll()
+            .stream()
+            .map(this::toResponse)
+            .toList();
+}
 
-    @Override
-    public UserResponseDTO findById(Long id) {
-        // TODO: read the user or raise ResourceNotFoundException.
-        throw new UnsupportedOperationException(
-                "UserService.findById is not implemented yet");
-    }
+   @Override
+@Transactional(readOnly = true)
+public UserResponseDTO findById(Long id) {
+    User user = userRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("User", id));
+
+    return toResponse(user);
+}
 
     @Override
     public UserResponseDTO create(UserRequestDTO request) {
