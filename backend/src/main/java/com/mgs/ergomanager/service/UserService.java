@@ -2,6 +2,7 @@ package com.mgs.ergomanager.service;
 
 import com.mgs.ergomanager.dto.user.UserRequestDTO;
 import com.mgs.ergomanager.dto.user.UserResponseDTO;
+import com.mgs.ergomanager.dto.user.UserUpdateRequestDTO;
 import java.util.List;
 
 /**
@@ -39,12 +40,13 @@ public interface UserService {
      * @param request new data of the user
      * @return the updated user
      */
-    UserResponseDTO update(Long id, UserRequestDTO request);
+    UserResponseDTO update(Long id, UserUpdateRequestDTO request);
 
     /**
-     * Deactivates a user so it can no longer sign in.
+     * Deactivates a user so it can no longer sign in, keeping the row.
      *
-     * @param id identifier of the user
+     * @param id               identifier of the user
+     * @param currentUserEmail email of the administrator making the request
      */
-    void deactivate(Long id);
+    void deactivate(Long id, String currentUserEmail);
 }
