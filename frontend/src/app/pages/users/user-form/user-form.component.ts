@@ -205,6 +205,61 @@ export class UserFormComponent implements OnInit, HasUnsavedChanges {
     }
 
     /**
+     * Validador asincrónico para verificar si el email ya existe.
+     */
+    emailDuplicateValidator(control: AbstractControl): Promise<ValidationErrors | null> {
+        if (!control.value) {
+            return Promise.resolve(null);
+        }
+
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                this.userService.findAll().subscribe({
+                    next: (users) => {
+                        const emailExists = users.some(
+                            (user) => user.email.toLowerCase() === control.value.trim().toLowerCase() && user.id !== this.currentUserId
+                        );
+                        resolve(emailExists ? { emailDuplicate: true } : null);
+                    },
+                    // Without the list the backend still rejects a duplicate with HTTP 409 on save.
+                    error: () => resolve(null)
+                });
+            }, 500);
+        });
+    }
+
+    /**
+     * Obtiene el mensaje de error para un campo.
+     */
+    protected getErrorMessage(field: string): string {
+        const control = this.userForm.get(field);
+        if (!control || !control.errors) {
+            return '';
+        }
+
+        if (control.hasError('required')) {
+            if (field === 'firstName') return 'El nombre es obligatorio.';
+            if (field === 'firstLastName') return 'El primer apellido es obligatorio.';
+            if (field === 'email') return 'El correo es obligatorio.';
+            if (field === 'password') return 'La contraseña es obligatoria.';
+        }
+
+        if (field === 'email' && control.hasError('email')) {
+            return 'Ingrese un correo válido.';
+        }
+
+        if (field === 'email' && control.hasError('emailDuplicate')) {
+            return 'Este correo ya está registrado.';
+        }
+
+        if (field === 'password' && control.hasError('minlength')) {
+            return 'La contraseña debe tener al menos 8 caracteres.';
+        }
+
+        return 'Este campo no es válido.';
+    }
+
+    /**
      * Checks whether a field has to show its error message.
      *
      * @param field name of the control
