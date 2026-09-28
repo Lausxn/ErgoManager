@@ -33,40 +33,16 @@
             <div class="mgs-field">
                 <label for="email">Correo electrónico</label>
                 <input pInputText id="email" type="email" formControlName="email" [maxlength]="limits.email" autocomplete="off" placeholder="nombre@empresa.com" />
-                <small class="text-muted-color">Es el usuario con el que inicia sesión.</small>
+                <small class="text-muted-color">
+                    Es el usuario con el que inicia sesión.
+                    @if (!isEditing()) {
+                        Al crear la cuenta se le enviará a este correo una contraseña temporal.
+                    }
+                </small>
                 @if (userForm.controls.email.hasError('duplicated')) {
                     <small class="mgs-field__error">Ya existe un usuario con este correo.</small>
                 } @else if (isInvalid('email')) {
                     <small class="mgs-field__error">Escriba un correo válido (máximo {{ limits.email }} caracteres).</small>
-                }
-            </div>
-
-            <div class="mgs-field mgs-field--half">
-                <label for="password">Contraseña</label>
-                <p-password
-                    inputId="password"
-                    formControlName="password"
-                    [toggleMask]="true"
-                    [fluid]="true"
-                    [maxLength]="limits.password"
-                    autocomplete="new-password"
-                    weakLabel="Débil"
-                    mediumLabel="Media"
-                    strongLabel="Fuerte"
-                    promptLabel="Mínimo 8 caracteres"
-                />
-                @if (isInvalid('password')) {
-                    <small class="mgs-field__error">La contraseña debe tener entre 8 y {{ limits.password }} caracteres.</small>
-                }
-            </div>
-
-            <div class="mgs-field mgs-field--half">
-                <label for="confirmPassword">Confirmar contraseña</label>
-                <p-password inputId="confirmPassword" formControlName="confirmPassword" [toggleMask]="true" [fluid]="true" [feedback]="false" autocomplete="new-password" />
-                @if (isInvalid('confirmPassword')) {
-                    <small class="mgs-field__error">Repita la contraseña.</small>
-                } @else if (isMismatch()) {
-                    <small class="mgs-field__error">Las contraseñas no coinciden.</small>
                 }
             </div>
         </div>
@@ -103,13 +79,6 @@
             </div>
             <p-progressbar [value]="progress()" [showValue]="false" styleClass="h-2" />
         </div>
-
-        @if (isEditing()) {
-            <div class="mgs-alert text-sm">
-                <i class="pi pi-info-circle"></i>
-                <span>Para guardar cambios escriba una contraseña: la nueva o la actual.</span>
-            </div>
-        }
     </aside>
 
     @if (hasChanges()) {

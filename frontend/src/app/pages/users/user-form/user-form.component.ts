@@ -1,13 +1,12 @@
 import { HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, input, numberAttribute, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
 import { AvatarModule } from 'primeng/avatar';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { PasswordModule } from 'primeng/password';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { RadioButtonModule } from 'primeng/radiobutton';
 import { TagModule } from 'primeng/tag';
@@ -24,8 +23,6 @@ import { UserService } from '../user.service';
 /** Limits of UserRequestDTO in the backend. */
 const MAX_NAME_LENGTH = 60;
 const MAX_EMAIL_LENGTH = 120;
-const MIN_PASSWORD_LENGTH = 8;
-const MAX_PASSWORD_LENGTH = 100;
 
 /** Rejects values made only of spaces, which required alone lets through. */
 const NOT_BLANK = Validators.pattern(/\S/);
@@ -34,18 +31,7 @@ const NOT_BLANK = Validators.pattern(/\S/);
 const ALERT_DURATION_MS = 900;
 
 /** Fields the user has to fill in before saving. */
-const REQUIRED_FIELDS = ['firstName', 'firstLastName', 'email', 'password', 'confirmPassword'] as const;
-
-/**
- * Checks that the confirmation repeats the password.
- *
- * @param group form holding both passwords
- * @returns a passwordMismatch error when they differ
- */
-function passwordsMatch(group: AbstractControl): ValidationErrors | null {
-    const confirmation = group.get('confirmPassword')?.value;
-    return !confirmation || group.get('password')?.value === confirmation ? null : { passwordMismatch: true };
-}
+const REQUIRED_FIELDS = ['firstName', 'firstLastName', 'email'] as const;
 
 /**
  * Form used to register a new administrator or ergonomist, or to edit one.
@@ -54,7 +40,7 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
     selector: 'app-user-form',
     standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [ReactiveFormsModule, RouterLink, AvatarModule, ButtonModule, InputTextModule, PasswordModule, ProgressBarModule, RadioButtonModule, TagModule, PageHeaderComponent],
+    imports: [ReactiveFormsModule, RouterLink, AvatarModule, ButtonModule, InputTextModule, ProgressBarModule, RadioButtonModule, TagModule, PageHeaderComponent],
     templateUrl: './user-form.component.html',
     host: { '(window:beforeunload)': 'onBeforeUnload($event)' }
 })
@@ -72,7 +58,7 @@ export class UserFormComponent implements OnInit, HasUnsavedChanges {
     /** Identifier of the user being edited, absent when creating a new one. */
     readonly id = input<number | undefined, unknown>(undefined, { transform: numberAttribute });
 
-    protected readonly limits = { name: MAX_NAME_LENGTH, email: MAX_EMAIL_LENGTH, password: MAX_PASSWORD_LENGTH };
+    protected readonly limits = { name: MAX_NAME_LENGTH, email: MAX_EMAIL_LENGTH };
 
     protected readonly roleLabels = ROLE_LABELS;
 
@@ -84,18 +70,13 @@ export class UserFormComponent implements OnInit, HasUnsavedChanges {
         { value: 'ADMIN', description: 'Acceso completo: gestiona empresas, usuarios y formularios.', icon: 'pi pi-shield' }
     ];
 
-    protected readonly userForm = this.formBuilder.nonNullable.group(
-        {
-            firstName: ['', [Validators.required, NOT_BLANK, Validators.maxLength(MAX_NAME_LENGTH)]],
-            firstLastName: ['', [Validators.required, NOT_BLANK, Validators.maxLength(MAX_NAME_LENGTH)]],
-            secondLastName: ['', [Validators.maxLength(MAX_NAME_LENGTH)]],
-            email: ['', [Validators.required, Validators.email, Validators.maxLength(MAX_EMAIL_LENGTH)]],
-            password: ['', [Validators.required, Validators.minLength(MIN_PASSWORD_LENGTH), Validators.maxLength(MAX_PASSWORD_LENGTH)]],
-            confirmPassword: ['', [Validators.required]],
-            role: ['ERGONOMIST' as Role, [Validators.required]]
-        },
-        { validators: passwordsMatch }
-    );
+    protected readonly userForm = this.formBuilder.nonNullable.group({
+        firstName: ['', [Validators.required, NOT_BLANK, Validators.maxLength(MAX_NAME_LENGTH)]],
+        firstLastName: ['', [Validators.required, NOT_BLANK, Validators.maxLength(MAX_NAME_LENGTH)]],
+        secondLastName: ['', [Validators.maxLength(MAX_NAME_LENGTH)]],
+        email: ['', [Validators.required, Validators.email, Validators.maxLength(MAX_EMAIL_LENGTH)]],
+        role: ['ERGONOMIST' as Role, [Validators.required]]
+    });
 
     protected readonly isSubmitting = signal(false);
 
@@ -140,8 +121,7 @@ export class UserFormComponent implements OnInit, HasUnsavedChanges {
     /** Required fields that already hold a valid value. */
     protected readonly completedCount = computed(() => {
         this.formValue();
-        const passwordsDiffer = this.userForm.hasError('passwordMismatch');
-        return REQUIRED_FIELDS.filter((field) => this.userForm.controls[field].valid && !(field === 'confirmPassword' && passwordsDiffer)).length;
+        return REQUIRED_FIELDS.filter((field) => this.userForm.controls[field].valid).length;
     });
 
     protected readonly progress = computed(() => Math.round((this.completedCount() / this.requiredCount) * 100));
@@ -221,16 +201,6 @@ export class UserFormComponent implements OnInit, HasUnsavedChanges {
     }
 
     /**
-     * Checks whether the confirmation has to show that it differs from the password.
-     *
-     * @returns true when both passwords were typed and differ
-     */
-    protected isMismatch(): boolean {
-        const confirmation = this.userForm.controls.confirmPassword;
-        return this.userForm.hasError('passwordMismatch') && (confirmation.touched || confirmation.dirty);
-    }
-
-    /**
      * Sends the form to the backend, creating or updating the user.
      */
     protected submit(): void {
@@ -269,18 +239,17 @@ export class UserFormComponent implements OnInit, HasUnsavedChanges {
 
     /**
      * Builds the body of the request with clean values: trimmed names, email in
-     * lower case, no empty second last name and without the confirmation.
+     * lower case and no empty second last name.
      *
      * @returns body for POST or PUT /api/users
      */
     private buildRequest(): UserRequest {
-        const { firstName, firstLastName, secondLastName, email, password, role } = this.userForm.getRawValue();
+        const { firstName, firstLastName, secondLastName, email, role } = this.userForm.getRawValue();
         return {
             firstName: firstName.trim(),
             firstLastName: firstLastName.trim(),
             secondLastName: secondLastName.trim() || undefined,
             email: email.trim().toLowerCase(),
-            password,
             role
         };
     }
