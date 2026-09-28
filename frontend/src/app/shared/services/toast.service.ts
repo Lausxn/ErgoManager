@@ -17,7 +17,9 @@ export class ToastService {
         closeButtonAriaLabel: 'Cerrar notificación',
         timer: TOAST_DURATION_MS,
         timerProgressBar: true,
-        customClass: { container: 'mgs-swal-container' },
+        customClass: {
+            container: 'mgs-swal-container'
+        },
         didOpen: (popup) => {
             popup.addEventListener('mouseenter', Swal.stopTimer);
             popup.addEventListener('mouseleave', Swal.resumeTimer);
@@ -59,7 +61,10 @@ export class ToastService {
             icon,
             title,
             text: detail,
-            customClass: { popup: `mgs-swal-toast mgs-swal-toast--${icon}` }
+            customClass: {
+                container: 'mgs-swal-container',
+                popup: `mgs-swal-toast mgs-swal-toast--${icon}`
+            }
         });
     }
 }

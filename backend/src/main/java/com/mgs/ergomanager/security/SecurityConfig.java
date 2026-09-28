@@ -42,10 +42,11 @@ public class SecurityConfig {
      * Builds the configuration with the JWT collaborators.
      *
      * @param jwtAuthenticationFilter filter that reads the Authorization header
-     * @param userDetailsService      service that loads the users
+     * @param userDetailsService service that loads the users
      */
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
-                          CustomUserDetailsService userDetailsService) {
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            CustomUserDetailsService userDetailsService) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.userDetailsService = userDetailsService;
     }
@@ -58,24 +59,54 @@ public class SecurityConfig {
      * @throws Exception when the chain cannot be built
      */
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS))
                 .exceptionHandling(handling ->
-                        handling.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+                        handling.authenticationEntryPoint(
+                                new HttpStatusEntryPoint(
+                                        HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(requests -> requests
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+
                         // Employees answer the form without an account.
-                        .requestMatchers(HttpMethod.GET, "/api/forms/active").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/self-evaluations").permitAll()
-                        .requestMatchers("/api/companies/**").hasRole("ADMIN")
-                        .requestMatchers("/api/users/**").hasRole("ADMIN")
-                        .requestMatchers("/api/forms/**").hasRole("ADMIN")
-                        .requestMatchers("/api/personalized-evaluations/**").hasRole("ERGONOMIST")
-                        .anyRequest().authenticated())
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/forms/active")
+                        .permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/self-evaluations")
+                        .permitAll()
+
+                        // Administrators and ergonomists have full access
+                        // to companies and forms.
+                        .requestMatchers("/api/companies/**")
+                        .hasAnyRole("ADMIN", "ERGONOMIST")
+
+                        .requestMatchers("/api/forms/**")
+                        .hasAnyRole("ADMIN", "ERGONOMIST")
+
+                        // User management is restricted to administrators.
+                        .requestMatchers("/api/users/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(
+                                "/api/personalized-evaluations/**")
+                        .hasRole("ERGONOMIST")
+
+                        .anyRequest()
+                        .authenticated())
+                .addFilterBefore(
+                        jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 
@@ -86,9 +117,13 @@ public class SecurityConfig {
      * @return manager backed by the database users
      */
     @Bean
-    public AuthenticationManager authenticationManager(PasswordEncoder passwordEncoder) {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+    public AuthenticationManager authenticationManager(
+            PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider =
+                new DaoAuthenticationProvider(userDetailsService);
+
         provider.setPasswordEncoder(passwordEncoder);
+
         return new ProviderManager(provider);
     }
 

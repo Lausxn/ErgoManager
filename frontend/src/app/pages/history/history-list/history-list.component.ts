@@ -21,7 +21,8 @@ import { HistoryService } from '../history.service';
 type SearchMode = 'company' | 'employee';
 
 /**
- * Screen where the evaluation history is consulted.
+ * Screen where the evaluation history of a client company, or of a single
+ * employee, is consulted.
  */
 @Component({
     selector: 'app-history-list',
@@ -40,6 +41,7 @@ export class HistoryListComponent {
 
     private readonly toastService = inject(ToastService);
 
+    /** Only administrators can read the company list, the others type the company number. */
     protected readonly isAdmin = computed(() => this.authService.session()?.role === 'ADMIN');
 
     protected readonly searchModeOptions = [
@@ -71,6 +73,11 @@ export class HistoryListComponent {
         }
     }
 
+    /**
+     * Switches between searching by company and by employee.
+     *
+     * @param mode search mode picked by the user
+     */
     protected changeMode(mode: SearchMode): void {
         this.searchMode.set(mode);
         this.historyList.set([]);
@@ -78,19 +85,22 @@ export class HistoryListComponent {
     }
 
     /**
-     * Searches the history through the corresponding backend service.
+     * Reads the history entries of the company or employee typed in the form.
      */
     protected search(): void {
         const field = this.searchMode() === 'company' ? this.searchForm.controls.companyId : this.searchForm.controls.employeeEmail;
+
         if (field.invalid) {
             markFormAsDirty(field);
             return;
         }
 
         const { companyId, employeeEmail } = this.searchForm.getRawValue();
+
         const history$: Observable<HistoryResponse[]> = this.searchMode() === 'company' ? this.historyService.findByCompany(companyId!) : this.historyService.findByEmployee(employeeEmail);
 
         this.isLoading.set(true);
+
         history$.subscribe({
             next: (historyList) => {
                 this.historyList.set(historyList);
@@ -101,6 +111,7 @@ export class HistoryListComponent {
                 this.historyList.set([]);
                 this.hasSearched.set(true);
                 this.isLoading.set(false);
+
                 this.toastService.error('No se pudo consultar el historial', 'Verifique los datos o la conexión e intente nuevamente.');
             }
         });

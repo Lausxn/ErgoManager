@@ -16,7 +16,7 @@ import { ACTIVE_TAG_CLASSES } from '../../../shared/utils/labels';
 import { CompanyService } from '../company.service';
 
 /**
- * Table of client companies registered in ErgoManager.
+ * Table of the client companies registered in ErgoManager.
  */
 @Component({
     selector: 'app-company-list',
@@ -42,10 +42,11 @@ export class CompanyListComponent {
     }
 
     /**
-     * Reads companies from the backend.
+     * Reads the companies shown by the table.
      */
     protected loadCompanies(): void {
         this.isLoading.set(true);
+
         this.companyService.findAll().subscribe({
             next: (companyList) => {
                 this.companyList.set(companyList);
@@ -53,17 +54,24 @@ export class CompanyListComponent {
             },
             error: () => {
                 this.isLoading.set(false);
+
                 this.toastService.error('No se pudieron cargar los clientes', 'Verifique la conexión e intente nuevamente.');
             }
         });
     }
 
+    /**
+     * Filters the table with the text typed in the search box.
+     *
+     * @param table table to filter
+     * @param event input event of the search box
+     */
     protected filterTable(table: Table, event: Event): void {
         table.filterGlobal((event.target as HTMLInputElement).value, 'contains');
     }
 
     /**
-     * Confirms and deactivates a client company.
+     * Asks for confirmation and deactivates the company, keeping its history.
      *
      * @param company company to deactivate
      */
@@ -74,11 +82,15 @@ export class CompanyListComponent {
             icon: 'pi pi-exclamation-triangle',
             acceptLabel: 'Desactivar',
             rejectLabel: 'Cancelar',
-            rejectButtonProps: { severity: 'secondary', outlined: true },
+            rejectButtonProps: {
+                severity: 'secondary',
+                outlined: true
+            },
             accept: () =>
                 this.companyService.deactivate(company.id).subscribe({
                     next: () => {
                         this.toastService.success('Empresa desactivada', company.businessName);
+
                         this.loadCompanies();
                     },
                     error: () => this.toastService.error('No se pudo desactivar la empresa', 'Intente nuevamente en unos minutos.')
