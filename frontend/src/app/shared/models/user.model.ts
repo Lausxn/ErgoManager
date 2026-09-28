@@ -1,10 +1,11 @@
 import { Role } from './role.model';
 
 /**
- * Body sent to POST and PUT /api/users. There is no password: the backend
- * generates a temporary one and sends it to the email of the new user.
+ * Body sent to POST and PUT /api/users. The supplied temporary password is
+ * hashed by the backend and sent to the email of the new user.
  */
 export interface UserRequest {
+    password: string;
     firstName: string;
     firstLastName: string;
     secondLastName?: string;

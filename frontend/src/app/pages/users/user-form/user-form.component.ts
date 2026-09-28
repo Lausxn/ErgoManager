@@ -4,21 +4,10 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
-import { Component, OnInit, computed, inject, input, numberAttribute, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
-import { MessageService } from 'primeng/api';
 import { AvatarModule } from 'primeng/avatar';
 import { ButtonModule } from 'primeng/button';
-import { CardModule } from 'primeng/card';
-import { DividerModule } from 'primeng/divider';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { ProgressBarModule } from 'primeng/progressbar';
-import { MessageModule } from 'primeng/message';
-import { PasswordModule } from 'primeng/password';
 import { RadioButtonModule } from 'primeng/radiobutton';
 import { TagModule } from 'primeng/tag';
 
@@ -29,6 +18,9 @@ import { UserRequest } from '../../../shared/models/user.model';
 import { ToastService } from '../../../shared/services/toast.service';
 import { isControlInvalid, markFormAsDirty } from '../../../shared/utils/form';
 import { ROLE_LABELS, ROLE_TAG_CLASSES } from '../../../shared/utils/labels';
+import { getApiErrorMessage, getApiFieldErrors } from '../../../shared/utils/api-error';
+import { compareFieldsValidator } from '../../../shared/utils/password';
+import { passwordByteLimit, userEmailValidator } from './user-validation';
 import { UserService } from '../user.service';
 
 /** Limits of UserRequestDTO in the backend. */
@@ -42,12 +34,10 @@ const NOT_BLANK = Validators.pattern(/\S/);
 const ALERT_DURATION_MS = 900;
 
 /** Fields the user has to fill in before saving. */
-const REQUIRED_FIELDS = ['firstName', 'firstLastName', 'email'] as const;
+const REQUIRED_FIELDS = ['firstName', 'firstLastName', 'email', 'password', 'confirmPassword'] as const;
 
 /**
- * Screen used to register a new administrator or ergonomist, or to edit one.
- * Groups the data asked to identify the user, their access and their role,
- * and shows a summary of the account while it is typed.
+ * Form used to register a new administrator or ergonomist, or to edit one.
  */
 @Component({
     selector: 'app-user-form',
@@ -56,23 +46,6 @@ const REQUIRED_FIELDS = ['firstName', 'firstLastName', 'email'] as const;
     imports: [ReactiveFormsModule, RouterLink, AvatarModule, ButtonModule, InputTextModule, ProgressBarModule, RadioButtonModule, TagModule, PageHeaderComponent],
     templateUrl: './user-form.component.html',
     host: { '(window:beforeunload)': 'onBeforeUnload($event)' }
-    imports: [
-        ReactiveFormsModule,
-        RouterLink,
-        AvatarModule,
-        ButtonModule,
-        CardModule,
-        DividerModule,
-        IconFieldModule,
-        InputIconModule,
-        InputTextModule,
-        MessageModule,
-        PasswordModule,
-        RadioButtonModule,
-        TagModule,
-        PageHeaderComponent
-    ],
-    templateUrl: './user-form.component.html'
 })
 export class UserFormComponent implements OnInit, HasUnsavedChanges {
     private readonly formBuilder = inject(FormBuilder);
@@ -100,52 +73,20 @@ export class UserFormComponent implements OnInit, HasUnsavedChanges {
         { value: 'ADMIN', description: 'Acceso completo: gestiona empresas, usuarios y formularios.', icon: 'pi pi-shield' }
     ];
 
-    protected readonly userForm = this.formBuilder.nonNullable.group({
-        firstName: ['', [Validators.required, NOT_BLANK, Validators.maxLength(MAX_NAME_LENGTH)]],
-        firstLastName: ['', [Validators.required, NOT_BLANK, Validators.maxLength(MAX_NAME_LENGTH)]],
-        secondLastName: ['', [Validators.maxLength(MAX_NAME_LENGTH)]],
-        email: ['', [Validators.required, Validators.email, Validators.maxLength(MAX_EMAIL_LENGTH)]],
-        role: ['ERGONOMIST' as Role, [Validators.required]]
-    protected readonly maxNameLength = MAX_NAME_LENGTH;
-
-    protected readonly maxEmailLength = MAX_EMAIL_LENGTH;
-
-    protected readonly maxPasswordLength = MAX_PASSWORD_LENGTH;
-
-    protected readonly roleCards: RoleCard[] = [
-        { value: 'ADMIN', label: ROLE_LABELS.ADMIN, description: 'Gestiona empresas, usuarios y formularios.', icon: 'pi pi-shield' },
-        { value: 'ERGONOMIST', label: ROLE_LABELS.ERGONOMIST, description: 'Realiza evaluaciones personalizadas y gestiona su agenda.', icon: 'pi pi-heart' }
-    ];
-
     protected readonly userForm = this.formBuilder.nonNullable.group(
         {
-            firstName: ['', [Validators.required, Validators.maxLength(MAX_NAME_LENGTH)]],
-            firstLastName: ['', [Validators.required, Validators.maxLength(MAX_NAME_LENGTH)]],
+            firstName: ['', [Validators.required, NOT_BLANK, Validators.maxLength(MAX_NAME_LENGTH)]],
+            firstLastName: ['', [Validators.required, NOT_BLANK, Validators.maxLength(MAX_NAME_LENGTH)]],
             secondLastName: ['', [Validators.maxLength(MAX_NAME_LENGTH)]],
-            email: ['', [Validators.required, Validators.email, Validators.maxLength(MAX_EMAIL_LENGTH)]],
-            password: ['', [Validators.required, Validators.minLength(MIN_PASSWORD_LENGTH), Validators.maxLength(MAX_PASSWORD_LENGTH)]],
-            passwordConfirmation: ['', [Validators.required]],
+            email: ['', [userEmailValidator]],
+            password: ['', [Validators.required, NOT_BLANK, Validators.minLength(8), passwordByteLimit]],
+            confirmPassword: ['', [Validators.required]],
             role: ['ERGONOMIST' as Role, [Validators.required]]
         },
-        { validators: passwordsMatch }
+        { validators: compareFieldsValidator('confirmPassword', 'password', true, 'passwordMismatch') }
     );
 
-    private readonly formValue = toSignal(this.userForm.valueChanges, { initialValue: this.userForm.getRawValue() });
-
-    /** Name shown in the summary card while the form is typed. */
-    protected readonly previewName = computed(() => {
-        const { firstName, firstLastName, secondLastName } = this.formValue();
-        return [firstName, firstLastName, secondLastName].map((part) => part?.trim()).filter(Boolean).join(' ');
-    });
-
-    protected readonly previewInitials = computed(() => {
-        const { firstName, firstLastName } = this.formValue();
-        return `${firstName?.trim().charAt(0) ?? ''}${firstLastName?.trim().charAt(0) ?? ''}`.toUpperCase();
-    });
-
-    protected readonly previewEmail = computed(() => this.formValue().email?.trim() ?? '');
-
-    protected readonly previewRole = computed(() => ROLE_LABELS[this.formValue().role ?? 'ERGONOMIST']);
+    protected readonly errorMessage = signal<string | null>(null);
 
     protected readonly isSubmitting = signal(false);
 
@@ -188,7 +129,10 @@ export class UserFormComponent implements OnInit, HasUnsavedChanges {
     protected readonly requiredCount = REQUIRED_FIELDS.length;
 
     /** Required fields that already hold a valid value. */
+    private readonly formStatus = toSignal(this.userForm.statusChanges, { initialValue: this.userForm.status });
+
     protected readonly completedCount = computed(() => {
+        this.formStatus();
         this.formValue();
         return REQUIRED_FIELDS.filter((field) => this.userForm.controls[field].valid).length;
     });
@@ -257,6 +201,7 @@ export class UserFormComponent implements OnInit, HasUnsavedChanges {
      */
     protected resetForm(): void {
         this.userForm.reset(this.initialValue());
+        this.errorMessage.set(null);
     }
 
     /**
@@ -269,19 +214,19 @@ export class UserFormComponent implements OnInit, HasUnsavedChanges {
         return isControlInvalid(this.userForm.get(field));
     }
 
-    /**
-     * Checks whether the confirmation has to show that the passwords differ.
-     *
-     * @returns true when both passwords were typed and do not match
-     */
-    protected isPasswordMismatch(): boolean {
-        const confirmation = this.userForm.controls.passwordConfirmation;
-        return this.userForm.hasError('passwordMismatch') && (confirmation.touched || confirmation.dirty);
+    /** Gives each field an actionable message, including server validation. */
+    protected fieldError(field: string): string {
+        const control = this.userForm.get(field);
+        if (control?.hasError('server')) return control.getError('server');
+        if (control?.hasError('duplicated')) return 'Ya existe un usuario con este correo.';
+        if (control?.hasError('required') || control?.hasError('pattern')) return 'Este campo es obligatorio.';
+        if (control?.hasError('email')) return 'Escriba un correo válido, por ejemplo nombre@empresa.com.';
+        if (control?.hasError('minlength')) return 'La contraseña debe tener al menos 8 caracteres.';
+        if (control?.hasError('passwordBytes')) return 'La contraseña no puede superar 72 bytes; las tildes y emojis ocupan más de uno.';
+        if (control?.hasError('maxlength')) return `Use un máximo de ${control.getError('maxlength').requiredLength} caracteres.`;
+        return 'Revise este campo.';
     }
-
-    /**
-     * Sends the form to the backend, creating or updating the user.
-     */
+    /** Sends validated data to the backend, preserving values after an error. */
     protected submit(): void {
         if (this.isSubmitting()) {
             return;
@@ -291,31 +236,38 @@ export class UserFormComponent implements OnInit, HasUnsavedChanges {
             return;
         }
 
+        this.errorMessage.set(null);
         this.isSubmitting.set(true);
         const request = this.buildRequest();
-        const { firstName, firstLastName, secondLastName, email, password, role } = this.userForm.getRawValue();
-        const request: UserRequest = { firstName, firstLastName, secondLastName: secondLastName || undefined, email, password, role };
         const userId = this.id();
         const saved$ = this.isEditing() && userId !== undefined ? this.userService.update(userId, request) : this.userService.create(request);
 
         saved$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
             next: () => {
                 this.isSubmitting.set(false);
+                this.userForm.controls.password.reset();
+                this.userForm.controls.confirmPassword.reset();
                 this.initialValue.set(this.userForm.getRawValue());
                 this.toastService.success(this.isEditing() ? 'Usuario actualizado' : 'Usuario creado', request.email);
-                this.messageService.add({ severity: 'success', summary: this.isEditing() ? 'Usuario actualizado' : 'Usuario creado', detail: request.email });
                 void this.router.navigate(['/users']);
             },
             error: (error: HttpErrorResponse) => {
                 this.isSubmitting.set(false);
                 if (error.status === HttpStatusCode.Conflict) {
                     const email = this.userForm.controls.email;
-                    email.setErrors({ duplicated: true });
+                    email.setErrors({ ...email.errors, duplicated: true });
                     email.markAsTouched();
                     return;
                 }
-                this.toastService.error('No se pudo guardar', 'Revise los datos e intente de nuevo.');
-                this.messageService.add({ severity: 'error', summary: 'No se pudo guardar', detail: 'Revise los datos e intente de nuevo. El correo no puede estar registrado.' });
+                const fieldErrors = getApiFieldErrors(error);
+                for (const [field, message] of Object.entries(fieldErrors)) {
+                    const control = this.userForm.get(field);
+                    if (control) {
+                        control.setErrors({ ...control.errors, server: message });
+                        control.markAsTouched();
+                    }
+                }
+                this.errorMessage.set(getApiErrorMessage(error, 'No se pudo guardar. Intente de nuevo.'));
             }
         });
     }
@@ -327,12 +279,13 @@ export class UserFormComponent implements OnInit, HasUnsavedChanges {
      * @returns body for POST or PUT /api/users
      */
     private buildRequest(): UserRequest {
-        const { firstName, firstLastName, secondLastName, email, role } = this.userForm.getRawValue();
+        const { firstName, firstLastName, secondLastName, email, password, role } = this.userForm.getRawValue();
         return {
             firstName: firstName.trim(),
             firstLastName: firstLastName.trim(),
             secondLastName: secondLastName.trim() || undefined,
             email: email.trim().toLowerCase(),
+            password,
             role
         };
     }
