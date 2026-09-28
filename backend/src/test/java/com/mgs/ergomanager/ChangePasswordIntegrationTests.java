@@ -180,15 +180,8 @@ class ChangePasswordIntegrationTests {
             throws Exception {
 
         String token = login(CURRENT_PASSWORD);
-
-        change(
-                token,
-                "Incorrect1!",
-                NEW_PASSWORD)
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("message")
-                        .value("Current password is incorrect"));
-
+        change(token, "Incorrect1!", NEW_PASSWORD).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("message").value("La contraseña actual es incorrecta."));
         assertUnchanged();
 
         change(
