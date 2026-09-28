@@ -1,41 +1,77 @@
-<div class="deactivation-container">
-  <!-- HEADER -->
-  <div class="deactivation-header">
-    <div class="header-content">
-      <h1 class="header-title">Desactivar acceso</h1>
-      <p class="header-subtitle">La cuenta pierde acceso, pero su información histórica se conserva.</p>
-    </div>
-    <div class="header-logo">
-      <img src="/brand/logo.svg" alt="ErgoManager" />
-    </div>
-  </div>
+<!-- The menu state is the one of the main layout, so it stays the same across pages. -->
+<div class="mgs-security" [class.is-sidebar-collapsed]="isSidebarCollapsed()" [class.is-sidebar-open]="isSidebarOpen()">
+    <app-sidebar-nav id="sidebar-nav" [user]="authService.session()" />
 
-  <!-- CONTENT -->
-  <div class="deactivation-content">
-    <p class="target-user">Se desactivará la cuenta de <strong>{{ userName }}</strong>.</p>
+    <!-- Closes the menu on phones when the user taps outside of it. -->
+    <div class="mgs-security__mask" (click)="closeSidebar()" aria-hidden="true"></div>
 
-    <!-- WARNING BOX -->
-    <div class="warning-box">
-      <div class="warning-icon">⚠️</div>
-      <div class="warning-text">
-        <strong>Importante:</strong> Los usuarios no se eliminan de forma permanente. La desactivación revoca el inicio de sesión y conserva las evaluaciones y registros anteriores.
-      </div>
-    </div>
+    <div class="mgs-security__main">
+        <header class="mgs-security__header">
+            <div class="mgs-security__brand">
+                <button type="button" class="mgs-prefs__theme" (click)="layoutService.onMenuToggle()" aria-label="Mostrar u ocultar el menú" aria-controls="sidebar-nav" [attr.aria-expanded]="isSidebarVisible()">
+                    <i class="pi pi-bars" aria-hidden="true"></i>
+                </button>
+                <app-brand-logo class="mgs-security__compact-logo" variant="full" />
+                <nav class="mgs-security__breadcrumb" aria-label="Ruta de navegación">
+                    <span>ErgoManager</span>
+                    <span aria-hidden="true">/</span>
+                    <strong aria-current="page">Desactivar usuario</strong>
+                </nav>
+            </div>
+            <!-- Only the theme switch; the choice is shared with the rest of the application. -->
+            <button
+                type="button"
+                class="mgs-prefs__theme"
+                (click)="layoutService.toggleTheme()"
+                [attr.aria-label]="layoutService.isDarkTheme() ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'"
+                [pTooltip]="layoutService.isDarkTheme() ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'"
+                tooltipPosition="bottom"
+            >
+                <i class="pi" [class.pi-sun]="layoutService.isDarkTheme()" [class.pi-moon]="!layoutService.isDarkTheme()" aria-hidden="true"></i>
+            </button>
+        </header>
 
-    <!-- ACTION BUTTONS -->
-    <div class="action-buttons">
-      <button 
-        class="btn-deactivate" 
-        (click)="deactivateUser()"
-        [disabled]="isLoading">
-        {{ isLoading ? 'Desactivando...' : 'Desactivar usuario' }}
-      </button>
-      <button 
-        class="btn-cancel" 
-        (click)="cancel()"
-        [disabled]="isLoading">
-        Cancelar
-      </button>
+        <main class="mgs-security__content">
+            <section class="mgs-security__card" aria-labelledby="deactivate-title" [attr.aria-busy]="isLoading">
+                <div class="mgs-security__intro">
+                    <span class="mgs-security__badge"><i class="pi pi-user-minus" aria-hidden="true"></i></span>
+                    <h1 id="deactivate-title" class="mgs-security__title">Desactivar usuario</h1>
+                    <p class="mgs-security__lead">Revise la cuenta seleccionada antes de confirmar la desactivación.</p>
+                </div>
+                <div class="mgs-security__body">
+                    <div class="mgs-security__fields">
+                        <div class="deactivation-user">
+                            <span class="deactivation-user__avatar" aria-hidden="true"><i class="pi pi-user"></i></span>
+                            <div>
+                                <span class="mgs-security__panel-title">Cuenta seleccionada</span>
+                                <h2>{{ userName }}</h2>
+                                @if (hasValidUser) {
+                                    <span class="mgs-security__hint">ID de usuario: {{ userId }}</span>
+                                }
+                            </div>
+                        </div>
+                        <p class="deactivation-description">Al confirmar, esta cuenta perderá el acceso a ErgoManager.</p>
+                    </div>
+                    <aside class="mgs-security__panel" aria-label="Información sobre la desactivación">
+                        <span class="mgs-security__panel-title">Antes de continuar</span>
+                        <ul class="mgs-security__rules">
+                            <li><i class="pi pi-lock" aria-hidden="true"></i><span>Se revoca el inicio de sesión.</span></li>
+                            <li><i class="pi pi-history" aria-hidden="true"></i><span>Se conservan las evaluaciones y los registros.</span></li>
+                        </ul>
+                        <p class="mgs-security__note"><i class="pi pi-info-circle" aria-hidden="true"></i><span>La cuenta se desactiva; sus datos no se eliminan de forma permanente.</span></p>
+                    </aside>
+                    @if (!hasValidUser) {
+                        <div class="mgs-alert mgs-security__full" role="alert">Seleccione un usuario desde la lista para continuar.</div>
+                    }
+                    @if (errorMessage) {
+                        <div class="mgs-alert mgs-security__full" role="alert">{{ errorMessage }}</div>
+                    }
+                    <div class="mgs-security__actions mgs-security__full">
+                        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="cancel()" [disabled]="isLoading" />
+                        <p-button [label]="isLoading ? 'Desactivando...' : 'Desactivar usuario'" icon="pi pi-user-minus" [loading]="isLoading" [disabled]="isLoading || !hasValidUser" (onClick)="deactivateUser()" />
+                    </div>
+                </div>
+            </section>
+        </main>
     </div>
-  </div>
 </div>

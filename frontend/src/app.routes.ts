@@ -12,6 +12,12 @@ import { Notfound } from './app/pages/notfound/notfound';
  */
 export const appRoutes: Routes = [
     {
+        path: 'users/deactivate-confirmation',
+        canActivate: [authGuard, roleGuard(['ADMIN'])],
+        loadComponent: () => import('./app/pages/users/deactivate-user-confirmation/deactivate-user-confirmation.component').then((m) => m.DeactivateUserConfirmationComponent),
+        title: 'ErgoManager - Desactivar usuario'
+    },
+    {
         path: '',
         component: AppLayout,
         canActivate: [authGuard],
