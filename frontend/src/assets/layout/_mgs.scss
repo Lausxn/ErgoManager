@@ -99,6 +99,11 @@
     color: var(--heading-color);
 }
 
+/* Title of a section that follows another one in the same card. */
+.mgs-section-title--spaced {
+    margin-top: 2rem;
+}
+
 /* Tags limited to the official palette. */
 .p-tag.mgs-tag {
     font-size: 0.8rem;
@@ -259,6 +264,106 @@
         text-align: right;
         font-weight: 600;
         color: var(--text-color);
+    }
+}
+
+/*
+ * Bar of unsaved changes, like the one of Discord: it appears while a form has
+ * changes and shakes in wine, the alert color, when the user tries to leave.
+ */
+.mgs-save-bar {
+    position: sticky;
+    bottom: 1rem;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+    padding: 0.75rem 0.75rem 0.75rem 1.25rem;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: var(--mgs-graphite);
+    color: #ffffff;
+    animation: mgs-save-bar-in 0.2s ease-out;
+    transition: background-color 0.2s;
+
+    &__text {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-weight: 600;
+    }
+
+    &__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-left: auto;
+    }
+
+    .p-button.p-button-text {
+        color: #ffffff;
+
+        &:not(:disabled):hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: #ffffff;
+        }
+    }
+
+    &--alert {
+        background: var(--mgs-wine);
+        animation: mgs-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+
+        .p-button:not(.p-button-text) {
+            border-color: #ffffff;
+            background: #ffffff;
+            color: var(--mgs-wine);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        &,
+        &--alert {
+            animation: none;
+        }
+    }
+}
+
+.app-dark .mgs-save-bar {
+    border-color: var(--surface-border);
+    background: var(--p-surface-800);
+
+    &--alert {
+        border-color: transparent;
+        background: var(--mgs-wine);
+    }
+}
+
+@keyframes mgs-save-bar-in {
+    from {
+        opacity: 0;
+        transform: translateY(1rem);
+    }
+}
+
+@keyframes mgs-shake {
+    10%,
+    90% {
+        transform: translateX(-2px);
+    }
+    20%,
+    80% {
+        transform: translateX(4px);
+    }
+    30%,
+    50%,
+    70% {
+        transform: translateX(-8px);
+    }
+    40%,
+    60% {
+        transform: translateX(8px);
     }
 }
 

@@ -67,13 +67,20 @@
                     </span>
                 </div>
             }
-
-            <div class="mgs-form-actions">
-                <p-button label="Cancelar" severity="secondary" [outlined]="true" routerLink="/users" />
-                <p-button label="Descartar cambios" icon="pi pi-undo" severity="secondary" [text]="true" [disabled]="!hasChanges() || isSaving()" (onClick)="discardChanges()" />
-                <p-button type="submit" label="Guardar cambios" icon="pi pi-check" [disabled]="!hasChanges()" [loading]="isSaving()" />
-            </div>
         </div>
+
+        @if (hasChanges()) {
+            <div class="col-span-12 mgs-save-bar" [class.mgs-save-bar--alert]="isAlerting()" role="region" aria-label="Cambios sin guardar" aria-live="polite">
+                <span class="mgs-save-bar__text">
+                    <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                    Cuidado, tiene cambios sin guardar.
+                </span>
+                <div class="mgs-save-bar__actions">
+                    <p-button label="Restablecer" [text]="true" [disabled]="isSaving()" (onClick)="discardChanges()" />
+                    <p-button type="submit" label="Guardar cambios" icon="pi pi-check" [loading]="isSaving()" />
+                </div>
+            </div>
+        }
     </form>
 } @else {
     <div class="grid grid-cols-12 gap-6" aria-busy="true" aria-label="Cargando usuario">

@@ -17,7 +17,7 @@ import { ROLE_CHOICES } from './user-fields';
     imports: [ReactiveFormsModule, RadioButtonModule],
     viewProviders: [{ provide: ControlContainer, useExisting: FormGroupDirective }],
     template: `
-        <h2 class="mgs-section-title mt-8">Rol</h2>
+        <h2 class="mgs-section-title mgs-section-title--spaced">Rol</h2>
         <div class="mgs-form-grid" role="radiogroup" aria-label="Rol del usuario">
             @for (choice of choices; track choice.value) {
                 <label class="mgs-field mgs-field--half mgs-choice" [class.mgs-choice--selected]="selected() === choice.value" [for]="'role-' + choice.value">

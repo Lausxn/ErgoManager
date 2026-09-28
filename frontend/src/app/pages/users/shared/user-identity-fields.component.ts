@@ -47,7 +47,7 @@ import { USER_LIMITS } from './user-fields';
             </div>
         </div>
 
-        <h2 class="mgs-section-title mt-8">Acceso</h2>
+        <h2 class="mgs-section-title mgs-section-title--spaced">Acceso</h2>
         <div class="mgs-form-grid">
             <div class="mgs-field">
                 <label for="email">Correo electrónico</label>
@@ -64,7 +64,12 @@ import { USER_LIMITS } from './user-fields';
     `
 })
 export class UserIdentityFieldsComponent {
-    protected readonly form = inject(FormGroupDirective).form;
+    private readonly formGroupDirective = inject(FormGroupDirective);
+
+    /** Read on every use: the parent binds the form after this component is built. */
+    protected get form() {
+        return this.formGroupDirective.form;
+    }
 
     protected readonly limits = USER_LIMITS;
 

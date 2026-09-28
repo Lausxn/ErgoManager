@@ -10,6 +10,7 @@ import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
 
+import { HasUnsavedChanges } from '../../../core/guards/unsaved-changes.guard';
 import { AuthService } from '../../../core/services/auth.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { UserResponse } from '../../../shared/models/user.model';
@@ -23,6 +24,9 @@ import { UserService } from '../user.service';
 
 const CONNECTION_ERROR = 'No fue posible conectar con el servidor. Revise su conexión e intente de nuevo.';
 
+/** Time the save bar stays in its alert state, a bit longer than the shake. */
+const ALERT_DURATION_MS = 900;
+
 /**
  * Edition of an administrator or ergonomist: shows the stored information of
  * the user next to the form to change the names, the email and the role. The
@@ -33,9 +37,10 @@ const CONNECTION_ERROR = 'No fue posible conectar con el servidor. Revise su con
     standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [DatePipe, ReactiveFormsModule, RouterLink, AvatarModule, ButtonModule, SkeletonModule, TagModule, PageHeaderComponent, UserIdentityFieldsComponent, UserRoleFieldComponent],
-    templateUrl: './user-edit.component.html'
+    templateUrl: './user-edit.component.html',
+    host: { '(window:beforeunload)': 'onBeforeUnload($event)' }
 })
-export class UserEditComponent implements OnInit {
+export class UserEditComponent implements OnInit, HasUnsavedChanges {
     private readonly userService = inject(UserService);
 
     private readonly authService = inject(AuthService);
@@ -61,6 +66,11 @@ export class UserEditComponent implements OnInit {
     protected readonly user = signal<UserResponse | null>(null);
 
     protected readonly isSaving = signal(false);
+
+    /** True while the save bar shakes to remind that there are unsaved changes. */
+    protected readonly isAlerting = signal(false);
+
+    private alertTimer?: ReturnType<typeof setTimeout>;
 
     /** Every value of the form, typed and complete, updated on each change. */
     private readonly formValue = toSignal(this.userForm.valueChanges.pipe(map(() => this.userForm.getRawValue())), { initialValue: this.userForm.getRawValue() });
@@ -94,6 +104,10 @@ export class UserEditComponent implements OnInit {
         return user !== null && this.selectedRole() !== user.role;
     });
 
+    constructor() {
+        this.destroyRef.onDestroy(() => clearTimeout(this.alertTimer));
+    }
+
     ngOnInit(): void {
         this.userService
             .findById(this.id())
@@ -106,6 +120,32 @@ export class UserEditComponent implements OnInit {
                     void this.router.navigate(['/users']);
                 }
             });
+    }
+
+    /**
+     * Called by unsavedChangesGuard before leaving the page. With pending
+     * changes it keeps the user here and shakes the save bar, like Discord.
+     *
+     * @returns true when there is nothing to save
+     */
+    canLeave(): boolean {
+        if (!this.hasChanges()) {
+            return true;
+        }
+        this.alertUnsavedChanges();
+        return false;
+    }
+
+    /**
+     * Asks the browser to confirm before closing or reloading the tab with
+     * unsaved changes.
+     *
+     * @param event unload event of the window
+     */
+    protected onBeforeUnload(event: BeforeUnloadEvent): void {
+        if (this.hasChanges()) {
+            event.preventDefault();
+        }
     }
 
     /**
@@ -140,6 +180,7 @@ export class UserEditComponent implements OnInit {
             .subscribe({
                 next: (updated) => {
                     this.isSaving.set(false);
+                    this.showUser(updated);
                     this.toastService.success('Usuario actualizado', updated.email);
                     void this.router.navigate(['/users']);
                 },
@@ -189,6 +230,7 @@ export class UserEditComponent implements OnInit {
                 return;
             case HttpStatusCode.NotFound:
                 this.toastService.error('No se encontró el usuario', 'Puede que ya no exista.');
+                this.user.set(null);
                 void this.router.navigate(['/users']);
                 return;
             case 0:
@@ -197,5 +239,19 @@ export class UserEditComponent implements OnInit {
             default:
                 this.toastService.error('No se pudo guardar', 'Intente de nuevo en unos minutos.');
         }
+    }
+
+    /**
+     * Shakes the save bar and paints it in the alert color. Removing the class
+     * first and adding it back on the next frame restarts the animation when
+     * the user insists.
+     */
+    private alertUnsavedChanges(): void {
+        clearTimeout(this.alertTimer);
+        this.isAlerting.set(false);
+        requestAnimationFrame(() => {
+            this.isAlerting.set(true);
+            this.alertTimer = setTimeout(() => this.isAlerting.set(false), ALERT_DURATION_MS);
+        });
     }
 }

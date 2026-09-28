@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 
+import { unsavedChangesGuard } from '../../core/guards/unsaved-changes.guard';
 import { UserEditComponent } from './user-edit/user-edit.component';
 import { DEMO_USER_ID, DemoUserService } from './user-edit/user-edit.demo';
 import { UserService } from './user.service';
@@ -16,7 +17,8 @@ export const usersRoutes: Routes = [
         component: UserEditComponent,
         title: 'ErgoManager - Editar usuario (ejemplo)',
         data: { id: DEMO_USER_ID },
+        canDeactivate: [unsavedChangesGuard],
         providers: [{ provide: UserService, useClass: DemoUserService }]
     },
-    { path: ':id', component: UserEditComponent, title: 'ErgoManager - Editar usuario' }
+    { path: ':id', component: UserEditComponent, title: 'ErgoManager - Editar usuario', canDeactivate: [unsavedChangesGuard] }
 ];
