@@ -11,8 +11,10 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
 
 import { HasUnsavedChanges } from '../../../core/guards/unsaved-changes.guard';
+import { SESSION_MESSAGE_STATE_KEY } from '../../../core/interceptors/error.interceptor';
 import { AuthService } from '../../../core/services/auth.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
+import { ApiError } from '../../../shared/models/api-error.model';
 import { UserResponse } from '../../../shared/models/user.model';
 import { ToastService } from '../../../shared/services/toast.service';
 import { markFormAsDirty } from '../../../shared/utils/form';
@@ -21,7 +23,6 @@ import { createIdentityControls, toIdentityRequest } from '../shared/user-fields
 import { UserIdentityFieldsComponent } from '../shared/user-identity-fields.component';
 import { UserRoleFieldComponent } from '../shared/user-role-field.component';
 import { UserService } from '../user.service';
-import { ApiError } from '../../../shared/models/api-error.model';
 
 const CONNECTION_ERROR = 'No fue posible conectar con el servidor. Revise su conexión e intente de nuevo.';
 
@@ -53,7 +54,9 @@ export class UserEditComponent implements OnInit, HasUnsavedChanges {
     private readonly destroyRef = inject(DestroyRef);
 
     /** Identifier of the user, taken from the route. */
-    readonly id = input.required<number, unknown>({ transform: numberAttribute });
+    readonly id = input.required<number, unknown>({
+        transform: numberAttribute
+    });
 
     protected readonly roleLabels = ROLE_LABELS;
 
@@ -74,7 +77,9 @@ export class UserEditComponent implements OnInit, HasUnsavedChanges {
     private alertTimer?: ReturnType<typeof setTimeout>;
 
     /** Every value of the form, typed and complete, updated on each change. */
-    private readonly formValue = toSignal(this.userForm.valueChanges.pipe(map(() => this.userForm.getRawValue())), { initialValue: this.userForm.getRawValue() });
+    private readonly formValue = toSignal(this.userForm.valueChanges.pipe(map(() => this.userForm.getRawValue())), {
+        initialValue: this.userForm.getRawValue()
+    });
 
     protected readonly selectedRole = computed(() => this.formValue().role);
 
@@ -202,8 +207,8 @@ export class UserEditComponent implements OnInit, HasUnsavedChanges {
                         this.authService.logout();
 
                         void this.router.navigate(['/auth/login'], {
-                            queryParams: {
-                                reason: 'role-changed'
+                            state: {
+                                [SESSION_MESSAGE_STATE_KEY]: 'Su rol fue actualizado. Inicie sesión nuevamente para aplicar sus nuevos permisos.'
                             }
                         });
 
@@ -254,7 +259,10 @@ export class UserEditComponent implements OnInit, HasUnsavedChanges {
             case HttpStatusCode.Conflict: {
                 const email = this.userForm.controls.email;
 
-                email.setErrors({ duplicated: true });
+                email.setErrors({
+                    duplicated: true
+                });
+
                 email.markAsTouched();
 
                 return;
@@ -283,6 +291,7 @@ export class UserEditComponent implements OnInit, HasUnsavedChanges {
                 this.toastService.error('No se pudo guardar', apiMessage ?? 'Intente de nuevo en unos minutos.');
         }
     }
+
     /**
      * Shakes the save bar and paints it in the alert color. Removing the class
      * first and adding it back on the next frame restarts the animation when
