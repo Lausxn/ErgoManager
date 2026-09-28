@@ -189,6 +189,56 @@
     border-top: 1px solid var(--surface-border);
 }
 
+/* Initials of a user: graphite, the wine is kept for calls to action. */
+.p-avatar.mgs-avatar {
+    flex-shrink: 0;
+    background: var(--mgs-graphite);
+    color: #ffffff;
+    font-family: var(--mgs-font-display);
+    font-weight: 700;
+}
+
+.app-dark .p-avatar.mgs-avatar {
+    background: var(--p-surface-0);
+    color: var(--mgs-black);
+}
+
+/* Option card of a radio group, the selected one gets the wine border. */
+.mgs-choice {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--surface-border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color var(--element-transition-duration);
+
+    &:hover {
+        border-color: var(--text-color-secondary);
+    }
+
+    &--selected,
+    &--selected:hover {
+        border-color: var(--mgs-accent-text);
+        box-shadow: inset 0 0 0 1px var(--mgs-accent-text);
+    }
+
+    &__icon {
+        margin-top: 0.15rem;
+        font-size: 1.1rem;
+        color: var(--text-color-secondary);
+    }
+}
+
+/* Side panel that follows the scroll next to a long form. */
+.mgs-sticky {
+    @media (min-width: 1200px) {
+        position: sticky;
+        top: calc(var(--layout-topbar-height, 4rem) + 1.5rem);
+    }
+}
+
 /* Keep the wine as accent only: links in body text stay graphite with a wine underline. */
 .mgs-link {
     color: var(--text-color);

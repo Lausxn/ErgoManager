@@ -1,46 +1,82 @@
-<app-page-header eyebrow="Administración" title="Usuarios" subtitle="Administradores y ergonomistas con acceso a ErgoManager.">
-    <p-button label="Nuevo usuario" icon="pi pi-user-plus" routerLink="/users/new" />
+<app-page-header eyebrow="Administración" title="Gestión de usuarios" subtitle="Administradores y ergonomistas con acceso a ErgoManager.">
+    <p-button label="Creación de usuario" icon="pi pi-user-plus" routerLink="/users/new" />
 </app-page-header>
 
+<div class="grid grid-cols-12 gap-6 mb-6">
+    <div class="col-span-12 sm:col-span-6 xl:col-span-3 mgs-card">
+        <span class="mgs-eyebrow">Usuarios registrados</span>
+        <div class="mgs-kpi mt-2">{{ summary().total }}</div>
+    </div>
+    <div class="col-span-12 sm:col-span-6 xl:col-span-3 mgs-card">
+        <span class="mgs-eyebrow">Activos</span>
+        <div class="mgs-kpi mt-2">{{ summary().active }}</div>
+        <div class="text-sm text-muted-color mt-1">{{ summary().total - summary().active }} inactivos</div>
+    </div>
+    <div class="col-span-12 sm:col-span-6 xl:col-span-3 mgs-card">
+        <span class="mgs-eyebrow">Administradores</span>
+        <div class="mgs-kpi mt-2">{{ summary().admins }}</div>
+    </div>
+    <div class="col-span-12 sm:col-span-6 xl:col-span-3 mgs-card">
+        <span class="mgs-eyebrow">Ergonomistas</span>
+        <div class="mgs-kpi mt-2">{{ summary().ergonomists }}</div>
+    </div>
+</div>
+
 <div class="mgs-card !p-0 overflow-hidden">
-    <p-table #table [value]="userList()" [loading]="isLoading()" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['firstName', 'firstLastName', 'secondLastName', 'email']" [rowHover]="true" dataKey="id">
+    <p-table [value]="filteredRows()" [loading]="isLoading()" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [rowHover]="true" dataKey="id" sortField="createdAt" [sortOrder]="-1">
         <ng-template #caption>
-            <div class="flex flex-wrap items-center justify-between gap-4 p-2">
-                <span class="mgs-section-title !m-0">Usuarios registrados</span>
+            <div class="flex flex-wrap items-center gap-4 p-2">
+                <span class="mgs-section-title !m-0 mr-auto">Usuarios actuales</span>
                 <p-iconfield>
                     <p-inputicon class="pi pi-search" />
-                    <input pInputText type="text" (input)="filterTable(table, $event)" placeholder="Buscar usuario" aria-label="Buscar usuario" />
+                    <input pInputText type="text" [ngModel]="searchText()" (ngModelChange)="searchText.set($event)" placeholder="Buscar por nombre o correo" aria-label="Buscar usuario" />
                 </p-iconfield>
+                <p-select [options]="roleOptions" [ngModel]="roleFilter()" (ngModelChange)="roleFilter.set($event)" optionLabel="label" optionValue="value" placeholder="Todos los roles" [showClear]="true" ariaLabel="Filtrar por rol" />
+                <p-selectbutton [options]="statusOptions" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event ?? 'ALL')" optionLabel="label" optionValue="value" [allowEmpty]="false" />
             </div>
         </ng-template>
         <ng-template #header>
             <tr>
-                <th pSortableColumn="firstName">Nombre <p-sortIcon field="firstName" /></th>
-                <th pSortableColumn="email">Correo <p-sortIcon field="email" /></th>
+                <th pSortableColumn="fullName">Usuario <p-sortIcon field="fullName" /></th>
                 <th pSortableColumn="role">Rol <p-sortIcon field="role" /></th>
                 <th pSortableColumn="active">Estado <p-sortIcon field="active" /></th>
+                <th pSortableColumn="createdAt">Registrado <p-sortIcon field="createdAt" /></th>
                 <th class="w-32"></th>
             </tr>
         </ng-template>
-        <ng-template #body let-user>
+        <ng-template #body let-row>
             <tr>
-                <td class="font-semibold">{{ user.firstName }} {{ user.firstLastName }} {{ user.secondLastName }}</td>
-                <td>{{ user.email }}</td>
-                <td>{{ roleLabels[user.role] }}</td>
                 <td>
-                    <p-tag [value]="user.active ? 'Activo' : 'Inactivo'" [styleClass]="user.active ? activeTagClasses.active : activeTagClasses.inactive" />
+                    <div class="flex items-center gap-3">
+                        <p-avatar [label]="row.initials" shape="circle" styleClass="mgs-avatar" />
+                        <div class="min-w-0">
+                            <div class="font-semibold">{{ row.fullName }}</div>
+                            <div class="text-sm text-muted-color truncate">{{ row.email }}</div>
+                        </div>
+                    </div>
                 </td>
+                <td><p-tag [value]="row.roleLabel" [styleClass]="row.roleTagClass" /></td>
+                <td>
+                    <p-tag [value]="row.active ? 'Activo' : 'Inactivo'" [styleClass]="row.active ? activeTagClasses.active : activeTagClasses.inactive" />
+                </td>
+                <td class="whitespace-nowrap">{{ row.createdAt | date: 'd MMM y' }}</td>
                 <td class="text-right whitespace-nowrap">
-                    <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="secondary" [routerLink]="['/users', user.id]" pTooltip="Editar" ariaLabel="Editar" />
-                    @if (user.active && !isCurrentUser(user)) {
-                        <p-button icon="pi pi-ban" [rounded]="true" [text]="true" (onClick)="confirmDeactivate(user)" pTooltip="Desactivar" ariaLabel="Desactivar" />
+                    <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="secondary" [routerLink]="['/users', row.id]" pTooltip="Editar" ariaLabel="Editar" />
+                    @if (row.canDeactivate) {
+                        <p-button icon="pi pi-ban" [rounded]="true" [text]="true" (onClick)="confirmDeactivate(row)" pTooltip="Desactivar" ariaLabel="Desactivar" />
                     }
                 </td>
             </tr>
         </ng-template>
         <ng-template #emptymessage>
             <tr>
-                <td colspan="5" class="text-center py-10 text-muted-color">Todavía no hay usuarios registrados.</td>
+                <td colspan="5" class="text-center py-10 text-muted-color">
+                    @if (summary().total === 0) {
+                        Todavía no hay usuarios registrados.
+                    } @else {
+                        Ningún usuario coincide con la búsqueda o los filtros.
+                    }
+                </td>
             </tr>
         </ng-template>
     </p-table>
