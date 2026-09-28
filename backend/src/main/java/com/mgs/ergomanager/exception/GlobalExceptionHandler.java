@@ -148,6 +148,19 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles malformed JSON or values that cannot be converted to the expected type.
+     *
+     * @param exception exception raised while reading the request body
+     * @param request   request being processed
+     * @return response with HTTP status 400
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleMessageNotReadable(HttpMessageNotReadableException exception,
+                                                                  HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Malformed or invalid request body", request, null);
+    }
+
+    /**
      * Handles a request made with invalid or missing credentials.
      *
      * @param exception exception raised by Spring Security
