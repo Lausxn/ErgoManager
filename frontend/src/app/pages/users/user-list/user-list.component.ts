@@ -1,3 +1,5 @@
+import { Component, inject, signal } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -143,7 +145,7 @@ export class UserListComponent {
     }
 
     /**
-     * Asks for confirmation and deactivates the user, who can no longer sign in.
+     * Opens the page that asks for confirmation before deactivating the user.
      *
      * @param row user to deactivate
      */

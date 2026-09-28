@@ -61,9 +61,9 @@
                 </td>
                 <td class="whitespace-nowrap">{{ row.createdAt | date: 'd MMM y' }}</td>
                 <td class="text-right whitespace-nowrap">
-                    <p-button label="Editar" icon="pi pi-pencil" size="small" [text]="true" severity="secondary" [routerLink]="['/users', row.id]" [ariaLabel]="'Editar a ' + row.fullName" />
-                    @if (row.canDeactivate) {
-                        <p-button icon="pi pi-ban" [rounded]="true" [text]="true" (onClick)="confirmDeactivate(row)" pTooltip="Desactivar" ariaLabel="Desactivar" />
+                    <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="secondary" [routerLink]="['/users', user.id]" pTooltip="Editar" ariaLabel="Editar" />
+                    @if (user.active && !isCurrentUser(user)) {
+                        <p-button icon="pi pi-ban" [rounded]="true" [text]="true" (click)="goToDeactivateConfirmation(user)" pTooltip="Desactivar" ariaLabel="Desactivar" />
                     }
                 </td>
             </tr>
