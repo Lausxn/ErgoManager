@@ -1,44 +1,31 @@
-<div class="dashboard">
-  <header class="dashboard-bar">
-    <nav class="dashboard-breadcrumb" aria-label="Ruta">
-      <span>ErgoManager</span>
-      <span class="dashboard-breadcrumb__separator">/</span>
-      <span class="dashboard-breadcrumb__current" aria-current="page">Inicio</span>
-    </nav>
-    <span class="dashboard-profile">Perfil administrador</span>
-  </header>
+<app-page-header eyebrow="Inicio" [title]="getGreeting() + ', ' + userName() + '.'" subtitle="Estas son las cinco funciones habilitadas para su perfil." />
 
-  <div class="dashboard-body">
-    <p class="dashboard-eyebrow">Inicio</p>
-    <h1 class="dashboard-title">{{ getGreeting() }}, {{ userName() }}.</h1>
-    <p class="dashboard-subtitle">Estas son las cinco funciones habilitadas para su perfil.</p>
+<nav class="mgs-card dashboard-options" aria-label="Funciones del administrador">
+  <ul>
+    <li *ngFor="let card of functionCards">
+      <a class="dashboard-option"
+         [attr.data-card]="card.title"
+         [ngClass]="['dashboard-option--' + card.color, card.route === null ? 'dashboard-option--disabled' : '']"
+         [routerLink]="card.route"
+         [attr.aria-disabled]="card.route === null ? 'true' : null">
+        <span class="dashboard-option__number">{{ card.id | number: '2.0-0' }}</span>
+        <span class="dashboard-option__icon" aria-hidden="true"><i [ngClass]="card.icon"></i></span>
+        <span class="dashboard-option__text">
+          <span class="dashboard-option__title">{{ card.title }}</span>
+          <span class="dashboard-option__description">{{ card.description }}</span>
+        </span>
+        <p-tag *ngIf="card.route === null; else arrow" styleClass="mgs-tag mgs-tag--muted" value="Próximamente" />
+        <ng-template #arrow><i class="pi pi-arrow-right dashboard-option__arrow" aria-hidden="true"></i></ng-template>
+      </a>
+    </li>
+  </ul>
+</nav>
 
-    <ul class="dashboard-options">
-      <li *ngFor="let card of functionCards">
-        <a class="dashboard-option"
-           [attr.data-card]="card.title"
-           [ngClass]="['dashboard-option--' + card.color, card.route === null ? 'dashboard-option--disabled' : '']"
-           [routerLink]="card.route"
-           [attr.aria-disabled]="card.route === null ? 'true' : null">
-          <span class="dashboard-option__number">{{ card.id | number: '2.0-0' }}</span>
-          <span class="dashboard-option__icon" aria-hidden="true"><i [ngClass]="card.icon"></i></span>
-          <span class="dashboard-option__text">
-            <span class="dashboard-option__title">{{ card.title }}</span>
-            <span class="dashboard-option__description">{{ card.description }}</span>
-          </span>
-          <span *ngIf="card.route === null; else arrow" class="dashboard-option__pending">Próximamente</span>
-          <ng-template #arrow><span class="dashboard-option__arrow" aria-hidden="true">→</span></ng-template>
-        </a>
-      </li>
-    </ul>
-
-    <section class="dashboard-stats" aria-label="Estadísticas del sistema">
-      <div *ngFor="let stat of stats()" class="dashboard-stat" [attr.data-stat]="stat.label">
-        <p class="dashboard-stat__label">{{ stat.label }}</p>
-        <p *ngIf="stat.isLoading" class="dashboard-stat__value dashboard-stat__value--muted">…</p>
-        <p *ngIf="!stat.isLoading && stat.value !== null" class="dashboard-stat__value" [class.dashboard-stat__value--highlight]="stat.highlight">{{ stat.value }}</p>
-        <p *ngIf="!stat.isLoading && stat.value === null" class="dashboard-stat__unavailable">No disponible</p>
-      </div>
-    </section>
+<section class="dashboard-stats" aria-label="Estadísticas del sistema">
+  <div *ngFor="let stat of stats()" class="mgs-card dashboard-stat" [attr.data-stat]="stat.label" [attr.aria-busy]="stat.isLoading">
+    <p class="mgs-eyebrow dashboard-stat__label">{{ stat.label }}</p>
+    <p-skeleton *ngIf="stat.isLoading" width="3rem" height="2.25rem" />
+    <p *ngIf="!stat.isLoading && stat.value !== null" class="mgs-kpi dashboard-stat__value" [class.dashboard-stat__value--highlight]="stat.highlight">{{ stat.value }}</p>
+    <p *ngIf="!stat.isLoading && stat.value === null" class="dashboard-stat__unavailable">No disponible</p>
   </div>
-</div>
+</section>
