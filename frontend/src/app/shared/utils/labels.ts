@@ -45,6 +45,11 @@ export const APPOINTMENT_STATUS_TAG_CLASSES: Record<AppointmentStatus, string> =
     CANCELLED: 'mgs-tag mgs-tag--muted'
 };
 
+export const ROLE_TAG_CLASSES: Record<Role, string> = {
+    ADMIN: 'mgs-tag mgs-tag--strong',
+    ERGONOMIST: 'mgs-tag mgs-tag--neutral'
+};
+
 export const ACTIVE_TAG_CLASSES = {
     active: 'mgs-tag mgs-tag--accent',
     inactive: 'mgs-tag mgs-tag--muted'

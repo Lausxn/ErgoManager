@@ -19,6 +19,11 @@ export const appRoutes: Routes = [
         children: [
             { path: '', pathMatch: 'full', redirectTo: homeRedirect },
             {
+                path: 'dashboard',
+                canActivate: [roleGuard(['ADMIN'])],
+                loadChildren: () => import('./app/pages/dashboard/dashboard.routes').then((m) => m.dashboardRoutes)
+            },
+            {
                 path: 'companies',
                 canActivate: [roleGuard(['ADMIN'])],
                 loadChildren: () => import('./app/pages/companies/companies.routes').then((m) => m.companiesRoutes)
@@ -47,6 +52,12 @@ export const appRoutes: Routes = [
                 loadChildren: () => import('./app/pages/history/history.routes').then((m) => m.historyRoutes)
             }
         ]
+    },
+    {
+        // Full screen pages of the signed in user, outside the main layout.
+        path: 'account',
+        canActivate: [authGuard],
+        loadChildren: () => import('./app/pages/account/account.routes').then((m) => m.accountRoutes)
     },
     {
         path: 'self-evaluation',

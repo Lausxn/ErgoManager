@@ -2,114 +2,95 @@
     <p-button label="Volver a usuarios" icon="pi pi-arrow-left" severity="secondary" [text]="true" routerLink="/users" />
 </app-page-header>
 
-<form [formGroup]="userForm" (ngSubmit)="submit()" class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_20rem] gap-6 items-start" novalidate>
-    <p-card>
-        <h2 class="mgs-section-title">1. Datos personales</h2>
-        <p class="mgs-section-hint">Nombre completo tal como aparece en su documento de identidad.</p>
+<form [formGroup]="userForm" (ngSubmit)="submit()" class="grid grid-cols-12 gap-6 items-start" novalidate>
+    <div class="col-span-12 xl:col-span-8 mgs-card">
+        <h2 class="mgs-section-title">Datos personales</h2>
         <div class="mgs-form-grid">
-            <div class="mgs-field mgs-field--half">
-                <label for="firstName">Nombre <span class="mgs-required" aria-hidden="true">*</span></label>
-                <p-iconfield>
-                    <p-inputicon class="pi pi-user" />
-                    <input pInputText id="firstName" formControlName="firstName" placeholder="Ej. María José" [maxlength]="maxNameLength" autocomplete="given-name" fluid />
-                </p-iconfield>
+            <div class="mgs-field">
+                <label for="firstName">Nombre</label>
+                <input pInputText id="firstName" formControlName="firstName" [maxlength]="limits.name" autocomplete="given-name" placeholder="Ej. María Fernanda" />
                 @if (isInvalid('firstName')) {
-                    <p-message severity="error" size="small" variant="simple">El nombre es obligatorio.</p-message>
+                    <small class="mgs-field__error">El nombre es obligatorio (máximo {{ limits.name }} caracteres).</small>
                 }
             </div>
 
             <div class="mgs-field mgs-field--half">
-                <label for="firstLastName">Primer apellido <span class="mgs-required" aria-hidden="true">*</span></label>
-                <input pInputText id="firstLastName" formControlName="firstLastName" placeholder="Ej. Rodríguez" [maxlength]="maxNameLength" autocomplete="family-name" fluid />
+                <label for="firstLastName">Primer apellido</label>
+                <input pInputText id="firstLastName" formControlName="firstLastName" [maxlength]="limits.name" autocomplete="family-name" placeholder="Ej. Madrigal" />
                 @if (isInvalid('firstLastName')) {
-                    <p-message severity="error" size="small" variant="simple">El primer apellido es obligatorio.</p-message>
+                    <small class="mgs-field__error">El primer apellido es obligatorio (máximo {{ limits.name }} caracteres).</small>
                 }
             </div>
 
             <div class="mgs-field mgs-field--half">
                 <label for="secondLastName">Segundo apellido <span class="text-muted-color font-normal">(opcional)</span></label>
-                <input pInputText id="secondLastName" formControlName="secondLastName" placeholder="Ej. Vargas" [maxlength]="maxNameLength" fluid />
+                <input pInputText id="secondLastName" formControlName="secondLastName" [maxlength]="limits.name" placeholder="Ej. Solano" />
             </div>
         </div>
 
-        <p-divider styleClass="!my-8" />
-
-        <h2 class="mgs-section-title">2. Acceso</h2>
-        <p class="mgs-section-hint">El correo será el usuario para iniciar sesión.</p>
+        <h2 class="mgs-section-title mgs-section-title--spaced">Acceso</h2>
         <div class="mgs-form-grid">
             <div class="mgs-field">
-                <label for="email">Correo electrónico <span class="mgs-required" aria-hidden="true">*</span></label>
-                <p-iconfield>
-                    <p-inputicon class="pi pi-envelope" />
-                    <input pInputText id="email" type="email" formControlName="email" placeholder="nombre@empresa.com" [maxlength]="maxEmailLength" autocomplete="off" fluid />
-                </p-iconfield>
-                @if (isInvalid('email')) {
-                    <p-message severity="error" size="small" variant="simple">Escriba un correo válido.</p-message>
-                }
-            </div>
-
-            <div class="mgs-field mgs-field--half">
-                <label for="password">Contraseña <span class="mgs-required" aria-hidden="true">*</span></label>
-                <p-password inputId="password" formControlName="password" [toggleMask]="true" [fluid]="true" [maxLength]="maxPasswordLength" autocomplete="new-password" weakLabel="Débil" mediumLabel="Media" strongLabel="Fuerte" promptLabel="Mínimo 8 caracteres" />
-                @if (isInvalid('password')) {
-                    <p-message severity="error" size="small" variant="simple">La contraseña debe tener al menos 8 caracteres.</p-message>
-                } @else {
-                    <p-message severity="secondary" size="small" variant="simple">Mínimo 8 caracteres.</p-message>
-                }
-            </div>
-
-            <div class="mgs-field mgs-field--half">
-                <label for="passwordConfirmation">Confirmar contraseña <span class="mgs-required" aria-hidden="true">*</span></label>
-                <p-password inputId="passwordConfirmation" formControlName="passwordConfirmation" [toggleMask]="true" [feedback]="false" [fluid]="true" autocomplete="new-password" />
-                @if (isInvalid('passwordConfirmation')) {
-                    <p-message severity="error" size="small" variant="simple">Confirme la contraseña.</p-message>
-                } @else if (isPasswordMismatch()) {
-                    <p-message severity="error" size="small" variant="simple">Las contraseñas no coinciden.</p-message>
+                <label for="email">Correo electrónico</label>
+                <input pInputText id="email" type="email" formControlName="email" [maxlength]="limits.email" autocomplete="off" placeholder="nombre@empresa.com" />
+                <small class="text-muted-color">
+                    Es el usuario con el que inicia sesión.
+                    @if (!isEditing()) {
+                        Al crear la cuenta se le enviará a este correo una contraseña temporal.
+                    }
+                </small>
+                @if (userForm.controls.email.hasError('duplicated')) {
+                    <small class="mgs-field__error">Ya existe un usuario con este correo.</small>
+                } @else if (isInvalid('email')) {
+                    <small class="mgs-field__error">Escriba un correo válido (máximo {{ limits.email }} caracteres).</small>
                 }
             </div>
         </div>
 
-        <p-divider styleClass="!my-8" />
-
-        <h2 id="roleLabel" class="mgs-section-title">3. Rol</h2>
-        <p class="mgs-section-hint">Define qué puede hacer el usuario dentro de la aplicación.</p>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" role="radiogroup" aria-labelledby="roleLabel">
-            @for (roleCard of roleCards; track roleCard.value) {
-                <label class="mgs-role-option" [class.mgs-role-option--selected]="userForm.controls.role.value === roleCard.value" [for]="'role-' + roleCard.value">
-                    <p-radiobutton [inputId]="'role-' + roleCard.value" formControlName="role" [value]="roleCard.value" />
-                    <div class="flex flex-col gap-1">
-                        <span class="font-bold flex items-center gap-2"><i [class]="roleCard.icon"></i> {{ roleCard.label }}</span>
-                        <span class="text-sm text-muted-color">{{ roleCard.description }}</span>
-                    </div>
+        <h2 class="mgs-section-title mgs-section-title--spaced">Rol</h2>
+        <div class="mgs-form-grid" role="radiogroup" aria-label="Rol del usuario">
+            @for (choice of roleChoices; track choice.value) {
+                <label class="mgs-field mgs-field--half mgs-choice" [class.mgs-choice--selected]="preview().role === choice.value" [for]="'role-' + choice.value">
+                    <p-radiobutton [inputId]="'role-' + choice.value" formControlName="role" [value]="choice.value" />
+                    <i [class]="choice.icon + ' mgs-choice__icon'"></i>
+                    <span class="flex flex-col gap-1">
+                        <span class="font-semibold">{{ roleLabels[choice.value] }}</span>
+                        <span class="text-sm text-muted-color">{{ choice.description }}</span>
+                    </span>
                 </label>
             }
         </div>
+    </div>
 
-        <ng-template #footer>
-            <p-divider />
-            <div class="flex flex-wrap items-center justify-end gap-3">
-                <span class="mr-auto text-sm text-muted-color"><span class="mgs-required">*</span> Campos obligatorios</span>
-                <p-button label="Cancelar" severity="secondary" [outlined]="true" routerLink="/users" />
+    <aside class="col-span-12 xl:col-span-4 mgs-card mgs-sticky flex flex-col gap-6">
+        <div class="flex flex-col items-center text-center gap-3">
+            <p-avatar [label]="preview().initials || undefined" [icon]="preview().initials ? undefined : 'pi pi-user'" shape="circle" size="xlarge" styleClass="mgs-avatar" />
+            <div>
+                <div class="mgs-section-title !m-0">{{ preview().name || 'Nuevo usuario' }}</div>
+                <div class="text-sm text-muted-color break-all">{{ preview().email || 'Sin correo' }}</div>
+            </div>
+            <p-tag [value]="roleLabels[preview().role]" [styleClass]="roleTagClasses[preview().role]" />
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <div class="flex justify-between items-baseline">
+                <span class="mgs-eyebrow">Datos obligatorios</span>
+                <span class="font-semibold tabular-nums">{{ completedCount() }} de {{ requiredCount }}</span>
+            </div>
+            <p-progressbar [value]="progress()" [showValue]="false" styleClass="h-2" />
+        </div>
+    </aside>
+
+    @if (hasChanges()) {
+        <div class="col-span-12 mgs-save-bar" [class.mgs-save-bar--alert]="isAlerting()" role="region" aria-label="Cambios sin guardar" aria-live="polite">
+            <span class="mgs-save-bar__text">
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                {{ isEditing() ? 'Cuidado, tiene cambios sin guardar.' : 'Cuidado, el usuario todavía no se ha creado.' }}
+            </span>
+            <div class="mgs-save-bar__actions">
+                <p-button [label]="isEditing() ? 'Restablecer' : 'Vaciar campos'" [text]="true" [disabled]="isSubmitting()" (onClick)="resetForm()" />
                 <p-button type="submit" [label]="isEditing() ? 'Guardar cambios' : 'Crear usuario'" icon="pi pi-check" [loading]="isSubmitting()" />
             </div>
-        </ng-template>
-    </p-card>
-
-    <p-card styleClass="xl:sticky xl:top-24" aria-label="Resumen del usuario">
-        <div class="flex flex-col items-center gap-3 text-center">
-            <span class="mgs-eyebrow self-start">Resumen</span>
-            @if (previewInitials()) {
-                <p-avatar [label]="previewInitials()" size="xlarge" shape="circle" styleClass="mgs-summary-avatar" />
-            } @else {
-                <p-avatar icon="pi pi-user" size="xlarge" shape="circle" styleClass="mgs-summary-avatar" />
-            }
-            <strong class="text-xl break-words">{{ previewName() || 'Nombre del usuario' }}</strong>
-            <span class="text-muted-color break-all">{{ previewEmail() || 'correo@empresa.com' }}</span>
-            <p-tag [value]="previewRole()" icon="pi pi-id-card" styleClass="mgs-tag mgs-tag--strong" />
         </div>
-        @if (!isEditing()) {
-            <p-divider />
-            <p-message severity="secondary" size="small" icon="pi pi-info-circle">La cuenta quedará activa y podrá iniciar sesión en cuanto se cree.</p-message>
-        }
-    </p-card>
+    }
 </form>
