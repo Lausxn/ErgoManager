@@ -1,0 +1,44 @@
+<app-page-header eyebrow="Empresas" [title]="isEditing() ? 'Editar empresa' : 'Nueva empresa'" subtitle="Datos de la empresa cliente y de su contacto." />
+
+<form [formGroup]="companyForm" (ngSubmit)="submit()" class="mgs-card" novalidate>
+    <div class="mgs-form-grid">
+        <div class="mgs-field">
+            <label for="businessName">Razón social</label>
+            <input pInputText id="businessName" formControlName="businessName" maxlength="150" />
+            @if (isInvalid('businessName')) {
+                <small class="mgs-field__error">La razón social es obligatoria (máximo 150 caracteres).</small>
+            }
+        </div>
+
+        <div class="mgs-field mgs-field--half">
+            <label for="taxId">Cédula jurídica</label>
+            <input pInputText id="taxId" formControlName="taxId" maxlength="20" />
+            @if (isInvalid('taxId')) {
+                <small class="mgs-field__error">La cédula jurídica es obligatoria (máximo 20 caracteres).</small>
+            }
+        </div>
+
+        <div class="mgs-field mgs-field--half">
+            <label for="contactEmail">Correo de contacto</label>
+            <input pInputText id="contactEmail" type="email" formControlName="contactEmail" />
+            @if (isInvalid('contactEmail')) {
+                <small class="mgs-field__error">Escriba un correo válido.</small>
+            }
+        </div>
+
+        <div class="mgs-field mgs-field--half">
+            <label for="phoneNumber">Teléfono <span class="text-muted-color font-normal">(opcional)</span></label>
+            <input pInputText id="phoneNumber" type="tel" formControlName="phoneNumber" />
+        </div>
+
+        <div class="mgs-field mgs-field--half">
+            <label for="address">Dirección <span class="text-muted-color font-normal">(opcional)</span></label>
+            <input pInputText id="address" formControlName="address" />
+        </div>
+    </div>
+
+    <div class="mgs-form-actions">
+        <p-button label="Cancelar" severity="secondary" [outlined]="true" routerLink="/companies" />
+        <p-button type="submit" label="Guardar" icon="pi pi-check" [loading]="isSubmitting()" />
+    </div>
+</form>

@@ -1,0 +1,1333 @@
+/*
+ * Visual system of the MGS brand book 2026 applied to ErgoManager.
+ * Wine is only an accent: labels, emphasis, alerts and calls to action. It is
+ * never used for long blocks of text (page 15).
+ */
+
+/* Short uppercase label, like "MADRIGAL GROUP SOLUTIONS" on every page of the book. */
+.mgs-eyebrow {
+    display: block;
+    font-family: var(--mgs-font-body);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    line-height: 1.3;
+    text-transform: uppercase;
+    color: var(--mgs-accent-text);
+}
+
+/* Main title: Aptos Display bold, black on light backgrounds. */
+.mgs-title {
+    margin: 0;
+    font-family: var(--mgs-font-display);
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--heading-color);
+}
+
+/* Subtitle or context of the page: regular weight, gray. */
+.mgs-subtitle {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 400;
+    line-height: 1.45;
+    color: var(--text-color-secondary);
+}
+
+/* Key data: large and bold. */
+.mgs-kpi {
+    font-family: var(--mgs-font-display);
+    font-size: 2.25rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--heading-color);
+}
+
+/* Header of the pages, following the base grid of the book (page 17). */
+.mgs-page-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+
+    &__text {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding-left: 1.25rem;
+
+        &::before {
+            content: '';
+            position: absolute;
+            top: 0.1rem;
+            bottom: 0.1rem;
+            left: 0;
+            width: 4px;
+            border-radius: 2px;
+            background: var(--mgs-wine);
+        }
+    }
+
+    &__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+
+        &:empty {
+            display: none;
+        }
+    }
+}
+
+/* Work surface: white card on "Papel", graphite card on "Negro". */
+.mgs-card {
+    background: var(--surface-card);
+    border: 1px solid var(--surface-border);
+    border-radius: 12px;
+    padding: 1.75rem;
+}
+
+.mgs-section-title {
+    margin: 0 0 1rem 0;
+    font-family: var(--mgs-font-display);
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--heading-color);
+}
+
+/* Title of a section that follows another one in the same card. */
+.mgs-section-title--spaced {
+    margin-top: 2rem;
+}
+
+/* Tags limited to the official palette. */
+.p-tag.mgs-tag {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    border: 1px solid transparent;
+}
+
+.p-tag.mgs-tag--neutral {
+    background: var(--p-surface-200);
+    color: var(--mgs-graphite);
+}
+
+.p-tag.mgs-tag--strong {
+    background: var(--mgs-graphite);
+    color: #ffffff;
+}
+
+.p-tag.mgs-tag--accent {
+    background: var(--mgs-wine);
+    color: #ffffff;
+}
+
+.p-tag.mgs-tag--critical {
+    background: var(--mgs-dark-wine);
+    color: #ffffff;
+}
+
+.p-tag.mgs-tag--muted {
+    background: transparent;
+    border-color: var(--surface-border);
+    color: var(--text-color-secondary);
+}
+
+.app-dark {
+    .p-tag.mgs-tag--neutral {
+        background: var(--p-surface-700);
+        color: var(--p-surface-0);
+    }
+
+    .p-tag.mgs-tag--strong {
+        background: var(--p-surface-0);
+        color: var(--mgs-black);
+    }
+}
+
+/* Form fields laid out in a responsive grid. */
+.mgs-form-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 1.25rem 1.5rem;
+
+    > .mgs-field {
+        grid-column: span 12;
+
+        @media (min-width: 768px) {
+            &--half {
+                grid-column: span 6;
+            }
+        }
+    }
+}
+
+.mgs-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+
+    > label {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-color);
+    }
+
+    small.mgs-field__error {
+        color: var(--mgs-accent-text);
+        font-weight: 600;
+    }
+}
+
+.mgs-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--surface-border);
+}
+
+/* Initials of a user: graphite, the wine is kept for calls to action. */
+.p-avatar.mgs-avatar {
+    flex-shrink: 0;
+    background: var(--mgs-graphite);
+    color: #ffffff;
+    font-family: var(--mgs-font-display);
+    font-weight: 700;
+}
+
+.app-dark .p-avatar.mgs-avatar {
+    background: var(--p-surface-0);
+    color: var(--mgs-black);
+}
+
+/* Option card of a radio group, the selected one gets the wine border. */
+.mgs-choice {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--surface-border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color var(--element-transition-duration);
+
+    &:hover {
+        border-color: var(--text-color-secondary);
+    }
+
+    &--selected,
+    &--selected:hover {
+        border-color: var(--mgs-accent-text);
+        box-shadow: inset 0 0 0 1px var(--mgs-accent-text);
+    }
+
+    &__icon {
+        margin-top: 0.15rem;
+        font-size: 1.1rem;
+        color: var(--text-color-secondary);
+    }
+}
+
+/* Read only label and value pairs, like the stored data of a user. */
+.mgs-details {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    border-top: 1px solid var(--surface-border);
+
+    > div {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--surface-border);
+    }
+
+    dt {
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--text-color-secondary);
+    }
+
+    dd {
+        margin: 0;
+        text-align: right;
+        font-weight: 600;
+        color: var(--text-color);
+    }
+}
+
+/*
+ * Bar of unsaved changes, like the one of Discord: it appears while a form has
+ * changes and shakes in wine, the alert color, when the user tries to leave.
+ */
+.mgs-save-bar {
+    position: sticky;
+    bottom: 1rem;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+    padding: 0.75rem 0.75rem 0.75rem 1.25rem;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: var(--mgs-graphite);
+    color: #ffffff;
+    animation: mgs-save-bar-in 0.2s ease-out;
+    transition: background-color 0.2s;
+
+    &__text {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-weight: 600;
+    }
+
+    &__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-left: auto;
+    }
+
+    .p-button.p-button-text {
+        color: #ffffff;
+
+        &:not(:disabled):hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: #ffffff;
+        }
+    }
+
+    &--alert {
+        background: var(--mgs-wine);
+        animation: mgs-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+
+        .p-button:not(.p-button-text) {
+            border-color: #ffffff;
+            background: #ffffff;
+            color: var(--mgs-wine);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        &,
+        &--alert {
+            animation: none;
+        }
+    }
+}
+
+.app-dark .mgs-save-bar {
+    border-color: var(--surface-border);
+    background: var(--p-surface-800);
+
+    &--alert {
+        border-color: transparent;
+        background: var(--mgs-wine);
+    }
+}
+
+@keyframes mgs-save-bar-in {
+    from {
+        opacity: 0;
+        transform: translateY(1rem);
+    }
+}
+
+@keyframes mgs-shake {
+    10%,
+    90% {
+        transform: translateX(-2px);
+    }
+    20%,
+    80% {
+        transform: translateX(4px);
+    }
+    30%,
+    50%,
+    70% {
+        transform: translateX(-8px);
+    }
+    40%,
+    60% {
+        transform: translateX(8px);
+    }
+}
+
+/* Side panel that follows the scroll next to a long form. */
+.mgs-sticky {
+    @media (min-width: 1200px) {
+        position: sticky;
+        top: calc(var(--layout-topbar-height, 4rem) + 1.5rem);
+    }
+}
+
+/*
+ * SweetAlert2 toasts (ToastService). They only read theme tokens, so they
+ * follow the light and dark themes like the rest of the page. The extra
+ * .swal2-container in the selectors beats the styles SweetAlert2 injects.
+ */
+.swal2-container.mgs-swal-container.swal2-top-end {
+    padding-top: calc(var(--layout-topbar-height, 4rem) + 0.5rem);
+}
+
+.swal2-container .swal2-popup.mgs-swal-toast {
+    --mgs-toast-tone: var(--heading-color);
+    --swal2-background: var(--surface-card);
+    --swal2-color: var(--text-color);
+    --swal2-close-button-color: var(--text-color-secondary);
+    --swal2-timer-progress-bar-background: color-mix(in srgb, var(--mgs-toast-tone), transparent 55%);
+    --swal2-toast-border: 1px solid var(--surface-border);
+    --swal2-toast-box-shadow: 0 8px 24px rgba(11, 11, 13, 0.16);
+
+    border-left: 4px solid var(--mgs-toast-tone);
+    border-radius: 10px;
+    font-family: var(--mgs-font-body);
+
+    &.mgs-swal-toast--error {
+        --mgs-toast-tone: var(--mgs-accent-text);
+    }
+
+    .swal2-title {
+        font-family: var(--mgs-font-display);
+        font-weight: 600;
+        color: var(--heading-color);
+    }
+
+    .swal2-html-container {
+        color: var(--text-color-secondary);
+    }
+
+    .swal2-close:hover {
+        color: var(--heading-color);
+    }
+
+    .swal2-close:focus-visible {
+        box-shadow: 0 0 0 2px var(--mgs-accent-text);
+    }
+
+    .swal2-icon {
+        border-color: var(--mgs-toast-tone);
+        color: var(--mgs-toast-tone);
+    }
+
+    .swal2-icon .swal2-success-ring {
+        border-color: color-mix(in srgb, var(--mgs-toast-tone), transparent 70%);
+    }
+
+    .swal2-icon [class^='swal2-success-line'],
+    .swal2-icon [class^='swal2-x-mark-line'] {
+        background-color: var(--mgs-toast-tone);
+    }
+}
+
+/* Keep the wine as accent only: links in body text stay graphite with a wine underline. */
+.mgs-link {
+    color: var(--text-color);
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: var(--mgs-accent-text);
+    text-underline-offset: 3px;
+
+    &:hover {
+        color: var(--mgs-accent-text);
+    }
+}
+
+/* Inline alert in wine, the accent reserved for alerts. */
+.mgs-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--mgs-wine), transparent 55%);
+    border-left: 4px solid var(--mgs-wine);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--mgs-wine), transparent 92%);
+    color: var(--text-color);
+    font-weight: 600;
+
+    > i {
+        margin-top: 0.15rem;
+        color: var(--mgs-accent-text);
+    }
+}
+
+/* Sign in: dark impact panel next to the working panel (page 17). */
+.mgs-auth {
+    display: grid;
+    min-height: 100vh;
+    background: var(--surface-ground);
+
+    @media (min-width: 992px) {
+        grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    }
+
+    &__impact {
+        position: relative;
+        display: none;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 3rem;
+        padding: 3rem;
+        overflow: hidden;
+        color: var(--mgs-paper);
+        background: linear-gradient(135deg, transparent 62%, color-mix(in srgb, var(--mgs-wine), transparent 55%) 62.2%, transparent 78%), linear-gradient(160deg, var(--mgs-black) 0%, var(--mgs-graphite) 100%);
+
+        @media (min-width: 992px) {
+            display: flex;
+        }
+    }
+
+    &__impact-body {
+        max-width: 30rem;
+    }
+
+    &__impact-eyebrow {
+        display: block;
+        margin-bottom: 1rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--p-primary-300);
+    }
+
+    &__impact-title {
+        margin: 0 0 2rem 0;
+        font-family: var(--mgs-font-display);
+        font-size: 2.5rem;
+        font-weight: 700;
+        line-height: 1.15;
+        color: #ffffff;
+    }
+
+    &__highlights {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+
+        li {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            font-size: 1.05rem;
+            color: var(--p-surface-200);
+        }
+
+        i {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: 8px;
+            background: var(--mgs-wine);
+            color: #ffffff;
+        }
+    }
+
+    &__impact-footer {
+        display: flex;
+        justify-content: space-between;
+        padding-top: 1rem;
+        border-top: 1px solid color-mix(in srgb, var(--mgs-paper), transparent 80%);
+        font-size: 0.85rem;
+        color: var(--p-surface-300);
+    }
+
+    &__panel {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6rem 1.5rem 3rem;
+    }
+
+    &__form-wrapper {
+        width: 100%;
+        max-width: 28rem;
+    }
+
+    &__mobile-logo {
+        margin-bottom: 1.5rem;
+
+        @media (min-width: 992px) {
+            display: none;
+        }
+    }
+
+    &__employee-link {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--surface-border);
+        color: var(--text-color-secondary);
+    }
+}
+
+/* Simple centered pages: public self evaluation and status pages. */
+.mgs-public {
+    min-height: 100vh;
+    background: var(--surface-ground);
+
+    &__header {
+        display: flex;
+        align-items: center;
+        min-height: var(--layout-topbar-height);
+        padding: 0 1.5rem;
+        border-bottom: 1px solid var(--surface-border);
+        background: var(--surface-card);
+    }
+
+    &__content {
+        max-width: 60rem;
+        margin: 0 auto;
+        padding: 2.5rem 1rem 4rem;
+    }
+}
+
+/* Badge of the temporary preview mode, see environment.previewMode. */
+.mgs-preview-badge {
+    padding: 0.35rem 0.75rem;
+    border: 1px dashed var(--mgs-accent-text);
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--mgs-accent-text);
+    white-space: nowrap;
+
+    @media (max-width: 575px) {
+        display: none;
+    }
+}
+
+/* Independent theme and page size controls (app-preferences). */
+.mgs-prefs {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    &__size {
+        display: inline-flex;
+        align-items: center;
+        height: 2.5rem;
+        padding: 0 0.25rem;
+        border: 1px solid var(--surface-border);
+        border-radius: 999px;
+        background: var(--surface-card);
+    }
+
+    &__step,
+    &__theme {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.1rem;
+        border: 0;
+        cursor: pointer;
+        color: var(--text-color);
+        background: transparent;
+        transition:
+            background-color var(--element-transition-duration),
+            color var(--element-transition-duration);
+
+        &:hover:not(:disabled) {
+            background: var(--surface-hover);
+            color: var(--heading-color);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--mgs-accent-text);
+            outline-offset: 2px;
+        }
+    }
+
+    &__step {
+        height: 2rem;
+        min-width: 2.4rem;
+        padding: 0 0.5rem;
+        border-radius: 999px;
+        font-family: var(--mgs-font-display);
+
+        i {
+            font-size: 0.6rem;
+        }
+
+        &:disabled {
+            cursor: default;
+            opacity: 0.35;
+        }
+    }
+
+    &__letter {
+        font-size: 1.05rem;
+        font-weight: 700;
+        line-height: 1;
+
+        &--small {
+            font-size: 0.8rem;
+        }
+    }
+
+    &__levels {
+        display: inline-flex;
+        align-items: flex-end;
+        gap: 0.2rem;
+        padding: 0 0.35rem;
+    }
+
+    /* Bars that grow with each level, like a volume meter. */
+    &__level {
+        width: 0.3rem;
+        padding: 0;
+        border: 0;
+        border-radius: 2px;
+        cursor: pointer;
+        background: var(--surface-border);
+        transition: background-color var(--element-transition-duration);
+
+        &:nth-child(1) {
+            height: 0.45rem;
+        }
+        &:nth-child(2) {
+            height: 0.7rem;
+        }
+        &:nth-child(3) {
+            height: 0.95rem;
+        }
+        &:nth-child(4) {
+            height: 1.2rem;
+        }
+
+        &--active {
+            background: var(--mgs-wine);
+        }
+    }
+
+    &__theme {
+        width: 2.5rem;
+        height: 2.5rem;
+        border: 1px solid var(--surface-border);
+        border-radius: 50%;
+        background: var(--surface-card);
+
+        i {
+            font-size: 1.1rem;
+        }
+    }
+}
+
+.app-dark .mgs-prefs__level--active {
+    background: var(--p-primary-400);
+}
+
+/* On pages without the top bar the controls float on a card. */
+.mgs-prefs-floating {
+    padding: 0.35rem;
+    border: 1px solid var(--surface-border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--surface-card), transparent 10%);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 4px 14px rgba(11, 11, 13, 0.12);
+
+    .mgs-prefs__size,
+    .mgs-prefs__theme {
+        border-color: transparent;
+        background: transparent;
+    }
+}
+
+/*
+ * Account security page (update password): own header and a compact two
+ * column card. On desktop the page is exactly one screen tall: every spacing scales
+ * with the viewport height (the vh term of each clamp), so the whole card
+ * fits without scrolling.
+ */
+.mgs-security {
+    --mgs-security-glow: color-mix(in srgb, var(--mgs-wine), transparent 90%);
+    /* Vertical rhythm: shrinks on short screens, grows on tall ones. */
+    --mgs-security-gap: clamp(0.75rem, 2.4vh, 1.5rem);
+    --mgs-security-pad: clamp(1rem, 3.2vh, 2rem);
+    /* The px floor keeps room for the full logo, whose 200 px minimum ignores the rem size. */
+    --mgs-sidenav-width: max(17rem, 260px);
+    /*
+     * Shared by the page header and the logo block of the side navigation, so
+     * both bottom borders line up. The px floor fits the logo and its label.
+     */
+    --mgs-bar-height: max(clamp(4.75rem, 11vh, 6rem), 80px);
+
+    display: grid;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: linear-gradient(115deg, transparent 58%, var(--mgs-security-glow) 58.1%, transparent 88%), radial-gradient(ellipse at 0% 100%, var(--mgs-security-glow), transparent 50%), var(--surface-ground);
+
+    /* The side navigation takes the left column from 992 px. */
+    @media (min-width: 992px) {
+        grid-template-columns: var(--mgs-sidenav-width) minmax(0, 1fr);
+        height: 100vh;
+        height: 100dvh;
+        transition: grid-template-columns 0.4s cubic-bezier(0.05, 0.74, 0.2, 0.99);
+
+        /* Hidden with the menu button, like the static menu of the main layout. */
+        &.is-sidebar-collapsed {
+            grid-template-columns: 0 minmax(0, 1fr);
+
+            .mgs-sidenav {
+                border-right-width: 0;
+            }
+        }
+    }
+
+    /* Phones: the menu opens over the page, with a mask that closes it. */
+    &__mask {
+        display: none;
+    }
+
+    @media (max-width: 991px) {
+        &.is-sidebar-open .mgs-sidenav {
+            transform: translateX(0);
+        }
+
+        &.is-sidebar-open &__mask {
+            position: fixed;
+            inset: 0;
+            z-index: 998;
+            display: block;
+            background: var(--maskbg, rgba(0, 0, 0, 0.4));
+        }
+    }
+
+    &__main {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 0;
+    }
+
+    &__header {
+        display: flex;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        height: var(--mgs-bar-height);
+        padding: 0 clamp(1rem, 2.5vw, 2rem);
+        border-bottom: 1px solid var(--surface-border);
+    }
+
+    &__brand {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        min-width: 0;
+    }
+
+    /* The side navigation has its own logo, so the header only shows it while the menu is hidden. */
+    &__compact-logo {
+        @media (min-width: 992px) {
+            display: none;
+        }
+    }
+
+    &.is-sidebar-collapsed &__compact-logo {
+        display: inline-flex;
+    }
+
+    /* With the logo back in the header, the breadcrumb needs its separator again. */
+    &.is-sidebar-collapsed &__breadcrumb {
+        padding-left: 1rem;
+        border-left: 1px solid var(--surface-border);
+    }
+
+    &__breadcrumb {
+        display: flex;
+        gap: 0.35rem;
+        padding-left: 1rem;
+        border-left: 1px solid var(--surface-border);
+        font-size: 0.85rem;
+        color: var(--text-color-secondary);
+        white-space: nowrap;
+
+        strong {
+            color: var(--heading-color);
+            font-weight: 700;
+        }
+
+        /* Without the logo beside it on desktop, the separator is not needed. */
+        @media (min-width: 992px) {
+            padding-left: 0;
+            border-left: 0;
+        }
+
+        @media (max-width: 767px) {
+            display: none;
+        }
+    }
+
+    /* Centers the card and leaves a margin to the edges. */
+    &__content {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        justify-content: center;
+        min-height: 0;
+        padding: var(--mgs-security-gap) clamp(1.25rem, 4vw, 4.5rem);
+    }
+
+    /* Three password fields read best in a compact card, not across the screen. */
+    &__card {
+        width: 100%;
+        max-width: 54rem;
+        border: 1px solid var(--surface-border);
+        border-top: 3px solid var(--mgs-wine);
+        border-radius: 6px;
+        background: var(--surface-card);
+        box-shadow: 0 18px 40px rgba(11, 11, 13, 0.18);
+    }
+
+    /* Badge and title share the first row; the lead spans below them. */
+    &__intro {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        align-items: center;
+        gap: calc(var(--mgs-security-gap) * 0.6) 0.85rem;
+        padding: var(--mgs-security-pad) var(--mgs-security-pad) calc(var(--mgs-security-pad) * 0.75);
+        border-bottom: 1px solid var(--surface-border);
+    }
+
+    &__badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 4px;
+        background: var(--mgs-wine);
+        color: #ffffff;
+    }
+
+    &__title {
+        margin: 0;
+        font-family: var(--mgs-font-display);
+        font-size: clamp(1.4rem, 3.6vh, 1.75rem);
+        font-weight: 700;
+        line-height: 1.15;
+        color: var(--heading-color);
+    }
+
+    &__lead {
+        grid-column: 1 / -1;
+        margin: 0;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        color: var(--text-color-secondary);
+    }
+
+    /* Two columns from 768 px: fields on the left, requirements on the right. */
+    &__body {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--mgs-security-gap) calc(var(--mgs-security-pad) * 1.1);
+        padding: var(--mgs-security-pad);
+
+        @media (min-width: 768px) {
+            grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+        }
+    }
+
+    &__full {
+        grid-column: 1 / -1;
+    }
+
+    &__fields {
+        display: flex;
+        flex-direction: column;
+        gap: var(--mgs-security-gap);
+    }
+
+    &__field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+
+        > label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        small.mgs-field__error {
+            color: var(--mgs-accent-text);
+            font-weight: 600;
+        }
+    }
+
+    /* Password input with the show / hide eye inside it. */
+    &__secret {
+        position: relative;
+
+        .p-inputtext {
+            width: 100%;
+            padding-right: 2.75rem;
+            font-size: 0.95rem;
+        }
+    }
+
+    &__eye {
+        position: absolute;
+        top: 50%;
+        right: 0.3rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.2rem;
+        height: 2.2rem;
+        border: 0;
+        border-radius: 4px;
+        background: transparent;
+        cursor: pointer;
+        color: var(--text-color-secondary);
+        transform: translateY(-50%);
+        transition: color var(--element-transition-duration, 0.2s);
+
+        &:hover {
+            color: var(--text-color);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--mgs-accent-text);
+            outline-offset: 0;
+        }
+    }
+
+    /* Short helper texts: the save hint and the "passwords match" feedback. */
+    &__hint {
+        font-size: 0.85rem;
+        color: var(--text-color-secondary);
+
+        &--ok {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-weight: 600;
+            color: var(--text-color);
+
+            i {
+                color: var(--mgs-accent-text);
+            }
+        }
+    }
+
+    /* Requirements panel: strength, checklist and the session note. */
+    &__panel {
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--mgs-security-gap) * 0.7);
+        padding: calc(var(--mgs-security-pad) * 0.75);
+        border: 1px solid var(--surface-border);
+        border-radius: 4px;
+        background: color-mix(in srgb, var(--surface-ground), transparent 40%);
+    }
+
+    /* The only uppercase label of the card. */
+    &__panel-title {
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-color-secondary);
+    }
+
+    /* Keeps its height while empty, so the list does not jump when typing starts. */
+    &__strength {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        min-height: 1rem;
+    }
+
+    &__meter {
+        display: grid;
+        flex: 1;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.25rem;
+
+        span {
+            height: 4px;
+            border-radius: 2px;
+            background: var(--surface-border);
+            transition: background-color 0.25s;
+
+            &.is-filled {
+                background: var(--mgs-accent-text);
+            }
+        }
+    }
+
+    &__strength-label {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--mgs-accent-text);
+        white-space: nowrap;
+    }
+
+    /* Status indicators, not controls: an empty circle turns into a check. */
+    &__rules {
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--mgs-security-gap) * 0.45);
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        font-size: 0.875rem;
+        color: var(--text-color-secondary);
+
+        li {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            transition: color 0.2s;
+
+            i {
+                font-size: 0.9rem;
+            }
+
+            &.is-met {
+                color: var(--text-color);
+
+                i {
+                    color: var(--mgs-accent-text);
+                }
+            }
+        }
+    }
+
+    &__note {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.6rem;
+        margin: auto 0 0;
+        padding-top: calc(var(--mgs-security-gap) * 0.7);
+        border-top: 1px solid var(--surface-border);
+        font-size: 0.8rem;
+        line-height: 1.5;
+        color: var(--text-color-secondary);
+
+        i {
+            margin-top: 0.15rem;
+            color: var(--mgs-accent-text);
+        }
+    }
+
+    /* Primary action on the right, cancel as a quiet text button beside it. */
+    &__actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.5rem 0.75rem;
+        padding-top: var(--mgs-security-gap);
+        border-top: 1px solid var(--surface-border);
+
+        .mgs-security__hint {
+            margin-right: auto;
+        }
+    }
+
+    /* After a successful change the actions sit right under the intro. */
+    &__card > &__actions {
+        justify-content: flex-start;
+        padding: var(--mgs-security-pad);
+        border-top: 0;
+    }
+
+    .mgs-alert {
+        font-size: 0.85rem;
+    }
+}
+
+/* The wine band stays a quiet accent: this page should feel calm. */
+.app-dark .mgs-security {
+    --mgs-security-glow: color-mix(in srgb, var(--mgs-wine), transparent 86%);
+}
+
+/* The default gray reads at 4.4:1 on the light panel; one step darker passes WCAG AA. */
+:root:not(.app-dark) .mgs-security {
+    --mgs-security-glow: color-mix(in srgb, var(--mgs-wine), transparent 95%);
+    --text-color-secondary: var(--p-surface-600);
+}
+
+/*
+ * Side navigation (app-sidebar-nav): the graphite of the dark theme cards
+ * (surface 900) in both themes, white logo and wine only for the active
+ * option and the avatar.
+ */
+.mgs-sidenav {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--p-surface-900);
+    color: var(--p-surface-300);
+
+    /* Fixed width content, so the column clips it while it slides closed. */
+    > * {
+        width: var(--mgs-sidenav-width, max(17rem, 260px));
+        flex-shrink: 0;
+    }
+
+    @media (max-width: 991px) {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 999;
+        width: var(--mgs-sidenav-width, max(17rem, 260px));
+        height: 100vh;
+        height: 100dvh;
+        transform: translateX(-100%);
+        transition: transform 0.4s cubic-bezier(0.05, 0.74, 0.2, 0.99);
+    }
+
+    /* Same height as the page header, see --mgs-bar-height. */
+    &__brand {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 0.25rem;
+        height: var(--mgs-bar-height, 80px);
+        padding: 0 0.75rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    &__product {
+        padding: 0 0.6rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--p-surface-400);
+    }
+
+    &__nav {
+        flex: 1 0 auto;
+        padding: clamp(1rem, 3.5vh, 2.25rem) 0;
+    }
+
+    &__section {
+        display: block;
+        padding: 0 1.5rem clamp(0.75rem, 2vh, 1.25rem);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--p-surface-500);
+    }
+
+    /* Options grow with the screen height so they fill the column. */
+    &__list {
+        display: flex;
+        flex-direction: column;
+        gap: clamp(0.1rem, 0.6vh, 0.35rem);
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    &__link {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: clamp(0.7rem, 2vh, 1.15rem) 1.5rem;
+        border-left: 3px solid transparent;
+        font-size: clamp(0.9rem, 1.7vh, 1.02rem);
+        color: var(--p-surface-300);
+        transition:
+            background-color 0.2s,
+            color 0.2s;
+
+        i {
+            font-size: clamp(0.95rem, 2vh, 1.15rem);
+            color: var(--p-surface-400);
+        }
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.04);
+            color: #ffffff;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--p-primary-300);
+            outline-offset: -2px;
+        }
+
+        &.is-active {
+            border-left-color: var(--mgs-wine);
+            background: rgba(255, 255, 255, 0.07);
+            font-weight: 700;
+            color: #ffffff;
+
+            i {
+                color: #ffffff;
+            }
+        }
+    }
+
+    &__user {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: clamp(0.75rem, 2vh, 1rem) 1.25rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    &__avatar {
+        display: inline-flex;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        width: 2.4rem;
+        height: 2.4rem;
+        border-radius: 4px;
+        background: var(--mgs-wine);
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #ffffff;
+    }
+
+    &__user-text {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+
+        strong {
+            overflow: hidden;
+            font-size: 0.9rem;
+            color: #ffffff;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        span {
+            font-size: 0.8rem;
+            color: var(--p-surface-400);
+        }
+    }
+}
