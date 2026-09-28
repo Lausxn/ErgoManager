@@ -1,56 +1,119 @@
-<app-page-header eyebrow="Usuarios" [title]="isEditing() ? 'Editar usuario' : 'Nuevo usuario'" subtitle="Datos personales, acceso y rol dentro de ErgoManager." />
+<app-page-header eyebrow="Gestión de usuarios" [title]="isEditing() ? 'Editar usuario' : 'Creación de usuario'" subtitle="Datos para identificar a la persona, su acceso y su rol dentro de ErgoManager.">
+    <p-button label="Volver a usuarios" icon="pi pi-arrow-left" severity="secondary" [text]="true" routerLink="/users" />
+</app-page-header>
 
-<form [formGroup]="userForm" (ngSubmit)="submit()" class="mgs-card" novalidate>
-    <h2 class="mgs-section-title">Datos personales</h2>
-    <div class="mgs-form-grid">
-        <div class="mgs-field mgs-field--half">
-            <label for="firstName">Nombre</label>
-            <input pInputText id="firstName" formControlName="firstName" />
-            @if (isInvalid('firstName')) {
-                <small class="mgs-field__error">El nombre es obligatorio.</small>
+<form [formGroup]="userForm" (ngSubmit)="submit()" class="grid grid-cols-12 gap-6 items-start" novalidate>
+    <div class="col-span-12 xl:col-span-8 mgs-card">
+        <h2 class="mgs-section-title">Datos personales</h2>
+        <div class="mgs-form-grid">
+            <div class="mgs-field">
+                <label for="firstName">Nombre</label>
+                <input pInputText id="firstName" formControlName="firstName" [maxlength]="limits.name" autocomplete="given-name" placeholder="Ej. María Fernanda" />
+                @if (isInvalid('firstName')) {
+                    <small class="mgs-field__error">El nombre es obligatorio (máximo {{ limits.name }} caracteres).</small>
+                }
+            </div>
+
+            <div class="mgs-field mgs-field--half">
+                <label for="firstLastName">Primer apellido</label>
+                <input pInputText id="firstLastName" formControlName="firstLastName" [maxlength]="limits.name" autocomplete="family-name" placeholder="Ej. Madrigal" />
+                @if (isInvalid('firstLastName')) {
+                    <small class="mgs-field__error">El primer apellido es obligatorio (máximo {{ limits.name }} caracteres).</small>
+                }
+            </div>
+
+            <div class="mgs-field mgs-field--half">
+                <label for="secondLastName">Segundo apellido <span class="text-muted-color font-normal">(opcional)</span></label>
+                <input pInputText id="secondLastName" formControlName="secondLastName" [maxlength]="limits.name" placeholder="Ej. Solano" />
+            </div>
+        </div>
+
+        <h2 class="mgs-section-title mt-8">Acceso</h2>
+        <div class="mgs-form-grid">
+            <div class="mgs-field">
+                <label for="email">Correo electrónico</label>
+                <input pInputText id="email" type="email" formControlName="email" [maxlength]="limits.email" autocomplete="off" placeholder="nombre@empresa.com" />
+                <small class="text-muted-color">Es el usuario con el que inicia sesión.</small>
+                @if (userForm.controls.email.hasError('duplicated')) {
+                    <small class="mgs-field__error">Ya existe un usuario con este correo.</small>
+                } @else if (isInvalid('email')) {
+                    <small class="mgs-field__error">Escriba un correo válido (máximo {{ limits.email }} caracteres).</small>
+                }
+            </div>
+
+            <div class="mgs-field mgs-field--half">
+                <label for="password">Contraseña</label>
+                <p-password
+                    inputId="password"
+                    formControlName="password"
+                    [toggleMask]="true"
+                    [fluid]="true"
+                    [maxLength]="limits.password"
+                    autocomplete="new-password"
+                    weakLabel="Débil"
+                    mediumLabel="Media"
+                    strongLabel="Fuerte"
+                    promptLabel="Mínimo 8 caracteres"
+                />
+                @if (isInvalid('password')) {
+                    <small class="mgs-field__error">La contraseña debe tener entre 8 y {{ limits.password }} caracteres.</small>
+                }
+            </div>
+
+            <div class="mgs-field mgs-field--half">
+                <label for="confirmPassword">Confirmar contraseña</label>
+                <p-password inputId="confirmPassword" formControlName="confirmPassword" [toggleMask]="true" [fluid]="true" [feedback]="false" autocomplete="new-password" />
+                @if (isInvalid('confirmPassword')) {
+                    <small class="mgs-field__error">Repita la contraseña.</small>
+                } @else if (isMismatch()) {
+                    <small class="mgs-field__error">Las contraseñas no coinciden.</small>
+                }
+            </div>
+        </div>
+
+        <h2 class="mgs-section-title mt-8">Rol</h2>
+        <div class="mgs-form-grid" role="radiogroup" aria-label="Rol del usuario">
+            @for (choice of roleChoices; track choice.value) {
+                <label class="mgs-field mgs-field--half mgs-choice" [class.mgs-choice--selected]="preview().role === choice.value" [for]="'role-' + choice.value">
+                    <p-radiobutton [inputId]="'role-' + choice.value" formControlName="role" [value]="choice.value" />
+                    <i [class]="choice.icon + ' mgs-choice__icon'"></i>
+                    <span class="flex flex-col gap-1">
+                        <span class="font-semibold">{{ roleLabels[choice.value] }}</span>
+                        <span class="text-sm text-muted-color">{{ choice.description }}</span>
+                    </span>
+                </label>
             }
         </div>
 
-        <div class="mgs-field mgs-field--half">
-            <label for="firstLastName">Primer apellido</label>
-            <input pInputText id="firstLastName" formControlName="firstLastName" />
-            @if (isInvalid('firstLastName')) {
-                <small class="mgs-field__error">El primer apellido es obligatorio.</small>
-            }
-        </div>
-
-        <div class="mgs-field mgs-field--half">
-            <label for="secondLastName">Segundo apellido <span class="text-muted-color font-normal">(opcional)</span></label>
-            <input pInputText id="secondLastName" formControlName="secondLastName" />
+        <div class="mgs-form-actions">
+            <p-button label="Cancelar" severity="secondary" [outlined]="true" routerLink="/users" />
+            <p-button type="submit" [label]="isEditing() ? 'Guardar cambios' : 'Crear usuario'" icon="pi pi-check" [loading]="isSubmitting()" />
         </div>
     </div>
 
-    <h2 class="mgs-section-title mt-8">Acceso</h2>
-    <div class="mgs-form-grid">
-        <div class="mgs-field mgs-field--half">
-            <label for="email">Correo electrónico</label>
-            <input pInputText id="email" type="email" formControlName="email" autocomplete="off" />
-            @if (isInvalid('email')) {
-                <small class="mgs-field__error">Escriba un correo válido.</small>
-            }
+    <aside class="col-span-12 xl:col-span-4 mgs-card mgs-sticky flex flex-col gap-6">
+        <div class="flex flex-col items-center text-center gap-3">
+            <p-avatar [label]="preview().initials || undefined" [icon]="preview().initials ? undefined : 'pi pi-user'" shape="circle" size="xlarge" styleClass="mgs-avatar" />
+            <div>
+                <div class="mgs-section-title !m-0">{{ preview().name || 'Nuevo usuario' }}</div>
+                <div class="text-sm text-muted-color break-all">{{ preview().email || 'Sin correo' }}</div>
+            </div>
+            <p-tag [value]="roleLabels[preview().role]" [styleClass]="roleTagClasses[preview().role]" />
         </div>
 
-        <div class="mgs-field mgs-field--half">
-            <label for="password">Contraseña</label>
-            <p-password inputId="password" formControlName="password" [toggleMask]="true" [fluid]="true" autocomplete="new-password" weakLabel="Débil" mediumLabel="Media" strongLabel="Fuerte" promptLabel="Mínimo 8 caracteres" />
-            @if (isInvalid('password')) {
-                <small class="mgs-field__error">La contraseña debe tener al menos 8 caracteres.</small>
-            }
+        <div class="flex flex-col gap-2">
+            <div class="flex justify-between items-baseline">
+                <span class="mgs-eyebrow">Datos obligatorios</span>
+                <span class="font-semibold tabular-nums">{{ completedCount() }} de {{ requiredCount }}</span>
+            </div>
+            <p-progressbar [value]="progress()" [showValue]="false" styleClass="h-2" />
         </div>
 
-        <div class="mgs-field mgs-field--half">
-            <label for="role">Rol</label>
-            <p-select inputId="role" formControlName="role" [options]="roleOptions" optionLabel="label" optionValue="value" [fluid]="true" />
-        </div>
-    </div>
-
-    <div class="mgs-form-actions">
-        <p-button label="Cancelar" severity="secondary" [outlined]="true" routerLink="/users" />
-        <p-button type="submit" label="Guardar" icon="pi pi-check" [loading]="isSubmitting()" />
-    </div>
+        @if (isEditing()) {
+            <div class="mgs-alert text-sm">
+                <i class="pi pi-info-circle"></i>
+                <span>Para guardar cambios escriba una contraseña: la nueva o la actual.</span>
+            </div>
+        }
+    </aside>
 </form>
