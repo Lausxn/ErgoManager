@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signa
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmationService } from 'primeng/api';
 import { AvatarModule } from 'primeng/avatar';
 import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
@@ -19,6 +19,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { Role } from '../../../shared/models/role.model';
 import { UserResponse } from '../../../shared/models/user.model';
+import { ToastService } from '../../../shared/services/toast.service';
 import { ACTIVE_TAG_CLASSES, ROLE_LABELS, ROLE_TAG_CLASSES, toEnumOptions } from '../../../shared/utils/labels';
 import { UserService } from '../user.service';
 
@@ -50,7 +51,7 @@ export class UserListComponent {
 
     private readonly confirmationService = inject(ConfirmationService);
 
-    private readonly messageService = inject(MessageService);
+    private readonly toastService = inject(ToastService);
 
     private readonly authService = inject(AuthService);
 
@@ -136,7 +137,7 @@ export class UserListComponent {
                 },
                 error: () => {
                     this.isLoading.set(false);
-                    this.messageService.add({ severity: 'error', summary: 'No se pudieron cargar los usuarios', detail: 'Intente de nuevo en unos minutos.' });
+                    this.toastService.error('No se pudieron cargar los usuarios', 'Intente de nuevo en unos minutos.');
                 }
             });
     }
@@ -163,10 +164,10 @@ export class UserListComponent {
                     .pipe(takeUntilDestroyed(this.destroyRef))
                     .subscribe({
                         next: () => {
-                            this.messageService.add({ severity: 'success', summary: 'Usuario desactivado', detail: row.fullName });
+                            this.toastService.success('Usuario desactivado', row.fullName);
                             this.loadUsers();
                         },
-                        error: () => this.messageService.add({ severity: 'error', summary: 'No se pudo desactivar', detail: 'Intente de nuevo en unos minutos.' })
+                        error: () => this.toastService.error('No se pudo desactivar', 'Intente de nuevo en unos minutos.')
                     })
         });
     }

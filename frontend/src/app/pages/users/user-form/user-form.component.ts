@@ -3,7 +3,6 @@ import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, injec
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { MessageService } from 'primeng/api';
 import { AvatarModule } from 'primeng/avatar';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -15,6 +14,7 @@ import { TagModule } from 'primeng/tag';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { Role } from '../../../shared/models/role.model';
 import { UserRequest } from '../../../shared/models/user.model';
+import { ToastService } from '../../../shared/services/toast.service';
 import { isControlInvalid, markFormAsDirty } from '../../../shared/utils/form';
 import { ROLE_LABELS, ROLE_TAG_CLASSES } from '../../../shared/utils/labels';
 import { UserService } from '../user.service';
@@ -57,7 +57,7 @@ export class UserFormComponent implements OnInit {
 
     private readonly userService = inject(UserService);
 
-    private readonly messageService = inject(MessageService);
+    private readonly toastService = inject(ToastService);
 
     private readonly router = inject(Router);
 
@@ -134,7 +134,7 @@ export class UserFormComponent implements OnInit {
             .subscribe({
                 next: ({ firstName, firstLastName, secondLastName, email, role }) => this.userForm.patchValue({ firstName, firstLastName, secondLastName: secondLastName ?? '', email, role }),
                 error: () => {
-                    this.messageService.add({ severity: 'error', summary: 'No se encontró el usuario', detail: 'Puede que ya no exista.' });
+                    this.toastService.error('No se encontró el usuario', 'Puede que ya no exista.');
                     void this.router.navigate(['/users']);
                 }
             });
@@ -180,7 +180,7 @@ export class UserFormComponent implements OnInit {
         saved$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
             next: () => {
                 this.isSubmitting.set(false);
-                this.messageService.add({ severity: 'success', summary: this.isEditing() ? 'Usuario actualizado' : 'Usuario creado', detail: request.email });
+                this.toastService.success(this.isEditing() ? 'Usuario actualizado' : 'Usuario creado', request.email);
                 void this.router.navigate(['/users']);
             },
             error: (error: HttpErrorResponse) => {
@@ -191,7 +191,7 @@ export class UserFormComponent implements OnInit {
                     email.markAsTouched();
                     return;
                 }
-                this.messageService.add({ severity: 'error', summary: 'No se pudo guardar', detail: 'Revise los datos e intente de nuevo.' });
+                this.toastService.error('No se pudo guardar', 'Revise los datos e intente de nuevo.');
             }
         });
     }
