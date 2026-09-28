@@ -30,10 +30,6 @@ export class AppMenu {
 
         return [
             {
-                label: 'Inicio',
-                items: [{ label: 'Inicio', icon: 'pi pi-fw pi-home', routerLink: [this.authService.getHomeUrl()] }]
-            },
-            {
                 label: 'Administración',
                 visible: isAdmin,
                 items: [
