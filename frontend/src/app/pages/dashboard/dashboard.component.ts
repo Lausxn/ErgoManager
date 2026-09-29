@@ -1,9 +1,13 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
+import { Observable } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
+import { CompanyService } from '../companies/company.service';
+import { FormService } from '../forms/form.service';
+import { UserService } from '../users/user.service';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 
 /**
@@ -32,6 +36,13 @@ export interface StatCard {
   highlight?: boolean;
 }
 
+/** Figure that is read from the backend. */
+interface ConnectedStat {
+  label: string;
+  highlight?: boolean;
+  load: () => Observable<{ active: boolean }[]>;
+}
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -41,6 +52,9 @@ export interface StatCard {
 })
 export class DashboardComponent {
   private readonly authService = inject(AuthService);
+  private readonly userService = inject(UserService);
+  private readonly companyService = inject(CompanyService);
+  private readonly formService = inject(FormService);
 
   /** First name of the signed in user, shown in the greeting. */
   userName = computed(() => this.authService.session()?.fullName.split(' ')[0] ?? '');
@@ -55,20 +69,41 @@ export class DashboardComponent {
     { id: 5, title: 'Gestión de usuarios', description: 'Cree, edite y desactive cuentas de Administrador y Ergonomista.', icon: 'pi pi-users', color: 'red', route: '/users' }
   ];
 
-  /**
-   * Figures of the system. They are connected to the backend in Task 31;
-   * until then no invented number is shown.
-   */
+  /** Figures read from the backend, counting only the active records. */
+  private readonly connectedStats: ConnectedStat[] = [
+    { label: 'Clientes activos', load: () => this.companyService.findAll() },
+    { label: 'Usuarios activos', highlight: true, load: () => this.userService.findAll() },
+    { label: 'Formularios activos', load: () => this.formService.findActive() }
+  ];
+
   readonly stats = signal<StatCard[]>([
+    // The backend only reads the agenda of one ergonomist, not every appointment.
     { label: 'Citas programadas', value: null, isLoading: false },
-    { label: 'Clientes activos', value: null, isLoading: false },
-    { label: 'Usuarios activos', value: null, isLoading: false, highlight: true },
-    { label: 'Formularios activos', value: null, isLoading: false }
+    ...this.connectedStats.map((stat) => ({ label: stat.label, value: null, isLoading: true, highlight: stat.highlight }))
   ]);
 
   getGreeting(): string {
     if (this.currentHour < 12) return 'Buenos días';
     if (this.currentHour < 18) return 'Buenas tardes';
     return 'Buenas noches';
+  }
+
+  ngOnInit(): void {
+    for (const stat of this.connectedStats) {
+      stat.load().subscribe({
+        next: (records) => this.setStat(stat.label, records.filter((record) => record.active).length),
+        error: () => this.setStat(stat.label, null)
+      });
+    }
+  }
+
+  /**
+   * Stores the value of a figure once its request finished.
+   *
+   * @param label label of the figure
+   * @param value number of active records, or null when it could not be read
+   */
+  private setStat(label: string, value: number | null): void {
+    this.stats.update((stats) => stats.map((stat) => (stat.label === label ? { ...stat, value, isLoading: false } : stat)));
   }
 }
