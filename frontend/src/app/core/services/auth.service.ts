@@ -3,11 +3,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import {
-    ChangePasswordRequest,
-    LoginRequest,
-    LoginResponse
-} from '../../shared/models/auth.model';
+import { ChangePasswordRequest, LoginRequest, LoginResponse } from '../../shared/models/auth.model';
 import { Role } from '../../shared/models/role.model';
 
 const SESSION_STORAGE_KEY = 'ergomanager.session';
@@ -32,15 +28,12 @@ const PREVIEW_SESSION: LoginResponse = {
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-
     private readonly http = inject(HttpClient);
 
     /** True while the temporary preview mode lets every page open without signing in. */
     readonly isPreviewMode = environment.previewMode;
 
-    private readonly currentSession = signal<LoginResponse | null>(
-        readStoredSession() ?? this.getPreviewSession()
-    );
+    private readonly currentSession = signal<LoginResponse | null>(readStoredSession() ?? this.getPreviewSession());
 
     /** Session of the signed in user, or null when nobody is signed in. */
     readonly session = this.currentSession.asReadonly();
@@ -56,11 +49,8 @@ export class AuthService {
         if (this.isPreviewMode) {
             return true;
         }
-
         const session = this.currentSession();
-
-        return session !== null
-            && session.expiresAtMs > Date.now();
+        return session !== null && session.expiresAtMs > Date.now();
     }
 
     /**
@@ -69,9 +59,7 @@ export class AuthService {
      * @returns url of the home page
      */
     getHomeUrl(): string {
-        return this.currentSession()?.role === 'ADMIN'
-            ? '/companies'
-            : '/appointments';
+        return this.currentSession()?.role === 'ADMIN' ? '/companies' : '/appointments';
     }
 
     /**
@@ -81,59 +69,34 @@ export class AuthService {
      * @returns the session issued by the backend
      */
     login(request: LoginRequest): Observable<LoginResponse> {
-        return this.http
-            .post<LoginResponse>(
-                `${environment.apiUrl}/auth/login`,
-                request
-            )
-            .pipe(
-                tap((session) =>
-                    this.storeSession(session)
-                )
-            );
+        return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, request).pipe(tap((session) => this.storeSession(session)));
     }
 
     /**
      * Replaces the password of the signed in user.
      *
-     * The backend returns a new authenticated session after the password is
-     * changed. The previous session is replaced because older tokens are
-     * invalidated by the backend.
+     * Contract expected from the backend (pending, see HU-019):
+     * - PUT /api/auth/password with a ChangePasswordRequest body and the JWT.
+     * - 200 with a LoginResponse holding a new token: the tokens issued before
+     *   the change stop working, so the current session is replaced here.
+     * - 400 when the current password is wrong or the new one breaks the rules.
+     *   It must not be 401, because the error interceptor signs the user out.
      *
      * @param request current and new passwords
      * @returns the new session issued by the backend
      */
-    changePassword(
-        request: ChangePasswordRequest
-    ): Observable<LoginResponse> {
-
-        return this.http
-            .put<LoginResponse>(
-                `${environment.apiUrl}/auth/password`,
-                request
-            )
-            .pipe(
-                tap((session) =>
-                    this.storeSession(session)
-                )
-            );
+    changePassword(request: ChangePasswordRequest): Observable<LoginResponse> {
+        return this.http.put<LoginResponse>(`${environment.apiUrl}/auth/password`, request).pipe(tap((session) => this.storeSession(session)));
     }
 
     /**
-     * Hides the temporary-password reminder without marking the password as
-     * permanently changed.
-     *
-     * Only the in-memory session is modified. The stored session keeps
-     * mustChangePassword=true, so the reminder can appear again after a page
-     * reload or a new sign in until the password is actually replaced.
+     * Hides the temporary-password reminder only in the current in-memory
+     * session. The stored session keeps mustChangePassword=true.
      */
     dismissPasswordReminder(): void {
         const session = this.currentSession();
 
-        if (
-            session === null
-            || !session.mustChangePassword
-        ) {
+        if (session === null || !session.mustChangePassword) {
             return;
         }
 
@@ -147,13 +110,8 @@ export class AuthService {
      * Clears the stored session.
      */
     logout(): void {
-        localStorage.removeItem(
-            SESSION_STORAGE_KEY
-        );
-
-        this.currentSession.set(
-            this.getPreviewSession()
-        );
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+        this.currentSession.set(this.getPreviewSession());
     }
 
     /**
@@ -171,18 +129,12 @@ export class AuthService {
      * @param allowedRoles roles that can reach the feature
      * @returns true when the session matches one of them
      */
-    hasAnyRole(
-        allowedRoles: readonly Role[]
-    ): boolean {
-
+    hasAnyRole(allowedRoles: readonly Role[]): boolean {
         if (this.isPreviewMode) {
             return true;
         }
-
         const session = this.currentSession();
-
-        return session !== null
-            && allowedRoles.includes(session.role);
+        return session !== null && allowedRoles.includes(session.role);
     }
 
     /**
@@ -191,9 +143,7 @@ export class AuthService {
      * @returns the demo session, or null outside the preview mode
      */
     private getPreviewSession(): LoginResponse | null {
-        return this.isPreviewMode
-            ? PREVIEW_SESSION
-            : null;
+        return this.isPreviewMode ? PREVIEW_SESSION : null;
     }
 
     /**
@@ -202,15 +152,8 @@ export class AuthService {
      *
      * @param session session returned by the backend
      */
-    private storeSession(
-        session: LoginResponse
-    ): void {
-
-        localStorage.setItem(
-            SESSION_STORAGE_KEY,
-            JSON.stringify(session)
-        );
-
+    private storeSession(session: LoginResponse): void {
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
         this.currentSession.set(session);
     }
 }
@@ -221,22 +164,14 @@ export class AuthService {
  * @returns the stored session, or null when there is none or it is unreadable
  */
 function readStoredSession(): LoginResponse | null {
-
-    const raw = localStorage.getItem(
-        SESSION_STORAGE_KEY
-    );
-
+    const raw = localStorage.getItem(SESSION_STORAGE_KEY);
     if (raw === null) {
         return null;
     }
-
     try {
         return JSON.parse(raw) as LoginResponse;
     } catch {
-        localStorage.removeItem(
-            SESSION_STORAGE_KEY
-        );
-
+        localStorage.removeItem(SESSION_STORAGE_KEY);
         return null;
     }
 }
