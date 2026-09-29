@@ -9,7 +9,7 @@ import { DashboardSummary } from '../../shared/models/dashboard.model';
 import { ToastService } from '../../shared/services/toast.service';
 import { DashboardService } from './dashboard.service';
 
-/** Function of the administrator, shown as a numbered option card. */
+/** Function of the profile, shown as a numbered option card. */
 interface FunctionCard {
     number: string;
     title: string;
@@ -31,9 +31,19 @@ const FUNCTION_CARDS: readonly FunctionCard[] = [
     { number: '05', title: 'Gestión de usuarios', description: 'Cree, edite y desactive cuentas de Administrador y Ergonomista.', icon: 'fa-solid fa-users-gear', route: '/users' }
 ];
 
+/** The five functions enabled for the ergonomist profile (HU-002). */
+const ERGONOMIST_FUNCTION_CARDS: readonly FunctionCard[] = [
+    { number: '01', title: 'Formularios', description: 'Consulte y gestione los formularios utilizados en las evaluaciones ergonómicas.', icon: 'fa-solid fa-file-lines', route: '/forms' },
+    { number: '02', title: 'Agenda de citas', description: 'Consulte y gestione las citas y espacios disponibles para atención.', icon: 'fa-solid fa-calendar-plus', route: '/appointments' },
+    { number: '03', title: 'Perfiles de clientes', description: 'Consulte la información de las empresas cliente y sus colaboradores.', icon: 'fa-solid fa-building', route: '/companies' },
+    { number: '04', title: 'Evaluación personalizada', description: 'Realice evaluaciones ergonómicas personalizadas para los colaboradores.', icon: 'fa-solid fa-clipboard-user', route: '/personalized-evaluations' },
+    { number: '05', title: 'Reportes e historial', description: 'Consulte el historial y los resultados de las evaluaciones ergonómicas.', icon: 'fa-solid fa-chart-column', route: '/history' }
+];
+
 /**
- * Home page of the administrator: dark impact band with the greeting, the key
- * figures of the system and the five functions of the profile.
+ * Home page of the signed in user: dark impact band with the greeting and the
+ * five functions of the profile. The administrator also sees the key figures
+ * of the system, which the backend only gives to that role.
  */
 @Component({
     selector: 'app-dashboard',
@@ -52,7 +62,9 @@ export class DashboardComponent {
 
     private readonly destroyRef = inject(DestroyRef);
 
-    protected readonly functionCards = FUNCTION_CARDS;
+    protected readonly isAdmin = computed(() => this.authService.session()?.role === 'ADMIN');
+
+    protected readonly functionCards = computed(() => (this.isAdmin() ? FUNCTION_CARDS : ERGONOMIST_FUNCTION_CARDS));
 
     protected readonly today = new Date();
 
@@ -81,6 +93,10 @@ export class DashboardComponent {
     });
 
     constructor() {
+        if (!this.isAdmin()) {
+            this.isLoading.set(false);
+            return;
+        }
         this.dashboardService
             .getSummary()
             .pipe(takeUntilDestroyed(this.destroyRef))

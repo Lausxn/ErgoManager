@@ -18,6 +18,7 @@ const EXPECTED_LINKS: Record<string, string> = {
     Empresas: '/companies',
     Usuarios: '/users',
     Formularios: '/forms',
+    'Perfiles de clientes': '/companies',
     Agenda: '/appointments',
     'Evaluación personalizada': '/personalized-evaluations',
     Historial: '/history',
@@ -31,7 +32,7 @@ const EXPECTED_LINKS: Record<string, string> = {
  * @returns stored session
  */
 function sessionOf(role: Role): LoginResponse {
-    return { token: 'token', tokenType: 'Bearer', expiresAtMs: Number.MAX_SAFE_INTEGER, userId: 1, fullName: 'Usuario Prueba', role };
+    return { token: 'token', tokenType: 'Bearer', expiresAtMs: Number.MAX_SAFE_INTEGER, userId: 1, fullName: 'Usuario Prueba', role, mustChangePassword: false };
 }
 
 /**
@@ -76,28 +77,24 @@ describe('AppMenu', () => {
         localStorage.removeItem(SESSION_STORAGE_KEY);
     });
 
-    it('lleva cada entrada del administrador a la pantalla que corresponde a su nombre', () => {
-        for (const item of visibleEntries('ADMIN').filter((entry) => entry.label !== 'Inicio')) {
-            expect(item.routerLink).withContext(item.label!).toEqual([EXPECTED_LINKS[item.label!]]);
-            expect(isRegistered(item.routerLink[0])).withContext(item.label!).toBeTrue();
+    it('lleva cada entrada de cada rol a la pantalla que corresponde a su nombre', () => {
+        for (const role of ['ADMIN', 'ERGONOMIST'] as const) {
+            for (const item of visibleEntries(role)) {
+                expect(item.routerLink).withContext(`${role} ${item.label}`).toEqual([EXPECTED_LINKS[item.label!]]);
+                expect(isRegistered(item.routerLink[0])).withContext(`${role} ${item.label}`).toBeTrue();
+            }
         }
     });
 
-    it('lleva Inicio al dashboard para el administrador', () => {
-        const home = visibleEntries('ADMIN').find((entry) => entry.label === 'Inicio');
-        expect(home?.routerLink).toEqual(['/dashboard']);
+    it('muestra Gestión de usuarios solo al administrador', () => {
+        expect(visibleEntries('ADMIN').map((entry) => entry.label)).toContain('Usuarios');
+        expect(visibleEntries('ERGONOMIST').map((entry) => entry.label)).not.toContain('Usuarios');
     });
 
-    it('lleva Inicio a la agenda para el ergonomista, que no tiene dashboard', () => {
-        const home = visibleEntries('ERGONOMIST').find((entry) => entry.label === 'Inicio');
-        expect(home?.routerLink).toEqual(['/appointments']);
-    });
-
-    it('muestra la sección Administración solo al administrador', () => {
+    it('da al ergonomista acceso a Formularios y Perfiles de clientes', () => {
         const ergonomistLabels = visibleEntries('ERGONOMIST').map((entry) => entry.label);
-        expect(ergonomistLabels).not.toContain('Usuarios');
-        expect(ergonomistLabels).not.toContain('Empresas');
-        expect(ergonomistLabels).not.toContain('Formularios');
+        expect(ergonomistLabels).toContain('Formularios');
+        expect(ergonomistLabels).toContain('Perfiles de clientes');
     });
 
     it('muestra Evaluación personalizada solo al ergonomista', () => {

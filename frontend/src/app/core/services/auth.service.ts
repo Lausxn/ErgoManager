@@ -54,12 +54,13 @@ export class AuthService {
     }
 
     /**
-     * Returns the first page of the signed in user, which depends on the role.
+     * Returns the first page of the signed in user: the dashboard, which shows
+     * the functions of each role.
      *
      * @returns url of the home page
      */
     getHomeUrl(): string {
-        return this.currentSession()?.role === 'ADMIN' ? '/dashboard' : '/appointments';
+        return '/dashboard';
     }
 
     /**
