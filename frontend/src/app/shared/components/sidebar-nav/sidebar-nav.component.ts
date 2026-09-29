@@ -1,4 +1,4 @@
-import { Component, computed } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 import { Role } from '../../models/role.model';
@@ -53,7 +53,7 @@ const ERGONOMIST_ITEMS: readonly SidebarItem[] = [
         <nav class="mgs-sidenav__nav" aria-label="Navegación principal">
             <span class="mgs-sidenav__section">{{ roleLabel() }}</span>
             <ul class="mgs-sidenav__list">
-                @for (item of items; track item.route) {
+                @for (item of items(); track item.route) {
                     <li>
                         <a class="mgs-sidenav__link" [routerLink]="item.route" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: item.exact ?? false }" ariaCurrentWhenActive="page">
                             <i [class]="item.icon" aria-hidden="true"></i>
@@ -67,7 +67,7 @@ const ERGONOMIST_ITEMS: readonly SidebarItem[] = [
         <div class="mgs-sidenav__user">
             <span class="mgs-sidenav__avatar" aria-hidden="true">{{ initials() }}</span>
             <div class="mgs-sidenav__user-text">
-                <strong>{{ user.fullName }}</strong>
+                <strong>{{ profile().fullName }}</strong>
                 <span>{{ roleLabel() }}</span>
             </div>
         </div>
@@ -75,16 +75,29 @@ const ERGONOMIST_ITEMS: readonly SidebarItem[] = [
     host: { class: 'mgs-sidenav' }
 })
 export class SidebarNavComponent {
-    protected readonly user = PLACEHOLDER_USER;
+    readonly user = input<SidebarUser | null>(null);
 
-    protected readonly items = ERGONOMIST_ITEMS;
+    protected readonly profile = computed(() => this.user() ?? PLACEHOLDER_USER);
 
-    protected readonly roleLabel = computed(() => ROLE_LABELS[this.user.role]);
+    protected readonly items = computed<readonly SidebarItem[]>(() =>
+        this.profile().role === 'ADMIN'
+            ? [
+                  { label: 'Inicio', icon: 'pi pi-th-large', route: '/', exact: true },
+                  { label: 'Empresas', icon: 'pi pi-building', route: '/companies' },
+                  { label: 'Usuarios', icon: 'pi pi-users', route: '/users' },
+                  { label: 'Formularios', icon: 'pi pi-file', route: '/forms' },
+                  { label: 'Citas', icon: 'pi pi-calendar', route: '/appointments' },
+                  { label: 'Historial', icon: 'pi pi-history', route: '/history' }
+              ]
+            : ERGONOMIST_ITEMS
+    );
+
+    protected readonly roleLabel = computed(() => ROLE_LABELS[this.profile().role]);
 
     /** First letter of the first two words of the name, as in the mockup ("KS"). */
     protected readonly initials = computed(() =>
-        this.user.fullName
-            .split(/\s+/)
+        this.profile()
+            .fullName.split(/\s+/)
             .slice(0, 2)
             .map((word) => word.charAt(0).toUpperCase())
             .join('')

@@ -110,11 +110,32 @@ public UserResponseDTO findById(Long id) {
         }
     }
 
+    /**
+     * Soft deletes the user: the row is kept so its records stay linked, the
+     * account can no longer sign in and its open sessions are revoked.
+     * Deactivating an inactive user changes nothing.
+     */
     @Override
-    public void deactivate(Long id) {
-        // TODO: set the active flag to false, never delete the row.
-        throw new UnsupportedOperationException(
-                "UserService.deactivate is not implemented yet");
+    @Transactional
+    public void deactivate(Long id, String currentUserEmail) {
+        User user = userRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", id));
+
+        if (user.getEmail().equalsIgnoreCase(currentUserEmail)) {
+            throw new BusinessException("No puede desactivar su propia cuenta.");
+        }
+        if (!user.isActive()) {
+            return;
+        }
+        if (user.getRole() == Role.ADMIN
+                && userRepository.countByRoleAndActiveTrue(Role.ADMIN) == 1) {
+            throw new BusinessException("No se puede desactivar al único administrador activo.");
+        }
+
+        user.setActive(false);
+        // A new version rejects the tokens issued before, even after a reactivation.
+        user.setTokenVersion(user.getTokenVersion() + 1);
+        userRepository.saveAndFlush(user);
     }
 
     /**
