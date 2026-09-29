@@ -18,6 +18,7 @@ import { FormFieldComponent } from '../../../shared/components/form-field/form-f
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { StatCardComponent } from '../../../shared/components/stat-card/stat-card.component';
 import { CompanyResponse } from '../../../shared/models/company.model';
+import { HistoryResponse } from '../../../shared/models/history.model';
 import { HistoryResponse, HistoryType } from '../../../shared/models/history.model';
 import { ToastService } from '../../../shared/services/toast.service';
 import { markFormAsDirty } from '../../../shared/utils/form';
@@ -172,6 +173,10 @@ export class HistoryListComponent {
 
     private readonly toastService = inject(ToastService);
 
+    private readonly toastService = inject(ToastService);
+
+    /** Only administrators can read the company list, the others type the company number. */
+    protected readonly isAdmin = computed(() => this.authService.session()?.role === 'ADMIN');
     private readonly destroyRef = inject(DestroyRef);
 
     /** Searches to run; null cancels the one in progress. */
@@ -205,6 +210,12 @@ export class HistoryListComponent {
 
     protected readonly isLoading = signal(false);
 
+    constructor() {
+        if (this.isAdmin()) {
+            this.companyService.findAll().subscribe({
+                next: (companyList) => this.companyList.set(companyList),
+                error: () => this.toastService.error('No se pudieron cargar las empresas', 'Intente nuevamente en unos minutos.')
+            });
     protected readonly filterText = signal('');
 
     protected readonly visibleCount = signal(PAGE_SIZE);
@@ -306,6 +317,11 @@ export class HistoryListComponent {
      *
      * @param companyId company picked in the select
      */
+    protected search(): void {
+        const field = this.searchMode() === 'company' ? this.searchForm.controls.companyId : this.searchForm.controls.employeeEmail;
+
+        if (field.invalid) {
+            markFormAsDirty(field);
     protected selectCompany(companyId: number | null): void {
         this.companyId.set(companyId);
         if (companyId === null) {
@@ -315,6 +331,9 @@ export class HistoryListComponent {
         this.startSearch({ mode: 'company', companyId });
     }
 
+        const { companyId, employeeEmail } = this.searchForm.getRawValue();
+
+        const history$: Observable<HistoryResponse[]> = this.searchMode() === 'company' ? this.historyService.findByCompany(companyId!) : this.historyService.findByEmployee(employeeEmail);
     /** Reads the history of the employee typed in the email field. */
     protected searchEmployee(): void {
         if (this.emailControl.invalid) {
@@ -369,6 +388,19 @@ export class HistoryListComponent {
         this.filterText.set('');
         this.visibleCount.set(PAGE_SIZE);
         this.isLoading.set(true);
+
+        history$.subscribe({
+            next: (historyList) => {
+                this.historyList.set(historyList);
+                this.hasSearched.set(true);
+                this.isLoading.set(false);
+            },
+            error: () => {
+                this.historyList.set([]);
+                this.hasSearched.set(true);
+                this.isLoading.set(false);
+
+                this.toastService.error('No se pudo consultar el historial', 'Verifique los datos o la conexión e intente nuevamente.');
         this.searches.next(query);
     }
 

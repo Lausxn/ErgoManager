@@ -49,16 +49,19 @@ export class AuthService {
         if (this.isPreviewMode) {
             return true;
         }
+
         const session = this.currentSession();
+
         return session !== null && session.expiresAtMs > Date.now();
     }
 
     /**
-     * Returns the first page of the signed in user, which depends on the role.
+     * Returns the dashboard of the signed in user.
      *
      * @returns url of the home page
      */
     getHomeUrl(): string {
+        return '/dashboard';
         return this.currentSession()?.role === 'ADMIN' ? '/dashboard' : '/appointments';
     }
 
@@ -133,7 +136,9 @@ export class AuthService {
         if (this.isPreviewMode) {
             return true;
         }
+
         const session = this.currentSession();
+
         return session !== null && allowedRoles.includes(session.role);
     }
 
@@ -154,6 +159,7 @@ export class AuthService {
      */
     private storeSession(session: LoginResponse): void {
         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+
         this.currentSession.set(session);
     }
 }
@@ -165,9 +171,11 @@ export class AuthService {
  */
 function readStoredSession(): LoginResponse | null {
     const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+
     if (raw === null) {
         return null;
     }
+
     try {
         return JSON.parse(raw) as LoginResponse;
     } catch {
