@@ -1,11 +1,8 @@
-import { Component, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
-import { ConfirmationService } from 'primeng/api';
+import { Router, RouterLink } from '@angular/router';
 import { AvatarModule } from 'primeng/avatar';
 import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
@@ -51,7 +48,7 @@ interface UserRow extends UserResponse {
 export class UserListComponent {
     private readonly userService = inject(UserService);
 
-    private readonly confirmationService = inject(ConfirmationService);
+    private readonly router = inject(Router);
 
     private readonly toastService = inject(ToastService);
 
@@ -149,28 +146,10 @@ export class UserListComponent {
      *
      * @param row user to deactivate
      */
-    protected confirmDeactivate(row: UserRow): void {
+    protected goToDeactivateConfirmation(row: UserRow): void {
         if (!row.canDeactivate) {
             return;
         }
-        this.confirmationService.confirm({
-            header: 'Desactivar usuario',
-            message: `¿Desea desactivar a ${row.fullName}? Ya no podrá iniciar sesión.`,
-            icon: 'pi pi-exclamation-triangle',
-            acceptLabel: 'Desactivar',
-            rejectLabel: 'Cancelar',
-            rejectButtonProps: { severity: 'secondary', outlined: true },
-            accept: () =>
-                this.userService
-                    .deactivate(row.id)
-                    .pipe(takeUntilDestroyed(this.destroyRef))
-                    .subscribe({
-                        next: () => {
-                            this.toastService.success('Usuario desactivado', row.fullName);
-                            this.loadUsers();
-                        },
-                        error: () => this.toastService.error('No se pudo desactivar', 'Intente de nuevo en unos minutos.')
-                    })
-        });
+        void this.router.navigate(['/users/deactivate-confirmation'], { queryParams: { id: row.id, name: row.fullName } });
     }
 }
