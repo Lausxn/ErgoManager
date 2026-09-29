@@ -50,7 +50,7 @@ interface ConnectedStat {
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent {
   private readonly authService = inject(AuthService);
   private readonly userService = inject(UserService);
   private readonly companyService = inject(CompanyService);
