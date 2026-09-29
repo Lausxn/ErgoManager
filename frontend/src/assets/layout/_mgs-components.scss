@@ -308,9 +308,7 @@
     padding: clamp(1.75rem, 3.5vw, 3rem);
     border-radius: var(--mgs-radius);
     color: var(--mgs-paper);
-    background:
-        radial-gradient(120% 140% at 100% 0%, rgba(122, 16, 34, 0.55), transparent 55%),
-        linear-gradient(160deg, var(--mgs-black) 0%, var(--mgs-graphite) 100%);
+    background: radial-gradient(120% 140% at 100% 0%, rgba(122, 16, 34, 0.55), transparent 55%), linear-gradient(160deg, var(--mgs-black) 0%, var(--mgs-graphite) 100%);
     box-shadow: var(--mgs-shadow-md);
 
     /* Wine sweep of the cover, drawn with a clipped gradient. */

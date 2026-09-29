@@ -1,4 +1,17 @@
-<p-dialog [visible]="visible()" (visibleChange)="visible.set($event)" (onShow)="onShow()" [modal]="true" [draggable]="false" [resizable]="false" [dismissableMask]="!isSubmitting()" [closeOnEscape]="!isSubmitting()" [closable]="!isSubmitting()" styleClass="booking-dialog" [style]="{ width: 'min(46rem, calc(100vw - 2rem))' }" [breakpoints]="{ '640px': '100vw' }">
+<p-dialog
+    [visible]="visible()"
+    (visibleChange)="visible.set($event)"
+    (onShow)="onShow()"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [dismissableMask]="!isSubmitting()"
+    [closeOnEscape]="!isSubmitting()"
+    [closable]="!isSubmitting()"
+    styleClass="booking-dialog"
+    [style]="{ width: 'min(46rem, calc(100vw - 2rem))' }"
+    [breakpoints]="{ '640px': '100vw' }"
+>
     <ng-template #header>
         <div class="booking-dialog__header">
             <span class="mgs-eyebrow">Agenda</span>
@@ -79,7 +92,9 @@
                         <p-skeleton height="3.5rem" />
                     </div>
                 } @else if (evaluationError()) {
-                    <div class="mgs-alert" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ evaluationError() }}</span></div>
+                    <div class="mgs-alert" role="alert">
+                        <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ evaluationError() }}</span>
+                    </div>
                 } @else if (evaluationChoices().length === 0) {
                     <app-empty-state icon="fa-regular fa-file-lines" title="Sin autoevaluaciones" message="Ningún colaborador de esta empresa ha completado la autoevaluación todavía." />
                 } @else {
@@ -135,7 +150,9 @@
                         <p-skeleton width="8rem" height="3rem" />
                     </div>
                 } @else if (slotError()) {
-                    <div class="mgs-alert" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ slotError() }}</span></div>
+                    <div class="mgs-alert" role="alert">
+                        <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ slotError() }}</span>
+                    </div>
                 } @else if (slotDays().length === 0) {
                     <p class="booking-step__hint">El ergonomista no tiene espacios libres en los próximos 30 días. Publique disponibilidad primero.</p>
                 } @else {
@@ -166,13 +183,25 @@
                     <label class="booking-step__title" for="booking-notes">Notas <span class="mgs-field__optional">Opcional</span></label>
                     <span class="booking-counter" [class.booking-counter--over]="notes().length > maxNotesLength">{{ notes().length }} / {{ maxNotesLength }}</span>
                 </div>
-                <textarea pTextarea id="booking-notes" rows="3" [autoResize]="true" [ngModel]="notes()" (ngModelChange)="notes.set($event)" [maxlength]="maxNotesLength" placeholder="Ej. Revisar puesto de trabajo en planta 2." class="w-full"></textarea>
+                <textarea
+                    pTextarea
+                    id="booking-notes"
+                    rows="3"
+                    [autoResize]="true"
+                    [ngModel]="notes()"
+                    (ngModelChange)="notes.set($event)"
+                    [maxlength]="maxNotesLength"
+                    placeholder="Ej. Revisar puesto de trabajo en planta 2."
+                    class="w-full"
+                ></textarea>
             </div>
         </li>
     </ol>
 
     @if (errorMessage(); as message) {
-        <div class="mgs-alert mt-4" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ message }}</span></div>
+        <div class="mgs-alert mt-4" role="alert">
+            <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ message }}</span>
+        </div>
     }
 
     <ng-template #footer>
@@ -181,7 +210,7 @@
                 @if (selectedEvaluation(); as evaluation) {
                     <strong>{{ evaluation.employeeName }}</strong>
                     @if (selectedSlot(); as slot) {
-                        · {{ slot.startDateTime | date: "EEE d MMM, h:mm a" }}
+                        · {{ slot.startDateTime | date: 'EEE d MMM, h:mm a' }}
                     }
                 } @else {
                     Complete los pasos para agendar.

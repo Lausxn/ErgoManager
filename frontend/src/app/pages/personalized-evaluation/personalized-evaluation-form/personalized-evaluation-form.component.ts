@@ -174,7 +174,7 @@ export class PersonalizedEvaluationFormComponent implements OnInit, HasUnsavedCh
     protected readonly appointmentOptions = computed<AppointmentOption[]>(() =>
         this.pendingAppointments().map((appointment) => ({
             ...appointment,
-            label: `${appointment.employeeName} — ${appointment.companyName} — ${formatDate(appointment.startDateTime, "d MMM y, h:mm a", this.locale)}`
+            label: `${appointment.employeeName} — ${appointment.companyName} — ${formatDate(appointment.startDateTime, 'd MMM y, h:mm a', this.locale)}`
         }))
     );
 

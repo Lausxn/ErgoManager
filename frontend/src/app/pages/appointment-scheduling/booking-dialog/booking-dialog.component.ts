@@ -137,9 +137,7 @@ export class BookingDialogComponent {
         return search === '' ? this.evaluationChoices() : this.evaluationChoices().filter((choice) => choice.searchKey.includes(search));
     });
 
-    protected readonly slotDays = computed(() =>
-        groupSlotsByDay(this.slots()).map((day) => ({ ...day, slots: day.slots.map((slot) => ({ ...slot, duration: formatDuration(minutesBetween(slot.startDateTime, slot.endDateTime)) })) }))
-    );
+    protected readonly slotDays = computed(() => groupSlotsByDay(this.slots()).map((day) => ({ ...day, slots: day.slots.map((slot) => ({ ...slot, duration: formatDuration(minutesBetween(slot.startDateTime, slot.endDateTime)) })) })));
 
     protected readonly selectedCompany = computed(() => this.companies().find((company) => company.id === this.companyId()) ?? null);
 
@@ -236,9 +234,7 @@ export class BookingDialogComponent {
                 error: (error: unknown) => {
                     this.isSubmitting.set(false);
                     this.errorMessage.set(
-                        isConflict(error)
-                            ? getApiErrorMessage(error, 'Esta autoevaluación ya tiene una cita pendiente o el espacio acaba de ser reservado.')
-                            : getApiErrorMessage(error, 'No se pudo agendar la cita. Intente de nuevo.')
+                        isConflict(error) ? getApiErrorMessage(error, 'Esta autoevaluación ya tiene una cita pendiente o el espacio acaba de ser reservado.') : getApiErrorMessage(error, 'No se pudo agendar la cita. Intente de nuevo.')
                     );
                 }
             });

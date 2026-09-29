@@ -61,7 +61,23 @@ interface AppointmentRow extends AppointmentResponse {
     selector: 'app-appointment-list',
     standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [DatePipe, FormsModule, RouterLink, AvatarModule, ButtonModule, SelectModule, SelectButtonModule, SkeletonModule, TableModule, TagModule, TooltipModule, BookingDialogComponent, EmptyStateComponent, PageHeaderComponent, StatCardComponent],
+    imports: [
+        DatePipe,
+        FormsModule,
+        RouterLink,
+        AvatarModule,
+        ButtonModule,
+        SelectModule,
+        SelectButtonModule,
+        SkeletonModule,
+        TableModule,
+        TagModule,
+        TooltipModule,
+        BookingDialogComponent,
+        EmptyStateComponent,
+        PageHeaderComponent,
+        StatCardComponent
+    ],
     templateUrl: './appointment-list.component.html',
     styleUrl: './appointment-list.component.scss'
 })
@@ -170,12 +186,17 @@ export class AppointmentListComponent implements OnInit {
 
     protected readonly slotCount = computed(() => this.slots().length);
 
-    protected readonly slotDays = computed(() =>
-        groupSlotsByDay(this.slots()).map((day) => ({ ...day, slots: day.slots.map((slot) => ({ ...slot, duration: formatDuration(minutesBetween(slot.startDateTime, slot.endDateTime)) })) }))
-    );
+    protected readonly slotDays = computed(() => groupSlotsByDay(this.slots()).map((day) => ({ ...day, slots: day.slots.map((slot) => ({ ...slot, duration: formatDuration(minutesBetween(slot.startDateTime, slot.endDateTime)) })) })));
 
     /** Self evaluations that already hold a pending appointment, so the dialog can warn about them. */
-    protected readonly pendingSelfEvaluationIds = computed<ReadonlySet<number>>(() => new Set(this.appointments().filter((appointment) => isPendingStatus(appointment.status)).map((appointment) => appointment.selfEvaluationId)));
+    protected readonly pendingSelfEvaluationIds = computed<ReadonlySet<number>>(
+        () =>
+            new Set(
+                this.appointments()
+                    .filter((appointment) => isPendingStatus(appointment.status))
+                    .map((appointment) => appointment.selfEvaluationId)
+            )
+    );
 
     ngOnInit(): void {
         if (this.isAdmin()) {

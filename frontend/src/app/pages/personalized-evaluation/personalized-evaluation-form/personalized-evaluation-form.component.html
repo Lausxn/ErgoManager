@@ -193,7 +193,9 @@
         </aside>
 
         @if (errorMessage(); as message) {
-            <div class="mgs-alert" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ message }}</span></div>
+            <div class="mgs-alert" role="alert">
+                <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ message }}</span>
+            </div>
         }
 
         <app-save-bar [tracker]="unsaved" [saving]="isSubmitting()" message="Cuidado, la evaluación todavía no se ha guardado." discardLabel="Vaciar campos" submitLabel="Guardar evaluación" (discarded)="clearError()" />
@@ -234,28 +236,40 @@
                     <td><p-skeleton width="8rem" height="0.9rem" /></td>
                     <td><p-skeleton width="4rem" height="1.5rem" borderRadius="999px" /></td>
                     <td><p-skeleton width="5.5rem" height="0.9rem" /></td>
-                    <td><div class="flex justify-end"><p-skeleton shape="circle" size="2rem" /></div></td>
+                    <td>
+                        <div class="flex justify-end"><p-skeleton shape="circle" size="2rem" /></div>
+                    </td>
                 </tr>
             } @else {
-            <tr>
-                <td>
-                    <div class="mgs-identity">
-                        <p-avatar [label]="row.initials" shape="circle" styleClass="mgs-avatar" />
-                        <div class="mgs-identity__text">
-                            <span class="mgs-identity__name">{{ row.employeeName }}</span>
-                            <span class="mgs-identity__meta">{{ row.employeeEmail }}</span>
+                <tr>
+                    <td>
+                        <div class="mgs-identity">
+                            <p-avatar [label]="row.initials" shape="circle" styleClass="mgs-avatar" />
+                            <div class="mgs-identity__text">
+                                <span class="mgs-identity__name">{{ row.employeeName }}</span>
+                                <span class="mgs-identity__meta">{{ row.employeeEmail }}</span>
+                            </div>
                         </div>
-                    </div>
-                </td>
-                <td>{{ row.companyName }}</td>
-                <td><p-tag [value]="row.riskLabel" [styleClass]="row.riskTagClass" /></td>
-                <td class="whitespace-nowrap">{{ row.evaluatedAt | date: 'd MMM y' }}</td>
-                <td class="text-right">
-                    <div class="mgs-row-actions">
-                        <p-button icon="fa-regular fa-file-pdf" [rounded]="true" [text]="true" severity="secondary" [loading]="downloadingIds().has(row.id)" (onClick)="downloadReport(row)" pTooltip="Descargar reporte PDF" tooltipPosition="top" ariaLabel="Descargar reporte PDF" />
-                    </div>
-                </td>
-            </tr>
+                    </td>
+                    <td>{{ row.companyName }}</td>
+                    <td><p-tag [value]="row.riskLabel" [styleClass]="row.riskTagClass" /></td>
+                    <td class="whitespace-nowrap">{{ row.evaluatedAt | date: 'd MMM y' }}</td>
+                    <td class="text-right">
+                        <div class="mgs-row-actions">
+                            <p-button
+                                icon="fa-regular fa-file-pdf"
+                                [rounded]="true"
+                                [text]="true"
+                                severity="secondary"
+                                [loading]="downloadingIds().has(row.id)"
+                                (onClick)="downloadReport(row)"
+                                pTooltip="Descargar reporte PDF"
+                                tooltipPosition="top"
+                                ariaLabel="Descargar reporte PDF"
+                            />
+                        </div>
+                    </td>
+                </tr>
             }
         </ng-template>
         <ng-template #emptymessage>

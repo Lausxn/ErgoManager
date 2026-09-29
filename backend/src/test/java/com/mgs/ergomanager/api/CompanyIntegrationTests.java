@@ -122,20 +122,20 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
-    void ergonomistOnlyReadsCompanies() throws Exception {
+    void ergonomistHasFullAccessToCompanies() throws Exception {
         Company company = persistCompany("Lectura", "3-101-000007", true);
         mvc.perform(get("/api/companies").with(as(ergonomist))).andExpect(status().isOk());
         mvc.perform(get("/api/companies/{id}", company.getId()).with(as(ergonomist))).andExpect(status().isOk());
         mvc.perform(post("/api/companies").with(as(ergonomist))
                         .contentType(MediaType.APPLICATION_JSON).content(toJson(body("X", "3-101-000008"))))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isCreated());
         mvc.perform(put("/api/companies/{id}", company.getId()).with(as(ergonomist))
                         .contentType(MediaType.APPLICATION_JSON).content(toJson(body("X", "3-101-000007"))))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
         mvc.perform(delete("/api/companies/{id}", company.getId()).with(as(ergonomist)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNoContent());
         mvc.perform(patch("/api/companies/{id}/activate", company.getId()).with(as(ergonomist)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
         mvc.perform(get("/api/companies")).andExpect(status().isUnauthorized());
     }
 }

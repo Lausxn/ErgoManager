@@ -75,11 +75,11 @@ public class SecurityConfig {
                         // Employees answer the form without an account.
                         .requestMatchers(HttpMethod.GET, "/api/forms/active").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/self-evaluations").permitAll()
-                        // Ergonomists read the companies to find their employees; only admins change them.
-                        .requestMatchers(HttpMethod.GET, "/api/companies/**").hasAnyRole("ADMIN", "ERGONOMIST")
-                        .requestMatchers("/api/companies/**").hasRole("ADMIN")
+                        // Administrators and ergonomists have full access to companies and forms;
+                        // user management stays restricted to administrators.
+                        .requestMatchers("/api/companies/**").hasAnyRole("ADMIN", "ERGONOMIST")
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
-                        .requestMatchers("/api/forms/**").hasRole("ADMIN")
+                        .requestMatchers("/api/forms/**").hasAnyRole("ADMIN", "ERGONOMIST")
                         .requestMatchers("/api/dashboard/**").hasRole("ADMIN")
                         // Only ergonomists write evaluations and list their own; admins can read
                         // a single evaluation and its report. Ownership is checked by the service.

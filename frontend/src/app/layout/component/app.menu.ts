@@ -39,6 +39,15 @@ export class AppMenu {
                 ]
             },
             {
+                // Ergonomists have full access to forms and client companies, but not to users.
+                label: 'Ergonomía',
+                visible: isErgonomist && !isAdmin,
+                items: [
+                    { label: 'Formularios', icon: 'fa-solid fa-file-pen fa-fw', routerLink: ['/forms'] },
+                    { label: 'Perfiles de clientes', icon: 'fa-solid fa-building fa-fw', routerLink: ['/companies'] }
+                ]
+            },
+            {
                 label: 'Evaluación',
                 items: [
                     { label: 'Agenda', icon: 'fa-regular fa-calendar-days fa-fw', routerLink: ['/appointments'] },

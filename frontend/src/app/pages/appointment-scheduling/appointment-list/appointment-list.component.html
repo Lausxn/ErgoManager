@@ -97,50 +97,52 @@
                         </td>
                         <td><p-skeleton width="5.5rem" height="1.5rem" borderRadius="999px" /></td>
                         <td><p-skeleton width="5rem" height="0.9rem" /></td>
-                        <td><div class="flex justify-end"><p-skeleton shape="circle" size="2rem" /></div></td>
+                        <td>
+                            <div class="flex justify-end"><p-skeleton shape="circle" size="2rem" /></div>
+                        </td>
                     </tr>
                 } @else {
-                <tr [class.opacity-70]="row.status === 'CANCELLED'">
-                    <td>
-                        <div class="mgs-identity">
-                            <p-avatar [label]="row.initials" shape="circle" styleClass="mgs-avatar" />
-                            <div class="mgs-identity__text">
-                                <span class="mgs-identity__name">{{ row.employeeName }}</span>
-                                <span class="mgs-identity__meta">{{ row.employeeEmail }}</span>
+                    <tr [class.opacity-70]="row.status === 'CANCELLED'">
+                        <td>
+                            <div class="mgs-identity">
+                                <p-avatar [label]="row.initials" shape="circle" styleClass="mgs-avatar" />
+                                <div class="mgs-identity__text">
+                                    <span class="mgs-identity__name">{{ row.employeeName }}</span>
+                                    <span class="mgs-identity__meta">{{ row.employeeEmail }}</span>
+                                </div>
                             </div>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="font-medium">{{ row.companyName }}</span>
-                        @if (row.notes) {
-                            <span class="agenda-note" [pTooltip]="row.notes" tooltipPosition="top">{{ row.notes }}</span>
-                        }
-                    </td>
-                    <td class="whitespace-nowrap">
-                        <div class="agenda-when">
-                            <span class="agenda-when__day">{{ row.startDateTime | date: 'EEE d MMM y' }}</span>
-                            <span class="agenda-when__time">{{ row.startDateTime | date: 'shortTime' }} – {{ row.endDateTime | date: 'shortTime' }}</span>
-                        </div>
-                    </td>
-                    <td><p-tag [value]="row.statusLabel" [styleClass]="row.statusTagClass" /></td>
-                    <td>
-                        @if (row.evaluated) {
-                            <span class="agenda-evaluated"><i class="fa-solid fa-circle-check" aria-hidden="true"></i>Evaluada</span>
-                        } @else {
-                            <span class="agenda-evaluated agenda-evaluated--pending"><i class="fa-regular fa-circle" aria-hidden="true"></i>Sin evaluar</span>
-                        }
-                    </td>
-                    <td class="text-right">
-                        <div class="mgs-row-actions">
-                            @if (row.canEvaluate) {
-                                <p-button label="Registrar evaluación" icon="fa-solid fa-notes-medical" size="small" severity="secondary" [outlined]="true" (onClick)="evaluate(row)" />
+                        </td>
+                        <td>
+                            <span class="font-medium">{{ row.companyName }}</span>
+                            @if (row.notes) {
+                                <span class="agenda-note" [pTooltip]="row.notes" tooltipPosition="top">{{ row.notes }}</span>
                             }
-                            @if (row.isPending) {
-                                <p-button icon="fa-solid fa-ban" [rounded]="true" [text]="true" [loading]="cancellingId() === row.id" (onClick)="confirmCancel(row)" pTooltip="Cancelar cita" tooltipPosition="top" ariaLabel="Cancelar cita" />
+                        </td>
+                        <td class="whitespace-nowrap">
+                            <div class="agenda-when">
+                                <span class="agenda-when__day">{{ row.startDateTime | date: 'EEE d MMM y' }}</span>
+                                <span class="agenda-when__time">{{ row.startDateTime | date: 'shortTime' }} – {{ row.endDateTime | date: 'shortTime' }}</span>
+                            </div>
+                        </td>
+                        <td><p-tag [value]="row.statusLabel" [styleClass]="row.statusTagClass" /></td>
+                        <td>
+                            @if (row.evaluated) {
+                                <span class="agenda-evaluated"><i class="fa-solid fa-circle-check" aria-hidden="true"></i>Evaluada</span>
+                            } @else {
+                                <span class="agenda-evaluated agenda-evaluated--pending"><i class="fa-regular fa-circle" aria-hidden="true"></i>Sin evaluar</span>
                             }
-                        </div>
-                    </td>
-                </tr>
+                        </td>
+                        <td class="text-right">
+                            <div class="mgs-row-actions">
+                                @if (row.canEvaluate) {
+                                    <p-button label="Registrar evaluación" icon="fa-solid fa-notes-medical" size="small" severity="secondary" [outlined]="true" (onClick)="evaluate(row)" />
+                                }
+                                @if (row.isPending) {
+                                    <p-button icon="fa-solid fa-ban" [rounded]="true" [text]="true" [loading]="cancellingId() === row.id" (onClick)="confirmCancel(row)" pTooltip="Cancelar cita" tooltipPosition="top" ariaLabel="Cancelar cita" />
+                                }
+                            </div>
+                        </td>
+                    </tr>
                 }
             </ng-template>
             <ng-template #emptymessage>
@@ -196,7 +198,9 @@
                 }
             </ol>
         } @else if (slotError()) {
-            <div class="mgs-alert" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ slotError() }}</span></div>
+            <div class="mgs-alert" role="alert">
+                <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ slotError() }}</span>
+            </div>
         } @else if (slotDays().length === 0) {
             <app-empty-state icon="fa-regular fa-calendar" title="Sin espacios libres" message="Publique disponibilidad para que se puedan agendar citas en este periodo." />
         } @else {

@@ -31,7 +31,7 @@ export const appRoutes: Routes = [
             },
             {
                 path: 'companies',
-                canActivate: [roleGuard(['ADMIN'])],
+                canActivate: [roleGuard(['ADMIN', 'ERGONOMIST'])],
                 loadChildren: () => import('./app/pages/companies/companies.routes').then((m) => m.companiesRoutes)
             },
             {
@@ -41,7 +41,7 @@ export const appRoutes: Routes = [
             },
             {
                 path: 'forms',
-                canActivate: [roleGuard(['ADMIN'])],
+                canActivate: [roleGuard(['ADMIN', 'ERGONOMIST'])],
                 loadChildren: () => import('./app/pages/forms/forms.routes').then((m) => m.formsRoutes)
             },
             {

@@ -114,7 +114,9 @@
     </aside>
 
     @if (errorMessage(); as message) {
-        <div class="mgs-alert" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ message }}</span></div>
+        <div class="mgs-alert" role="alert">
+            <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ message }}</span>
+        </div>
     }
 
     <app-save-bar [tracker]="unsaved" [saving]="isSubmitting()" message="Cuidado, el espacio todavía no se ha publicado." discardLabel="Vaciar campos" submitLabel="Publicar disponibilidad" (discarded)="clearError()" />
