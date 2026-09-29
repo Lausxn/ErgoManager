@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
@@ -11,6 +11,7 @@ import { TooltipModule } from 'primeng/tooltip';
 
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { CompanyResponse } from '../../../shared/models/company.model';
+import { ToastService } from '../../../shared/services/toast.service';
 import { ACTIVE_TAG_CLASSES } from '../../../shared/utils/labels';
 import { CompanyService } from '../company.service';
 
@@ -28,7 +29,7 @@ export class CompanyListComponent {
 
     private readonly confirmationService = inject(ConfirmationService);
 
-    private readonly messageService = inject(MessageService);
+    private readonly toastService = inject(ToastService);
 
     protected readonly companyList = signal<CompanyResponse[]>([]);
 
@@ -45,12 +46,17 @@ export class CompanyListComponent {
      */
     protected loadCompanies(): void {
         this.isLoading.set(true);
+
         this.companyService.findAll().subscribe({
             next: (companyList) => {
                 this.companyList.set(companyList);
                 this.isLoading.set(false);
             },
-            error: () => this.isLoading.set(false)
+            error: () => {
+                this.isLoading.set(false);
+
+                this.toastService.error('No se pudieron cargar los clientes', 'Verifique la conexión e intente nuevamente.');
+            }
         });
     }
 
@@ -76,11 +82,18 @@ export class CompanyListComponent {
             icon: 'pi pi-exclamation-triangle',
             acceptLabel: 'Desactivar',
             rejectLabel: 'Cancelar',
-            rejectButtonProps: { severity: 'secondary', outlined: true },
+            rejectButtonProps: {
+                severity: 'secondary',
+                outlined: true
+            },
             accept: () =>
-                this.companyService.deactivate(company.id).subscribe(() => {
-                    this.messageService.add({ severity: 'success', summary: 'Empresa desactivada', detail: company.businessName });
-                    this.loadCompanies();
+                this.companyService.deactivate(company.id).subscribe({
+                    next: () => {
+                        this.toastService.success('Empresa desactivada', company.businessName);
+
+                        this.loadCompanies();
+                    },
+                    error: () => this.toastService.error('No se pudo desactivar la empresa', 'Intente nuevamente en unos minutos.')
                 })
         });
     }

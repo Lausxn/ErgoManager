@@ -13,6 +13,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { CompanyResponse } from '../../../shared/models/company.model';
 import { HistoryResponse } from '../../../shared/models/history.model';
+import { ToastService } from '../../../shared/services/toast.service';
 import { markFormAsDirty } from '../../../shared/utils/form';
 import { CompanyService } from '../../companies/company.service';
 import { HistoryService } from '../history.service';
@@ -37,6 +38,8 @@ export class HistoryListComponent {
     private readonly companyService = inject(CompanyService);
 
     private readonly authService = inject(AuthService);
+
+    private readonly toastService = inject(ToastService);
 
     /** Only administrators can read the company list, the others type the company number. */
     protected readonly isAdmin = computed(() => this.authService.session()?.role === 'ADMIN');
@@ -63,7 +66,10 @@ export class HistoryListComponent {
 
     constructor() {
         if (this.isAdmin()) {
-            this.companyService.findAll().subscribe((companyList) => this.companyList.set(companyList));
+            this.companyService.findAll().subscribe({
+                next: (companyList) => this.companyList.set(companyList),
+                error: () => this.toastService.error('No se pudieron cargar las empresas', 'Intente nuevamente en unos minutos.')
+            });
         }
     }
 
@@ -83,15 +89,18 @@ export class HistoryListComponent {
      */
     protected search(): void {
         const field = this.searchMode() === 'company' ? this.searchForm.controls.companyId : this.searchForm.controls.employeeEmail;
+
         if (field.invalid) {
             markFormAsDirty(field);
             return;
         }
 
         const { companyId, employeeEmail } = this.searchForm.getRawValue();
+
         const history$: Observable<HistoryResponse[]> = this.searchMode() === 'company' ? this.historyService.findByCompany(companyId!) : this.historyService.findByEmployee(employeeEmail);
 
         this.isLoading.set(true);
+
         history$.subscribe({
             next: (historyList) => {
                 this.historyList.set(historyList);
@@ -102,6 +111,8 @@ export class HistoryListComponent {
                 this.historyList.set([]);
                 this.hasSearched.set(true);
                 this.isLoading.set(false);
+
+                this.toastService.error('No se pudo consultar el historial', 'Verifique los datos o la conexión e intente nuevamente.');
             }
         });
     }
