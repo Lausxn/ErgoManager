@@ -32,7 +32,7 @@
         </header>
 
         <main class="mgs-security__content">
-            <section class="mgs-security__card" aria-labelledby="deactivate-title" [attr.aria-busy]="isLoading">
+            <section class="mgs-security__card" aria-labelledby="deactivate-title" [attr.aria-busy]="isLoadingUser() || isDeactivating()">
                 <div class="mgs-security__intro">
                     <span class="mgs-security__badge"><i class="pi pi-user-minus" aria-hidden="true"></i></span>
                     <h1 id="deactivate-title" class="mgs-security__title">Desactivar usuario</h1>
@@ -44,9 +44,11 @@
                             <span class="deactivation-user__avatar" aria-hidden="true"><i class="pi pi-user"></i></span>
                             <div>
                                 <span class="mgs-security__panel-title">Cuenta seleccionada</span>
-                                <h2>{{ userName }}</h2>
-                                @if (hasValidUser) {
-                                    <span class="mgs-security__hint">ID de usuario: {{ userId }}</span>
+                                <h2>{{ userName() }}</h2>
+                                @if (user(); as selected) {
+                                    <span class="mgs-security__hint">{{ selected.email }} · {{ roleLabels[selected.role] }} · {{ selected.active ? 'Activo' : 'Inactivo' }}</span>
+                                } @else if (isLoadingUser()) {
+                                    <span class="mgs-security__hint">Cargando datos de la cuenta...</span>
                                 }
                             </div>
                         </div>
@@ -63,12 +65,15 @@
                     @if (!hasValidUser) {
                         <div class="mgs-alert mgs-security__full" role="alert">Seleccione un usuario desde la lista para continuar.</div>
                     }
-                    @if (errorMessage) {
-                        <div class="mgs-alert mgs-security__full" role="alert">{{ errorMessage }}</div>
+                    @if (blockedReason(); as reason) {
+                        <div class="mgs-alert mgs-security__full" role="status">{{ reason }}</div>
+                    }
+                    @if (errorMessage(); as message) {
+                        <div class="mgs-alert mgs-security__full" role="alert">{{ message }}</div>
                     }
                     <div class="mgs-security__actions mgs-security__full">
-                        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="cancel()" [disabled]="isLoading" />
-                        <p-button [label]="isLoading ? 'Desactivando...' : 'Desactivar usuario'" icon="pi pi-user-minus" [loading]="isLoading" [disabled]="isLoading || !hasValidUser" (onClick)="deactivateUser()" />
+                        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="cancel()" [disabled]="isDeactivating()" />
+                        <p-button [label]="isDeactivating() ? 'Desactivando...' : 'Desactivar usuario'" icon="pi pi-user-minus" [loading]="isDeactivating()" [disabled]="!canDeactivate()" (onClick)="deactivateUser()" />
                     </div>
                 </div>
             </section>
