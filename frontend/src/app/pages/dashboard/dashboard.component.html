@@ -41,3 +41,44 @@
         }
     </div>
 </div>
+<section class="mgs-impact dashboard-hero" aria-labelledby="dashboard-title">
+    <span class="mgs-impact__rule" aria-hidden="true"></span>
+    <span class="mgs-impact__eyebrow">Panel de administración</span>
+    <h1 id="dashboard-title" class="mgs-impact__title">{{ greeting() }}</h1>
+    <p class="mgs-impact__lead">Estas son las cinco funciones habilitadas para su perfil y el estado actual de ErgoManager.</p>
+    <p class="dashboard-hero__date">
+        <i class="fa-regular fa-calendar" aria-hidden="true"></i>
+        <time [attr.datetime]="today | date: 'yyyy-MM-dd'">{{ today | date: "EEEE, d 'de' MMMM 'de' y" }}</time>
+    </p>
+</section>
+
+<section class="mgs-stats" aria-label="Indicadores del sistema">
+    <app-stat-card label="Citas programadas" icon="fa-regular fa-calendar-check" [value]="figures().scheduledAppointments" [loading]="isLoading()" />
+    <app-stat-card label="Empresas activas" icon="fa-solid fa-building" [value]="figures().activeCompanies" [loading]="isLoading()" />
+    <app-stat-card label="Usuarios activos" icon="fa-solid fa-user-check" [value]="figures().activeUsers" [loading]="isLoading()" [accent]="true" />
+    <app-stat-card label="Formularios activos" icon="fa-solid fa-file-lines" [value]="figures().activeForms" [loading]="isLoading()" />
+</section>
+
+<section aria-labelledby="dashboard-functions">
+    <div class="mgs-card-header">
+        <div>
+            <h2 id="dashboard-functions" class="mgs-section-title">Funciones</h2>
+            <p class="mgs-section-lead">Elija por dónde continuar.</p>
+        </div>
+    </div>
+    <ul class="mgs-option-grid">
+        @for (card of functionCards; track card.route) {
+            <li>
+                <a class="mgs-option" [routerLink]="card.route">
+                    <span class="mgs-option__top">
+                        <span class="mgs-option__number">{{ card.number }}</span>
+                        <span class="mgs-option__icon" aria-hidden="true"><i [class]="card.icon"></i></span>
+                    </span>
+                    <span class="mgs-option__title">{{ card.title }}</span>
+                    <span class="mgs-option__description">{{ card.description }}</span>
+                    <span class="mgs-option__arrow" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></span>
+                </a>
+            </li>
+        }
+    </ul>
+</section>

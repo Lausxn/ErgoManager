@@ -20,9 +20,10 @@
 .mgs-title {
     margin: 0;
     font-family: var(--mgs-font-display);
-    font-size: 2rem;
+    font-size: clamp(1.75rem, 1.2rem + 1.4vw, 2.35rem);
     font-weight: 700;
-    line-height: 1.15;
+    letter-spacing: -0.015em;
+    line-height: 1.12;
     color: var(--heading-color);
 }
 
@@ -87,8 +88,9 @@
 .mgs-card {
     background: var(--surface-card);
     border: 1px solid var(--surface-border);
-    border-radius: 12px;
-    padding: 1.75rem;
+    border-radius: var(--mgs-radius);
+    padding: clamp(1.25rem, 2.2vw, 2rem);
+    box-shadow: var(--mgs-shadow-sm);
 }
 
 .mgs-section-title {
@@ -97,6 +99,11 @@
     font-size: 1.25rem;
     font-weight: 600;
     color: var(--heading-color);
+}
+
+/* Title of a section that follows another one in the same card. */
+.mgs-section-title--spaced {
+    margin-top: 2rem;
 }
 
 /* Tags limited to the official palette. */
@@ -165,17 +172,54 @@
 .mgs-field {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: 0.45rem;
+    min-width: 0;
 
     > label {
-        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
         font-weight: 600;
-        color: var(--text-color);
+        color: var(--heading-color);
+    }
+
+    .p-inputtext,
+    .p-select,
+    .p-inputnumber,
+    .p-datepicker,
+    .p-textarea {
+        width: 100%;
     }
 
     small.mgs-field__error {
+        display: inline-flex;
+        align-items: flex-start;
+        gap: 0.4rem;
+        font-size: 0.82rem;
         color: var(--mgs-accent-text);
         font-weight: 600;
+
+        i {
+            margin-top: 0.1rem;
+            font-size: 0.8rem;
+        }
+    }
+
+    &__hint {
+        font-size: 0.82rem;
+        color: var(--text-color-secondary);
+    }
+
+    &__optional {
+        padding: 0.05rem 0.45rem;
+        border-radius: 999px;
+        background: var(--surface-ground);
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-color-secondary);
     }
 }
 
@@ -187,6 +231,246 @@
     margin-top: 2rem;
     padding-top: 1.5rem;
     border-top: 1px solid var(--surface-border);
+}
+
+/* Initials of a user: graphite, the wine is kept for calls to action. */
+.p-avatar.mgs-avatar {
+    flex-shrink: 0;
+    background: var(--mgs-graphite);
+    color: #ffffff;
+    font-family: var(--mgs-font-display);
+    font-weight: 700;
+}
+
+.app-dark .p-avatar.mgs-avatar {
+    background: var(--p-surface-0);
+    color: var(--mgs-black);
+}
+
+/* Option card of a radio group, the selected one gets the wine border. */
+.mgs-choice {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--surface-border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color var(--element-transition-duration);
+
+    &:hover {
+        border-color: var(--text-color-secondary);
+    }
+
+    &--selected,
+    &--selected:hover {
+        border-color: var(--mgs-accent-text);
+        box-shadow: inset 0 0 0 1px var(--mgs-accent-text);
+    }
+
+    &__icon {
+        margin-top: 0.15rem;
+        font-size: 1.1rem;
+        color: var(--text-color-secondary);
+    }
+}
+
+/* Read only label and value pairs, like the stored data of a user. */
+.mgs-details {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    border-top: 1px solid var(--surface-border);
+
+    > div {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--surface-border);
+    }
+
+    dt {
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--text-color-secondary);
+    }
+
+    dd {
+        margin: 0;
+        text-align: right;
+        font-weight: 600;
+        color: var(--text-color);
+    }
+}
+
+/*
+ * Bar of unsaved changes, like the one of Discord: it appears while a form has
+ * changes and shakes in wine, the alert color, when the user tries to leave.
+ */
+.mgs-save-bar {
+    position: sticky;
+    bottom: 1rem;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+    padding: 0.75rem 0.75rem 0.75rem 1.25rem;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: var(--mgs-graphite);
+    color: #ffffff;
+    animation: mgs-save-bar-in 0.2s ease-out;
+    transition: background-color 0.2s;
+
+    &__text {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-weight: 600;
+    }
+
+    &__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-left: auto;
+    }
+
+    .p-button.p-button-text {
+        color: #ffffff;
+
+        &:not(:disabled):hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: #ffffff;
+        }
+    }
+
+    &--alert {
+        background: var(--mgs-wine);
+        animation: mgs-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+
+        .p-button:not(.p-button-text) {
+            border-color: #ffffff;
+            background: #ffffff;
+            color: var(--mgs-wine);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        &,
+        &--alert {
+            animation: none;
+        }
+    }
+}
+
+.app-dark .mgs-save-bar {
+    border-color: var(--surface-border);
+    background: var(--p-surface-800);
+
+    &--alert {
+        border-color: transparent;
+        background: var(--mgs-wine);
+    }
+}
+
+@keyframes mgs-save-bar-in {
+    from {
+        opacity: 0;
+        transform: translateY(1rem);
+    }
+}
+
+@keyframes mgs-shake {
+    10%,
+    90% {
+        transform: translateX(-2px);
+    }
+    20%,
+    80% {
+        transform: translateX(4px);
+    }
+    30%,
+    50%,
+    70% {
+        transform: translateX(-8px);
+    }
+    40%,
+    60% {
+        transform: translateX(8px);
+    }
+}
+
+/* Side panel that follows the scroll next to a long form. */
+.mgs-sticky {
+    @media (min-width: 1200px) {
+        position: sticky;
+        top: calc(var(--layout-topbar-height, 4rem) + 1.5rem);
+    }
+}
+
+/*
+ * SweetAlert2 toasts (ToastService). They only read theme tokens, so they
+ * follow the light and dark themes like the rest of the page. The extra
+ * .swal2-container in the selectors beats the styles SweetAlert2 injects.
+ */
+.swal2-container.mgs-swal-container.swal2-top-end {
+    padding-top: calc(var(--layout-topbar-height, 4rem) + 0.5rem);
+}
+
+.swal2-container .swal2-popup.mgs-swal-toast {
+    --mgs-toast-tone: var(--heading-color);
+    --swal2-background: var(--surface-card);
+    --swal2-color: var(--text-color);
+    --swal2-close-button-color: var(--text-color-secondary);
+    --swal2-timer-progress-bar-background: color-mix(in srgb, var(--mgs-toast-tone), transparent 55%);
+    --swal2-toast-border: 1px solid var(--surface-border);
+    --swal2-toast-box-shadow: 0 8px 24px rgba(11, 11, 13, 0.16);
+
+    border-left: 4px solid var(--mgs-toast-tone);
+    border-radius: 10px;
+    font-family: var(--mgs-font-body);
+
+    &.mgs-swal-toast--error {
+        --mgs-toast-tone: var(--mgs-accent-text);
+    }
+
+    .swal2-title {
+        font-family: var(--mgs-font-display);
+        font-weight: 600;
+        color: var(--heading-color);
+    }
+
+    .swal2-html-container {
+        color: var(--text-color-secondary);
+    }
+
+    .swal2-close:hover {
+        color: var(--heading-color);
+    }
+
+    .swal2-close:focus-visible {
+        box-shadow: 0 0 0 2px var(--mgs-accent-text);
+    }
+
+    .swal2-icon {
+        border-color: var(--mgs-toast-tone);
+        color: var(--mgs-toast-tone);
+    }
+
+    .swal2-icon .swal2-success-ring {
+        border-color: color-mix(in srgb, var(--mgs-toast-tone), transparent 70%);
+    }
+
+    .swal2-icon [class^='swal2-success-line'],
+    .swal2-icon [class^='swal2-x-mark-line'] {
+        background-color: var(--mgs-toast-tone);
+    }
 }
 
 /* Keep the wine as accent only: links in body text stay graphite with a wine underline. */
@@ -529,10 +813,7 @@
     display: grid;
     min-height: 100vh;
     min-height: 100dvh;
-    background:
-        linear-gradient(115deg, transparent 58%, var(--mgs-security-glow) 58.1%, transparent 88%),
-        radial-gradient(ellipse at 0% 100%, var(--mgs-security-glow), transparent 50%),
-        var(--surface-ground);
+    background: linear-gradient(115deg, transparent 58%, var(--mgs-security-glow) 58.1%, transparent 88%), radial-gradient(ellipse at 0% 100%, var(--mgs-security-glow), transparent 50%), var(--surface-ground);
 
     /* The side navigation takes the left column from 992 px. */
     @media (min-width: 992px) {

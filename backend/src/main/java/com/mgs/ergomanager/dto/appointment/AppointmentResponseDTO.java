@@ -14,6 +14,11 @@ import java.time.LocalDateTime;
  * @param endDateTime      moment the appointment ends
  * @param status           current state of the appointment
  * @param notes            free text written when the appointment was booked
+ * @param employeeEmail    email of the employee being attended
+ * @param companyId        identifier of the company the employee works for
+ * @param companyName      business name of that company
+ * @param ergonomistName   full name of the assigned ergonomist
+ * @param evaluated        true when a personalized evaluation was written for it
  */
 public record AppointmentResponseDTO(
         Long id,
@@ -23,5 +28,10 @@ public record AppointmentResponseDTO(
         LocalDateTime startDateTime,
         LocalDateTime endDateTime,
         AppointmentStatus status,
-        String notes) {
+        String notes,
+        String employeeEmail,
+        Long companyId,
+        String companyName,
+        String ergonomistName,
+        boolean evaluated) {
 }

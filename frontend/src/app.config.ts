@@ -17,6 +17,7 @@ export const appConfig: ApplicationConfig = {
         provideAnimationsAsync(),
         providePrimeNG({ theme: { preset: MGS_PRESET, options: { darkModeSelector: '.app-dark' } }, translation: PRIMENG_SPANISH }),
         { provide: LOCALE_ID, useValue: 'es' },
+        // Kept for the screens of other features that still use the PrimeNG toast and confirmation.
         MessageService,
         ConfirmationService
     ]

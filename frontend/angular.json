@@ -18,6 +18,7 @@
                     "builder": "@angular-devkit/build-angular:application",
                     "options": {
                         "outputPath": "dist/sakai-ng",
+                        "allowedCommonJsDependencies": ["sweetalert2"],
                         "index": "src/index.html",
                         "browser": "src/main.ts",
                         "polyfills": [
@@ -32,6 +33,7 @@
                             }
                         ],
                         "styles": [
+                            "node_modules/@fortawesome/fontawesome-free/css/all.min.css",
                             "src/styles.scss"
                         ],
                         "scripts": [],
@@ -49,7 +51,7 @@
                                 },
                                 {
                                     "type": "anyComponentStyle",
-                                    "maximumWarning": "4kb",
+                                    "maximumWarning": "6kb",
                                     "maximumError": "8kb"
                                 }
                             ],
@@ -100,6 +102,7 @@
                             }
                         ],
                         "styles": [
+                            "node_modules/@fortawesome/fontawesome-free/css/all.min.css",
                             "src/styles.scss"
                         ],
                         "scripts": []

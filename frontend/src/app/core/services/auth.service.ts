@@ -62,6 +62,7 @@ export class AuthService {
      */
     getHomeUrl(): string {
         return '/dashboard';
+        return this.currentSession()?.role === 'ADMIN' ? '/dashboard' : '/appointments';
     }
 
     /**
@@ -89,6 +90,23 @@ export class AuthService {
      */
     changePassword(request: ChangePasswordRequest): Observable<LoginResponse> {
         return this.http.put<LoginResponse>(`${environment.apiUrl}/auth/password`, request).pipe(tap((session) => this.storeSession(session)));
+    }
+
+    /**
+     * Hides the temporary-password reminder only in the current in-memory
+     * session. The stored session keeps mustChangePassword=true.
+     */
+    dismissPasswordReminder(): void {
+        const session = this.currentSession();
+
+        if (session === null || !session.mustChangePassword) {
+            return;
+        }
+
+        this.currentSession.set({
+            ...session,
+            mustChangePassword: false
+        });
     }
 
     /**

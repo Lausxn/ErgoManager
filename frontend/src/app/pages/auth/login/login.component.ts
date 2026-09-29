@@ -1,4 +1,4 @@
-import { Component, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -26,6 +26,7 @@ const LOGIN_FAILED_MESSAGE = 'No fue posible iniciar sesión. Intente de nuevo.'
 @Component({
     selector: 'app-login',
     standalone: true,
+    changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, PasswordModule, IconFieldModule, InputIconModule, AppFloatingConfigurator, BrandLogoComponent],
     templateUrl: './login.component.html'
 })

@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Self evaluation submitted by an employee of a client company.
@@ -20,25 +21,32 @@ import java.util.List;
  */
 public record SelfEvaluationRequestDTO(
 
-        @NotNull
+        @NotNull(message = "Este campo es obligatorio.")
         Long formId,
 
-        @NotNull
+        @NotNull(message = "Este campo es obligatorio.")
         Long companyId,
 
-        @NotBlank
-        @Size(max = 150)
+        @NotBlank(message = "Este campo es obligatorio.")
+        @Size(max = 150, message = "Use un máximo de 150 caracteres.")
         String employeeName,
 
-        @NotBlank
-        @Email
-        @Size(max = 120)
+        @NotBlank(message = "Este campo es obligatorio.")
+        @Email(message = "Escriba un correo válido.")
+        @Size(max = 120, message = "Use un máximo de 120 caracteres.")
         String employeeEmail,
 
-        @Size(max = 100)
+        @Size(max = 100, message = "Use un máximo de 100 caracteres.")
         String employeePosition,
 
-        @NotEmpty
+        @NotEmpty(message = "Responda todas las preguntas del formulario.")
         @Valid
         List<AnswerRequestDTO> answerList) {
+
+    /** Trims the employee data, lowercases the email and turns a blank position into null. */
+    public SelfEvaluationRequestDTO {
+        employeeName = employeeName == null ? null : employeeName.trim();
+        employeeEmail = employeeEmail == null ? null : employeeEmail.trim().toLowerCase(Locale.ROOT);
+        employeePosition = employeePosition == null || employeePosition.isBlank() ? null : employeePosition.trim();
+    }
 }

@@ -1,0 +1,783 @@
+/*
+ * Reusable pieces of the ErgoManager interface, built on the MGS brand book
+ * 2026: black and graphite for authority, "Papel" and generous space for
+ * clarity, and wine only as the accent of actions and alerts (page 3).
+ */
+
+/* ===== Page layout ===== */
+
+/* Grid of key figures at the top of a page. */
+.mgs-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+}
+
+/* Main column with a sticky summary on the right, used by the long forms. */
+.mgs-form-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+
+    @media (min-width: 1200px) {
+        grid-template-columns: minmax(0, 1fr) 22rem;
+    }
+
+    > .mgs-alert,
+    .mgs-save-bar {
+        grid-column: 1 / -1;
+    }
+}
+
+.mgs-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    min-width: 0;
+}
+
+/* Title of a card with a line of context under it and room for actions. */
+.mgs-card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+
+    .mgs-section-title {
+        margin-bottom: 0.25rem;
+    }
+}
+
+.mgs-section-lead {
+    margin: 0;
+    font-size: 0.92rem;
+    color: var(--text-color-secondary);
+}
+
+/* ===== Key figure (app-stat-card) ===== */
+
+.mgs-stat {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 1.35rem 1.5rem;
+    overflow: hidden;
+    border: 1px solid var(--surface-border);
+    border-radius: var(--mgs-radius);
+    background: var(--surface-card);
+    box-shadow: var(--mgs-shadow-sm);
+
+    &__head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    /* "Etiqueta": 11 to 14 pt semibold (page 15). */
+    &__label {
+        font-size: 0.74rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-color-secondary);
+    }
+
+    &__icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: var(--mgs-radius-sm);
+        background: var(--surface-ground);
+        color: var(--heading-color);
+        font-size: 1rem;
+    }
+
+    /* "Datos clave": large and bold (page 15). */
+    &__value {
+        margin-top: 0.35rem;
+        font-family: var(--mgs-font-display);
+        font-size: 2.4rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1;
+        color: var(--heading-color);
+        font-variant-numeric: tabular-nums;
+    }
+
+    &__note {
+        font-size: 0.82rem;
+        color: var(--text-color-secondary);
+    }
+
+    &--accent {
+        &::before {
+            content: '';
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 4px;
+            background: var(--mgs-wine);
+        }
+
+        .mgs-stat__value {
+            color: var(--mgs-accent-text);
+        }
+    }
+
+    /* "Autoridad": black block with light text (page 3). */
+    &--dark {
+        border-color: transparent;
+        background: linear-gradient(150deg, var(--mgs-black), var(--mgs-graphite));
+
+        .mgs-stat__label,
+        .mgs-stat__note {
+            color: var(--p-surface-300);
+        }
+
+        .mgs-stat__value {
+            color: #ffffff;
+        }
+
+        .mgs-stat__icon {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+        }
+    }
+}
+
+/* ===== Empty state (app-empty-state) ===== */
+
+.mgs-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 3rem 1.5rem;
+    text-align: center;
+
+    &__icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 3.5rem;
+        height: 3.5rem;
+        margin-bottom: 0.5rem;
+        border-radius: 50%;
+        background: var(--surface-ground);
+        color: var(--text-color-secondary);
+        font-size: 1.35rem;
+    }
+
+    &__title {
+        font-family: var(--mgs-font-display);
+        font-size: 1.05rem;
+        color: var(--heading-color);
+    }
+
+    &__message {
+        max-width: 26rem;
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--text-color-secondary);
+    }
+
+    > .p-button,
+    > p-button {
+        margin-top: 0.75rem;
+    }
+}
+
+/* ===== Tables ===== */
+
+/* Card that holds a p-table: dark header of the brand book (page 18), soft rows. */
+.mgs-table-card {
+    overflow: hidden;
+    border: 1px solid var(--surface-border);
+    border-radius: var(--mgs-radius);
+    background: var(--surface-card);
+    box-shadow: var(--mgs-shadow-sm);
+
+    .p-datatable-header {
+        padding: 1rem 1.25rem;
+        border: 0;
+        background: transparent;
+    }
+
+    .p-datatable-thead > tr > th {
+        padding-top: 0.85rem;
+        padding-bottom: 0.85rem;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .p-datatable-tbody > tr > td {
+        padding-top: 0.9rem;
+        padding-bottom: 0.9rem;
+        vertical-align: middle;
+    }
+
+    .p-datatable-tbody > tr {
+        transition: background-color 0.15s;
+    }
+
+    .p-paginator {
+        border-top: 1px solid var(--surface-border);
+    }
+}
+
+/* Search, filters and counters above a table. */
+.mgs-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+
+    &__title {
+        margin-right: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+
+        strong {
+            font-family: var(--mgs-font-display);
+            font-size: 1.1rem;
+            color: var(--heading-color);
+        }
+
+        span {
+            font-size: 0.82rem;
+            color: var(--text-color-secondary);
+        }
+    }
+
+    .p-iconfield {
+        min-width: min(18rem, 100%);
+    }
+}
+
+/* Avatar, name and a secondary line inside a table cell. */
+.mgs-identity {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    min-width: 0;
+
+    &__text {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    &__name {
+        font-weight: 600;
+        color: var(--heading-color);
+    }
+
+    &__meta {
+        overflow: hidden;
+        font-size: 0.84rem;
+        color: var(--text-color-secondary);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+/* Row actions: quiet icon buttons aligned to the right. */
+.mgs-row-actions {
+    display: inline-flex;
+    justify-content: flex-end;
+    gap: 0.15rem;
+    white-space: nowrap;
+}
+
+/* ===== Dark impact band (cover of the brand book) ===== */
+
+.mgs-impact {
+    position: relative;
+    overflow: hidden;
+    padding: clamp(1.75rem, 3.5vw, 3rem);
+    border-radius: var(--mgs-radius);
+    color: var(--mgs-paper);
+    background: radial-gradient(120% 140% at 100% 0%, rgba(122, 16, 34, 0.55), transparent 55%), linear-gradient(160deg, var(--mgs-black) 0%, var(--mgs-graphite) 100%);
+    box-shadow: var(--mgs-shadow-md);
+
+    /* Wine sweep of the cover, drawn with a clipped gradient. */
+    &::after {
+        content: '';
+        position: absolute;
+        right: -10%;
+        bottom: -60%;
+        width: 70%;
+        height: 140%;
+        border-radius: 50%;
+        background: radial-gradient(closest-side, rgba(122, 16, 34, 0.45), transparent);
+        pointer-events: none;
+    }
+
+    > * {
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Short wine rule above the title, as on the cover (page 1). */
+    &__rule {
+        display: block;
+        width: 3.5rem;
+        height: 4px;
+        margin-bottom: 1.25rem;
+        border-radius: 2px;
+        background: var(--p-primary-400);
+    }
+
+    &__eyebrow {
+        display: block;
+        margin-bottom: 0.6rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--p-primary-200);
+    }
+
+    &__title {
+        margin: 0;
+        font-family: var(--mgs-font-display);
+        font-size: clamp(1.9rem, 1.3rem + 1.8vw, 2.75rem);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+        color: #ffffff;
+    }
+
+    &__lead {
+        max-width: 38rem;
+        margin: 0.75rem 0 0;
+        font-size: 1.05rem;
+        color: var(--p-surface-300);
+    }
+}
+
+/* ===== Numbered option cards (personality page of the brand book) ===== */
+
+.mgs-option-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.mgs-option {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    height: 100%;
+    padding: 1.5rem;
+    border: 1px solid var(--surface-border);
+    border-radius: var(--mgs-radius);
+    background: var(--surface-card);
+    box-shadow: var(--mgs-shadow-sm);
+    color: inherit;
+    text-decoration: none;
+    transition:
+        transform 0.25s var(--mgs-ease),
+        box-shadow 0.25s var(--mgs-ease),
+        border-color 0.25s;
+
+    &:hover {
+        transform: translateY(-3px);
+        border-color: color-mix(in srgb, var(--mgs-wine), transparent 55%);
+        box-shadow: var(--mgs-shadow-md);
+
+        .mgs-option__arrow {
+            transform: translateX(4px);
+            color: var(--mgs-accent-text);
+        }
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--mgs-accent-text);
+        outline-offset: 2px;
+    }
+
+    &__top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    &__number {
+        font-family: var(--mgs-font-display);
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--mgs-accent-text);
+        font-variant-numeric: tabular-nums;
+    }
+
+    &__icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.75rem;
+        height: 2.75rem;
+        border-radius: var(--mgs-radius-sm);
+        background: var(--mgs-graphite);
+        color: #ffffff;
+        font-size: 1.15rem;
+    }
+
+    &__title {
+        margin-top: 0.5rem;
+        font-family: var(--mgs-font-display);
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--heading-color);
+    }
+
+    &__description {
+        flex: 1;
+        font-size: 0.92rem;
+        line-height: 1.5;
+        color: var(--text-color-secondary);
+    }
+
+    &__arrow {
+        align-self: flex-end;
+        color: var(--text-color-secondary);
+        transition:
+            transform 0.25s var(--mgs-ease),
+            color 0.25s;
+    }
+}
+
+.app-dark .mgs-option__icon {
+    background: var(--p-surface-800);
+}
+
+/* ===== Timeline of the history ===== */
+
+.mgs-timeline {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    &__item {
+        position: relative;
+        display: grid;
+        grid-template-columns: 2.5rem minmax(0, 1fr);
+        gap: 1rem;
+        padding-bottom: 1.5rem;
+
+        &::before {
+            content: '';
+            position: absolute;
+            top: 2.5rem;
+            bottom: 0;
+            left: 1.25rem;
+            width: 1px;
+            background: var(--surface-border);
+        }
+
+        &:last-child {
+            padding-bottom: 0;
+
+            &::before {
+                display: none;
+            }
+        }
+    }
+
+    &__dot {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 50%;
+        background: var(--surface-ground);
+        color: var(--heading-color);
+
+        &--accent {
+            background: var(--mgs-wine);
+            color: #ffffff;
+        }
+    }
+
+    &__body {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        padding: 0.9rem 1.1rem;
+        border: 1px solid var(--surface-border);
+        border-radius: var(--mgs-radius-sm);
+        background: var(--surface-card);
+    }
+
+    &__meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem 1rem;
+        font-size: 0.8rem;
+        color: var(--text-color-secondary);
+    }
+}
+
+/* ===== Confirmation dialogs (DialogService, SweetAlert2) ===== */
+
+.swal2-container.mgs-swal-dialog-container {
+    background: rgba(11, 11, 13, 0.55) !important;
+    backdrop-filter: blur(3px);
+}
+
+.swal2-container .swal2-popup.mgs-swal-dialog {
+    width: min(28rem, calc(100vw - 2rem));
+    padding: 2rem 1.75rem 1.5rem;
+    border: 1px solid var(--surface-border);
+    border-top: 4px solid var(--mgs-graphite);
+    border-radius: var(--mgs-radius);
+    background: var(--surface-card);
+    box-shadow: var(--mgs-shadow-md);
+    font-family: var(--mgs-font-body);
+
+    &.mgs-swal-dialog--destructive {
+        border-top-color: var(--mgs-wine);
+
+        .mgs-swal-dialog__icon {
+            background: color-mix(in srgb, var(--mgs-wine), transparent 88%);
+            color: var(--mgs-accent-text);
+        }
+    }
+
+    .mgs-swal-dialog__icon {
+        width: 3.25rem;
+        height: 3.25rem;
+        margin: 0 auto 0.5rem;
+        border: 0;
+        border-radius: 50%;
+        background: var(--surface-ground);
+        color: var(--heading-color);
+
+        .swal2-icon-content {
+            font-size: 1.35rem;
+        }
+    }
+
+    .mgs-swal-dialog__title {
+        padding: 0.5rem 0 0;
+        font-family: var(--mgs-font-display);
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: var(--heading-color);
+    }
+
+    .mgs-swal-dialog__text {
+        margin: 0.6rem 0 0;
+        padding: 0;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        color: var(--text-color-secondary);
+    }
+
+    .mgs-swal-dialog__actions {
+        width: 100%;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        margin: 1.75rem 0 0;
+    }
+
+    .mgs-swal-dialog__confirm,
+    .mgs-swal-dialog__cancel {
+        padding: 0.65rem 1.15rem;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        font-family: var(--mgs-font-body);
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+            background-color 0.2s,
+            border-color 0.2s;
+
+        &:focus-visible {
+            outline: 2px solid var(--mgs-accent-text);
+            outline-offset: 2px;
+        }
+    }
+
+    .mgs-swal-dialog__confirm {
+        background: var(--mgs-graphite);
+        color: #ffffff;
+
+        &:hover {
+            background: var(--mgs-black);
+        }
+    }
+
+    &.mgs-swal-dialog--destructive .mgs-swal-dialog__confirm {
+        background: var(--mgs-wine);
+
+        &:hover {
+            background: var(--mgs-dark-wine);
+        }
+    }
+
+    .mgs-swal-dialog__cancel {
+        border-color: var(--surface-border);
+        background: transparent;
+        color: var(--text-color);
+
+        &:hover {
+            background: var(--surface-hover);
+        }
+    }
+}
+
+.app-dark .swal2-container .swal2-popup.mgs-swal-dialog .mgs-swal-dialog__confirm {
+    background: var(--p-surface-0);
+    color: var(--mgs-black);
+}
+
+.app-dark .swal2-container .swal2-popup.mgs-swal-dialog.mgs-swal-dialog--destructive .mgs-swal-dialog__confirm {
+    background: var(--mgs-wine);
+    color: #ffffff;
+}
+
+.mgs-swal-dialog--in {
+    animation: mgs-dialog-in 0.22s var(--mgs-ease);
+}
+
+.mgs-swal-dialog--out {
+    animation: mgs-dialog-in 0.15s ease-in reverse;
+}
+
+@keyframes mgs-dialog-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mgs-option,
+    .mgs-swal-dialog--in,
+    .mgs-swal-dialog--out {
+        transition: none;
+        animation: none;
+    }
+}
+
+/* ===== Save bar refinements ===== */
+
+.mgs-save-bar {
+    box-shadow: var(--mgs-shadow-md);
+}
+
+/* ===== Page entrance ===== */
+
+.layout-main > * {
+    animation: mgs-page-in 0.35s var(--mgs-ease);
+}
+
+@keyframes mgs-page-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .layout-main > * {
+        animation: none;
+    }
+}
+
+/* Short note with an icon, used in the side summaries of the forms. */
+.mgs-details-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    padding: 0.9rem 1rem;
+    border-radius: var(--mgs-radius-sm);
+    background: var(--surface-ground);
+    font-size: 0.86rem;
+    line-height: 1.5;
+    color: var(--text-color-secondary);
+
+    i {
+        margin-top: 0.15rem;
+        color: var(--mgs-accent-text);
+    }
+}
+
+/* PrimeNG password with the eye button, full width inside a field. */
+.mgs-field .p-password {
+    width: 100%;
+}
+
+/* ===== Side menu: graphite "Autoridad" panel, same as the account side navigation ===== */
+
+.layout-sidebar {
+    border-color: rgba(255, 255, 255, 0.06);
+    border-radius: var(--mgs-radius);
+    background: linear-gradient(180deg, var(--p-surface-900), var(--mgs-black));
+    box-shadow: var(--mgs-shadow-md);
+    padding: 0.75rem 1rem 1.25rem;
+
+    .layout-menu {
+        .layout-root-menuitem > .layout-menuitem-root-text {
+            margin: 1.4rem 0 0.5rem 0.75rem;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            color: var(--p-surface-500);
+        }
+
+        ul a {
+            gap: 0.25rem;
+            margin: 0.1rem 0;
+            padding: 0.7rem 0.9rem;
+            border-radius: var(--mgs-radius-sm);
+            color: var(--p-surface-300);
+
+            .layout-menuitem-icon {
+                margin-right: 0.65rem;
+                color: var(--p-surface-400);
+            }
+
+            &:hover {
+                background: rgba(255, 255, 255, 0.05);
+                color: #ffffff;
+            }
+
+            &.active-route {
+                background: rgba(255, 255, 255, 0.08);
+                box-shadow: inset 3px 0 0 var(--p-primary-400);
+                color: #ffffff;
+
+                .layout-menuitem-icon {
+                    color: #ffffff;
+                }
+            }
+
+            &:focus-visible {
+                outline: 2px solid var(--p-primary-300);
+                outline-offset: -2px;
+            }
+        }
+    }
+}

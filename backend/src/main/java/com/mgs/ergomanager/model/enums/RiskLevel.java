@@ -5,8 +5,23 @@ package com.mgs.ergomanager.model.enums;
  */
 public enum RiskLevel {
 
-    LOW,
-    MEDIUM,
-    HIGH,
-    CRITICAL
+    LOW("Bajo"),
+    MEDIUM("Medio"),
+    HIGH("Alto"),
+    CRITICAL("Crítico");
+
+    private final String label;
+
+    RiskLevel(String label) {
+        this.label = label;
+    }
+
+    /**
+     * Returns the Spanish name shown to the users, in history entries and reports.
+     *
+     * @return label of the risk level
+     */
+    public String getLabel() {
+        return label;
+    }
 }

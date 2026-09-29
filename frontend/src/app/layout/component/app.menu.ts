@@ -77,6 +77,18 @@ export class AppMenu {
                         icon: 'pi pi-fw pi-building',
                         routerLink: ['/companies']
                     }
+                    { label: 'Empresas', icon: 'fa-solid fa-building fa-fw', routerLink: ['/companies'] },
+                    { label: 'Usuarios', icon: 'fa-solid fa-users fa-fw', routerLink: ['/users'] },
+                    { label: 'Formularios', icon: 'fa-solid fa-file-pen fa-fw', routerLink: ['/forms'] }
+                ]
+            },
+            {
+                // Ergonomists have full access to forms and client companies, but not to users.
+                label: 'Ergonomía',
+                visible: isErgonomist && !isAdmin,
+                items: [
+                    { label: 'Formularios', icon: 'fa-solid fa-file-pen fa-fw', routerLink: ['/forms'] },
+                    { label: 'Perfiles de clientes', icon: 'fa-solid fa-building fa-fw', routerLink: ['/companies'] }
                 ]
             },
             {
@@ -98,6 +110,9 @@ export class AppMenu {
                         icon: 'pi pi-fw pi-history',
                         routerLink: ['/history']
                     }
+                    { label: 'Agenda', icon: 'fa-regular fa-calendar-days fa-fw', routerLink: ['/appointments'] },
+                    { label: 'Evaluación personalizada', icon: 'fa-solid fa-clipboard-user fa-fw', routerLink: ['/personalized-evaluations'], visible: isErgonomist },
+                    { label: 'Historial', icon: 'fa-solid fa-chart-line fa-fw', routerLink: ['/history'] }
                 ]
             },
             {
@@ -120,6 +135,11 @@ export class AppMenu {
                         routerLink: ['/account/password']
                     }
                 ]
+                items: [{ label: 'Autoevaluación pública', icon: 'fa-solid fa-arrow-up-right-from-square fa-fw', url: '/self-evaluation', target: '_blank' }]
+            },
+            {
+                label: 'Cuenta',
+                items: [{ label: 'Cambiar contraseña', icon: 'fa-solid fa-key fa-fw', routerLink: ['/account/password'] }]
             }
         ];
     });

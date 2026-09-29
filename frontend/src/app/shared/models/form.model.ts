@@ -1,5 +1,7 @@
 /** Question sent as part of a form. */
 export interface QuestionRequest {
+    /** Present when the question already exists, so it is updated instead of replaced. */
+    id?: number;
     statement: string;
     questionOrder: number;
     weight: number;
@@ -31,4 +33,9 @@ export interface FormResponse {
     active: boolean;
     createdAt: string;
     questionList: QuestionResponse[];
+}
+
+/** Answer of POST /api/forms/{id}/resend/{companyId}. */
+export interface FormResendResponse {
+    recipientCount: number;
 }

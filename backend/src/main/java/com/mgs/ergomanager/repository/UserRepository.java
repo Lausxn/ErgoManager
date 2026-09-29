@@ -18,6 +18,16 @@ import org.springframework.stereotype.Repository;
 public interface UserRepository extends JpaRepository<User, Long> {
 
     /**
+     * Locks an edited user so concurrent updates cannot lose session revocations.
+     *
+     * @param id identifier of the edited user
+     * @return user locked until the update transaction completes
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select user from User user where user.id = :id")
+    Optional<User> findByIdForUpdate(@Param("id") Long id);
+
+    /**
      * Finds a user by the email used as sign in credential.
      *
      * @param email email to look for
@@ -44,10 +54,41 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
 
     /**
+     * Checks whether a user other than the given one uses an email.
+     *
+     * @param email email to look for
+     * @param id    identifier of the user being updated
+     * @return true when another user already uses that email
+     */
+    boolean existsByEmailAndIdNot(String email, Long id);
+
+    /**
      * Returns the active users that hold the given role.
      *
      * @param role role to filter by
      * @return list of users
      */
     List<User> findByRoleAndActiveTrue(Role role);
+
+    /**
+     * Returns every user, newest first.
+     *
+     * @return ordered list of users
+     */
+    List<User> findAllByOrderByCreatedAtDescIdDesc();
+
+    /**
+     * Counts the users that have not been deactivated.
+     *
+     * @return number of active users
+     */
+    long countByActiveTrue();
+
+    /**
+     * Counts the active users that hold the given role.
+     *
+     * @param role role to filter by
+     * @return number of active users with the given role
+     */
+    long countByRoleAndActiveTrue(Role role);
 }

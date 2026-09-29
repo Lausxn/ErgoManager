@@ -63,4 +63,14 @@ export class CompanyService {
     deactivate(id: number): Observable<void> {
         return this.http.delete<void>(`${this.baseUrl}/${id}`);
     }
+
+    /**
+     * Activates a company that was deactivated before.
+     *
+     * @param id identifier of the company
+     * @returns the activated company
+     */
+    activate(id: number): Observable<CompanyResponse> {
+        return this.http.patch<CompanyResponse>(`${this.baseUrl}/${id}/activate`, {});
+    }
 }

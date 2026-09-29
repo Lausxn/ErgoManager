@@ -6,22 +6,27 @@ import { AppTopbar } from './app.topbar';
 import { AppSidebar } from './app.sidebar';
 import { AppFooter } from './app.footer';
 import { LayoutService } from '../service/layout.service';
+import { AuthService } from '../../core/services/auth.service';
+import { UPDATE_PASSWORD_URL } from '../../pages/account/account.routes';
+import { PasswordUpdatePopupComponent } from '../../pages/auth/password-update-popup/password-update-popup.component';
 
 @Component({
     selector: 'app-layout',
     standalone: true,
-    imports: [CommonModule, AppTopbar, AppSidebar, RouterModule, AppFooter],
+    imports: [CommonModule, AppTopbar, AppSidebar, RouterModule, AppFooter, PasswordUpdatePopupComponent],
     template: `<div class="layout-wrapper" [ngClass]="containerClass">
-        <app-topbar></app-topbar>
-        <app-sidebar></app-sidebar>
-        <div class="layout-main-container">
-            <div class="layout-main">
-                <router-outlet></router-outlet>
+            <app-topbar></app-topbar>
+            <app-sidebar></app-sidebar>
+            <div class="layout-main-container">
+                <div class="layout-main">
+                    <router-outlet></router-outlet>
+                </div>
+                <app-footer></app-footer>
             </div>
-            <app-footer></app-footer>
+            <div class="layout-mask animate-fadein"></div>
         </div>
-        <div class="layout-mask animate-fadein"></div>
-    </div> `
+
+        <app-password-update-popup [visible]="showPasswordUpdatePopup()" (closed)="closePasswordUpdatePopup()" (updateRequested)="openPasswordUpdatePage()" /> `
 })
 export class AppLayout {
     overlayMenuOpenSubscription: Subscription;
@@ -35,7 +40,8 @@ export class AppLayout {
     constructor(
         public layoutService: LayoutService,
         public renderer: Renderer2,
-        public router: Router
+        public router: Router,
+        private readonly authService: AuthService
     ) {
         this.overlayMenuOpenSubscription = this.layoutService.overlayOpen$.subscribe(() => {
             if (!this.menuOutsideClickListener) {
@@ -54,6 +60,31 @@ export class AppLayout {
         this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe(() => {
             this.hideMenu();
         });
+    }
+
+    /**
+     * Checks whether the temporary-password reminder has to be displayed.
+     *
+     * @returns true when the signed in user still has a temporary password
+     */
+    protected showPasswordUpdatePopup(): boolean {
+        return this.authService.session()?.mustChangePassword === true;
+    }
+
+    /**
+     * Closes the temporary-password reminder for the current visit.
+     */
+    protected closePasswordUpdatePopup(): void {
+        this.authService.dismissPasswordReminder();
+    }
+
+    /**
+     * Opens the page where the authenticated user can replace the temporary
+     * password.
+     */
+    protected openPasswordUpdatePage(): void {
+        this.authService.dismissPasswordReminder();
+        void this.router.navigateByUrl(UPDATE_PASSWORD_URL);
     }
 
     isOutsideClicked(event: MouseEvent) {

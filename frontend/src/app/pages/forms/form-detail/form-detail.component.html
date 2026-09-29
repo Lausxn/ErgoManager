@@ -1,68 +1,206 @@
-<app-page-header eyebrow="Formularios" [title]="isEditing() ? 'Editar formulario' : 'Nuevo formulario'" subtitle="Defina el formulario y las preguntas que responderán los colaboradores." />
+<app-page-header eyebrow="Formularios de autoevaluación" [title]="isEditing() ? 'Editar formulario' : 'Creación de formulario'" subtitle="Defina el cuestionario y el peso de cada pregunta en el puntaje de riesgo.">
+    <p-button label="Volver a formularios" icon="fa-solid fa-arrow-left" severity="secondary" [text]="true" routerLink="/forms" />
+</app-page-header>
 
-<form [formGroup]="formDetail" (ngSubmit)="submit()" class="flex flex-col gap-6" novalidate>
-    <section class="mgs-card">
-        <h2 class="mgs-section-title">Información general</h2>
-        <div class="mgs-form-grid">
-            <div class="mgs-field">
-                <label for="title">Título</label>
-                <input pInputText id="title" formControlName="title" />
-                @if (isInvalid('title')) {
-                    <small class="mgs-field__error">El título es obligatorio.</small>
-                }
+<form [formGroup]="formDetail" (ngSubmit)="submit()" class="mgs-form-layout" novalidate>
+    <div class="mgs-stack">
+        <section class="mgs-card">
+            <div class="mgs-card-header">
+                <div>
+                    <h2 class="mgs-section-title">Información general</h2>
+                    <p class="mgs-section-lead">Así verán los colaboradores el formulario al abrir el enlace de su empresa.</p>
+                </div>
             </div>
-
-            <div class="mgs-field">
-                <label for="description">Descripción <span class="text-muted-color font-normal">(opcional)</span></label>
-                <textarea pTextarea id="description" formControlName="description" rows="3" [autoResize]="true"></textarea>
-            </div>
-
-            <div class="mgs-field mgs-field--half">
-                <label for="publicationYear">Año de publicación</label>
-                <p-inputnumber inputId="publicationYear" formControlName="publicationYear" [useGrouping]="false" [min]="firstPublicationYear" [showButtons]="true" [fluid]="true" />
-                @if (isInvalid('publicationYear')) {
-                    <small class="mgs-field__error">El año debe ser {{ firstPublicationYear }} o posterior.</small>
-                }
-            </div>
-        </div>
-    </section>
-
-    <section class="mgs-card">
-        <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
-            <div>
-                <h2 class="mgs-section-title !mb-1">Preguntas</h2>
-                <p class="text-muted-color m-0">{{ questionList.length }} pregunta(s). El peso multiplica el puntaje de la respuesta.</p>
-            </div>
-            <p-button type="button" label="Agregar pregunta" icon="pi pi-plus" severity="secondary" [outlined]="true" (onClick)="addQuestion()" />
-        </div>
-
-        <div formArrayName="questionList" class="flex flex-col gap-4">
-            @for (question of questionList.controls; track question; let index = $index) {
-                <div [formGroupName]="index" class="grid grid-cols-12 gap-4 items-start p-4 rounded-border border border-surface">
-                    <div class="col-span-12 md:col-span-1 flex md:justify-center">
-                        <span class="mgs-kpi !text-2xl">{{ index + 1 }}</span>
-                    </div>
-                    <div class="mgs-field col-span-12 md:col-span-8">
-                        <label [for]="'statement-' + index">Enunciado</label>
-                        <input pInputText [id]="'statement-' + index" formControlName="statement" />
-                        @if (isInvalid('questionList.' + index + '.statement')) {
-                            <small class="mgs-field__error">El enunciado es obligatorio.</small>
-                        }
-                    </div>
-                    <div class="mgs-field col-span-8 md:col-span-2">
-                        <label [for]="'weight-' + index">Peso</label>
-                        <p-inputnumber [inputId]="'weight-' + index" formControlName="weight" [min]="1" [showButtons]="true" [fluid]="true" />
-                    </div>
-                    <div class="col-span-4 md:col-span-1 flex justify-end md:pt-7">
-                        <p-button type="button" icon="pi pi-trash" [rounded]="true" [text]="true" severity="secondary" (onClick)="removeQuestion(index)" [disabled]="questionList.length === 1" pTooltip="Quitar pregunta" ariaLabel="Quitar pregunta" />
-                    </div>
+            @if (isLoading()) {
+                <div class="mgs-form-grid">
+                    <p-skeleton height="3.5rem" styleClass="col-span-12" />
+                    <p-skeleton height="6rem" styleClass="col-span-12" />
+                    <p-skeleton height="3.5rem" styleClass="col-span-6" />
+                </div>
+            } @else {
+                <div class="mgs-form-grid">
+                    <app-form-field label="Título" inputId="title" [control]="formDetail.controls.title">
+                        <input pInputText id="title" formControlName="title" [maxlength]="limits.title" autocomplete="off" placeholder="Ej. Autoevaluación de puesto de trabajo 2026" />
+                    </app-form-field>
+                    <app-form-field label="Descripción" inputId="description" [control]="formDetail.controls.description" [optional]="true" [hint]="'Instrucciones breves para quien responde. Máximo ' + limits.description + ' caracteres.'">
+                        <textarea pTextarea id="description" formControlName="description" rows="3" [autoResize]="true" [maxlength]="limits.description" placeholder="Ej. Responda pensando en su jornada habitual de trabajo."></textarea>
+                    </app-form-field>
+                    <app-form-field label="Año de publicación" inputId="publicationYear" [control]="formDetail.controls.publicationYear" [errors]="yearErrors" [half]="true">
+                        <p-inputnumber inputId="publicationYear" formControlName="publicationYear" [useGrouping]="false" [min]="firstPublicationYear" [maxFractionDigits]="0" [showButtons]="true" [fluid]="true" />
+                    </app-form-field>
                 </div>
             }
-        </div>
+        </section>
 
-        <div class="mgs-form-actions">
-            <p-button label="Cancelar" severity="secondary" [outlined]="true" routerLink="/forms" />
-            <p-button type="submit" label="Guardar formulario" icon="pi pi-check" [loading]="isSubmitting()" />
+        <section class="mgs-card">
+            <div class="mgs-card-header">
+                <div>
+                    <h2 class="mgs-section-title">Preguntas</h2>
+                    <p class="mgs-section-lead">Cada respuesta vale de 0 a {{ maxAnswerScore }} puntos y se multiplica por el peso de la pregunta.</p>
+                </div>
+                <p-button type="button" label="Agregar pregunta" icon="fa-solid fa-plus" severity="secondary" [outlined]="true" [disabled]="isLoading()" (onClick)="addQuestion()" />
+            </div>
+
+            @if (isLoading()) {
+                <div class="question-list">
+                    <p-skeleton height="9rem" />
+                    <p-skeleton height="9rem" />
+                </div>
+            } @else {
+                <div formArrayName="questionList" class="question-list">
+                    @for (question of questionList.controls; track question; let index = $index, first = $first, last = $last) {
+                        <div [formGroupName]="index" class="question" [class.question--invalid]="question.invalid && (question.touched || question.dirty)">
+                            <div class="question__head">
+                                <span class="question__number">
+                                    <span class="question__badge">{{ index + 1 }}</span>
+                                    Pregunta {{ index + 1 }}
+                                </span>
+                                <div class="question__actions">
+                                    <p-button
+                                        type="button"
+                                        icon="fa-solid fa-arrow-up"
+                                        [rounded]="true"
+                                        [text]="true"
+                                        severity="secondary"
+                                        [disabled]="first"
+                                        (onClick)="moveQuestion(index, -1)"
+                                        pTooltip="Subir"
+                                        tooltipPosition="top"
+                                        [ariaLabel]="'Subir pregunta ' + (index + 1)"
+                                    />
+                                    <p-button
+                                        type="button"
+                                        icon="fa-solid fa-arrow-down"
+                                        [rounded]="true"
+                                        [text]="true"
+                                        severity="secondary"
+                                        [disabled]="last"
+                                        (onClick)="moveQuestion(index, 1)"
+                                        pTooltip="Bajar"
+                                        tooltipPosition="top"
+                                        [ariaLabel]="'Bajar pregunta ' + (index + 1)"
+                                    />
+                                    <p-button
+                                        type="button"
+                                        icon="fa-regular fa-trash-can"
+                                        [rounded]="true"
+                                        [text]="true"
+                                        severity="secondary"
+                                        [disabled]="questionList.length === 1"
+                                        (onClick)="removeQuestion(index)"
+                                        [pTooltip]="questionList.length === 1 ? 'El formulario necesita al menos una pregunta' : 'Quitar pregunta'"
+                                        tooltipPosition="top"
+                                        [ariaLabel]="'Quitar pregunta ' + (index + 1)"
+                                    />
+                                </div>
+                            </div>
+                            <div class="mgs-form-grid">
+                                <app-form-field label="Enunciado" [inputId]="'statement-' + index" [control]="question.controls.statement" [errors]="statementErrors">
+                                    <textarea
+                                        pTextarea
+                                        [id]="'statement-' + index"
+                                        formControlName="statement"
+                                        rows="2"
+                                        [autoResize]="true"
+                                        [maxlength]="limits.statement"
+                                        placeholder="Ej. ¿Su silla le permite apoyar la espalda completamente?"
+                                    ></textarea>
+                                </app-form-field>
+                                <app-form-field
+                                    label="Peso"
+                                    [inputId]="'weight-' + index"
+                                    [control]="question.controls.weight"
+                                    [errors]="weightErrors"
+                                    [half]="true"
+                                    [hint]="'Aporta hasta ' + maxAnswerScore * (question.controls.weight.value ?? 0) + ' puntos.'"
+                                >
+                                    <p-inputnumber [inputId]="'weight-' + index" formControlName="weight" [min]="1" [maxFractionDigits]="0" [showButtons]="true" [fluid]="true" />
+                                </app-form-field>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="form-add">
+                    <p-button type="button" label="Agregar otra pregunta" icon="fa-solid fa-plus" [text]="true" (onClick)="addQuestion()" />
+                </div>
+            }
+        </section>
+    </div>
+
+    <aside class="mgs-card mgs-sticky flex flex-col gap-6">
+        @if (isLoading()) {
+            <div class="flex flex-col gap-3" aria-hidden="true">
+                <p-skeleton width="5rem" height="0.75rem" />
+                <p-skeleton width="80%" height="1.2rem" />
+                <p-skeleton width="4.5rem" height="1.5rem" borderRadius="999px" />
+            </div>
+            <p-skeleton height="7.5rem" />
+            <div class="flex flex-col gap-3" aria-hidden="true">
+                <p-skeleton height="1rem" />
+                <p-skeleton height="1rem" />
+                <p-skeleton height="1rem" />
+            </div>
+        } @else {
+            <div class="flex flex-col gap-2">
+                <span class="mgs-eyebrow">Resumen</span>
+                <div class="mgs-section-title !m-0 break-words">{{ summary().title || 'Nuevo formulario' }}</div>
+                @if (storedForm(); as form) {
+                    <div><p-tag [value]="form.active ? 'Activo' : 'Inactivo'" [styleClass]="form.active ? activeTagClasses.active : activeTagClasses.inactive" /></div>
+                }
+            </div>
+
+            <div class="form-summary__score" aria-live="polite">
+                <span class="form-summary__score-label">Puntaje máximo</span>
+                <span class="form-summary__score-value">{{ summary().maxScore }}</span>
+                <span class="form-summary__score-note">{{ maxAnswerScore }} puntos × {{ summary().totalWeight }} de peso total</span>
+            </div>
+
+            <dl class="mgs-details">
+                <div>
+                    <dt>Preguntas</dt>
+                    <dd class="tabular-nums">{{ summary().questionCount }}</dd>
+                </div>
+                <div>
+                    <dt>Peso total</dt>
+                    <dd class="tabular-nums">{{ summary().totalWeight }}</dd>
+                </div>
+                <div>
+                    <dt>Año</dt>
+                    <dd class="tabular-nums">{{ summary().year ?? '—' }}</dd>
+                </div>
+            </dl>
+        }
+
+        @if (!isLoading() && summary().incompleteCount > 0) {
+            <div class="mgs-details-note">
+                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                <span>{{ summary().incompleteCount }} pregunta(s) sin completar: escriba el enunciado y un peso de al menos 1.</span>
+            </div>
+        } @else if (!isLoading() && isEditing()) {
+            <div class="mgs-details-note">
+                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                <span>Las preguntas que quite se desactivan; las respuestas anteriores se conservan en el historial.</span>
+            </div>
+        } @else if (!isLoading()) {
+            <div class="mgs-details-note">
+                <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
+                <span>Use pesos mayores en las preguntas que representan más riesgo ergonómico.</span>
+            </div>
+        }
+    </aside>
+
+    @if (errorMessage(); as message) {
+        <div class="mgs-alert" role="alert">
+            <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ message }}</span>
         </div>
-    </section>
+    }
+
+    <app-save-bar
+        [tracker]="unsaved"
+        [saving]="isSubmitting()"
+        [message]="isEditing() ? 'Cuidado, tiene cambios sin guardar.' : 'Cuidado, el formulario todavía no se ha creado.'"
+        [discardLabel]="isEditing() ? 'Restablecer' : 'Vaciar campos'"
+        [submitLabel]="isEditing() ? 'Guardar cambios' : 'Crear formulario'"
+        (discarded)="clearError()"
+    />
 </form>
