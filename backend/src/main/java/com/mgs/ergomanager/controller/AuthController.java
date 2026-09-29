@@ -1,12 +1,15 @@
 package com.mgs.ergomanager.controller;
 
+import com.mgs.ergomanager.dto.auth.ChangePasswordRequestDTO;
 import com.mgs.ergomanager.dto.auth.LoginRequestDTO;
 import com.mgs.ergomanager.dto.auth.LoginResponseDTO;
 import com.mgs.ergomanager.service.AuthService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.security.Principal;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -39,5 +42,18 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    /**
+     * Replaces the password of the authenticated user and renews their session.
+     *
+     * @param request current and replacement passwords
+     * @param principal identity established by Spring Security
+     * @return a session that replaces all previously issued tokens
+     */
+    @PutMapping("/password")
+    public ResponseEntity<LoginResponseDTO> changePassword(@Valid @RequestBody ChangePasswordRequestDTO request,
+                                                         Principal principal) {
+        return ResponseEntity.ok(authService.changePassword(principal.getName(), request));
     }
 }

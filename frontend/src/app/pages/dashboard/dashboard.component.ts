@@ -43,13 +43,48 @@ export class DashboardComponent {
     protected readonly functionCards = computed<FunctionCard[]>(() => {
         if (this.role() === 'ERGONOMIST') {
             return [
-                { id: 1, title: 'Formularios', description: 'Consulte y gestione los formularios utilizados en las evaluaciones ergonómicas.', icon: 'pi pi-file-edit', color: 'red', route: '/forms' },
-                { id: 2, title: 'Agenda de citas', description: 'Consulte y gestione las citas y espacios disponibles para atención.', icon: 'pi pi-calendar', color: 'gray', route: '/appointments' },
-                { id: 3, title: 'Perfiles de clientes', description: 'Consulte la información de las empresas cliente y sus colaboradores.', icon: 'pi pi-building', color: 'red', route: '/companies' },
-                { id: 4, title: 'Reportes', description: 'Consulte el historial y los resultados de las evaluaciones ergonómicas.', icon: 'pi pi-chart-bar', color: 'gray', route: '/history' }
+                {
+                    id: 1,
+                    title: 'Formularios',
+                    description: 'Consulte y gestione los formularios utilizados en las evaluaciones ergonómicas.',
+                    icon: 'pi pi-file-edit',
+                    color: 'red',
+                    route: '/forms'
+                },
+                {
+                    id: 2,
+                    title: 'Agenda de citas',
+                    description: 'Consulte y gestione las citas y espacios disponibles para atención.',
+                    icon: 'pi pi-calendar',
+                    color: 'gray',
+                    route: '/appointments'
+                },
+                {
+                    id: 3,
+                    title: 'Perfiles de clientes',
+                    description: 'Consulte la información de las empresas cliente y sus colaboradores.',
+                    icon: 'pi pi-building',
+                    color: 'red',
+                    route: '/companies'
+                },
+                {
+                    id: 4,
+                    title: 'Evaluación personalizada',
+                    description: 'Realice evaluaciones ergonómicas personalizadas para los colaboradores.',
+                    icon: 'pi pi-clipboard',
+                    color: 'gray',
+                    route: '/personalized-evaluations'
+                },
+                {
+                    id: 5,
+                    title: 'Reportes',
+                    description: 'Consulte el historial y los resultados de las evaluaciones ergonómicas.',
+                    icon: 'pi pi-chart-bar',
+                    color: 'red',
+                    route: '/history'
+                }
             ];
         }
-
         return [
             { id: 1, title: 'Formularios', description: 'Cree, edite y desactive los formularios del sistema.', icon: 'pi pi-file', color: 'red', route: '/forms' },
             { id: 2, title: 'Citas', description: 'Programe visitas y evaluaciones presenciales con los clientes.', icon: 'pi pi-calendar-plus', color: 'gray', route: '/appointments' },

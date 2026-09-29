@@ -1,11 +1,16 @@
 import { Routes } from '@angular/router';
+
 import { authGuard } from './app/core/guards/auth.guard';
 import { homeRedirect } from './app/core/guards/redirect-to-home';
 import { roleGuard } from './app/core/guards/role.guard';
 import { AppLayout } from './app/layout/component/app.layout';
 import { Notfound } from './app/pages/notfound/notfound';
 
-/** Root routes of ErgoManager. */
+/**
+ * Root routes. Everything inside the layout needs a session, and some
+ * features also need a role. The self evaluation stays public because the
+ * employees answer it without an account.
+ */
 export const appRoutes: Routes = [
     {
         path: '',
@@ -13,7 +18,11 @@ export const appRoutes: Routes = [
         canActivate: [authGuard],
         canActivateChild: [authGuard],
         children: [
-            { path: '', pathMatch: 'full', redirectTo: homeRedirect },
+            {
+                path: '',
+                pathMatch: 'full',
+                redirectTo: homeRedirect
+            },
             {
                 path: 'dashboard',
                 canActivate: [roleGuard(['ADMIN', 'ERGONOMIST'])],
@@ -52,6 +61,7 @@ export const appRoutes: Routes = [
         ]
     },
     {
+        // Full screen pages of the signed in user, outside the main layout.
         path: 'account',
         canActivate: [authGuard],
         loadChildren: () => import('./app/pages/account/account.routes').then((m) => m.accountRoutes)
@@ -60,7 +70,17 @@ export const appRoutes: Routes = [
         path: 'self-evaluation',
         loadChildren: () => import('./app/pages/self-evaluation/self-evaluation.routes').then((m) => m.selfEvaluationRoutes)
     },
-    { path: 'auth', loadChildren: () => import('./app/pages/auth/auth.routes') },
-    { path: 'notfound', component: Notfound, title: 'ErgoManager - Página no encontrada' },
-    { path: '**', redirectTo: '/notfound' }
+    {
+        path: 'auth',
+        loadChildren: () => import('./app/pages/auth/auth.routes')
+    },
+    {
+        path: 'notfound',
+        component: Notfound,
+        title: 'ErgoManager - Página no encontrada'
+    },
+    {
+        path: '**',
+        redirectTo: '/notfound'
+    }
 ];

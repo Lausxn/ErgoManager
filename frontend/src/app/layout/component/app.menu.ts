@@ -6,7 +6,10 @@ import { MenuItem } from 'primeng/api';
 import { AuthService } from '../../core/services/auth.service';
 import { AppMenuitem } from './app.menuitem';
 
-/** Side menu of ErgoManager. The visible options depend on the signed-in role. */
+/**
+ * Side menu of ErgoManager. Every entry is shown only to the roles that the
+ * guards of its route let through.
+ */
 @Component({
     selector: 'app-menu',
     standalone: true,
@@ -16,38 +19,108 @@ import { AppMenuitem } from './app.menuitem';
             <li app-menuitem *ngIf="!item.separator" [item]="item" [index]="i" [root]="true"></li>
             <li *ngIf="item.separator" class="menu-separator"></li>
         </ng-container>
-    </ul> `
+    </ul>`
 })
 export class AppMenu {
     private readonly authService = inject(AuthService);
 
     protected readonly model = computed<MenuItem[]>(() => {
-        const role = this.authService.session()?.role ?? 'ERGONOMIST';
-        const isAdmin = role === 'ADMIN';
+        const isPreview = this.authService.isPreviewMode && !this.authService.getToken();
 
-        const roleSection: MenuItem = isAdmin
-            ? {
-                  label: 'Administración',
-                  items: [
-                      { label: 'Empresas', icon: 'pi pi-fw pi-building', routerLink: ['/companies'] },
-                      { label: 'Usuarios', icon: 'pi pi-fw pi-users', routerLink: ['/users'] },
-                      { label: 'Formularios', icon: 'pi pi-fw pi-file-edit', routerLink: ['/forms'] }
-                  ]
-              }
-            : {
-                  label: 'Ergonomía',
-                  items: [
-                      { label: 'Formularios', icon: 'pi pi-fw pi-file-edit', routerLink: ['/forms'] },
-                      { label: 'Agenda de citas', icon: 'pi pi-fw pi-calendar', routerLink: ['/appointments'] },
-                      { label: 'Perfiles de clientes', icon: 'pi pi-fw pi-building', routerLink: ['/companies'] },
-                      { label: 'Reportes', icon: 'pi pi-fw pi-chart-bar', routerLink: ['/history'] }
-                  ]
-              };
+        const isAdmin = isPreview || this.authService.session()?.role === 'ADMIN';
+
+        const isErgonomist = isPreview || this.authService.session()?.role === 'ERGONOMIST';
 
         return [
-            { label: 'Inicio', items: [{ label: 'Inicio', icon: 'pi pi-fw pi-home', routerLink: ['/dashboard'] }] },
-            roleSection,
-            { label: 'Cuenta', items: [{ label: 'Cambiar contraseña', icon: 'pi pi-fw pi-key', routerLink: ['/account/password'] }] }
+            {
+                label: 'Inicio',
+                items: [
+                    {
+                        label: 'Inicio',
+                        icon: 'pi pi-fw pi-home',
+                        routerLink: ['/dashboard']
+                    }
+                ]
+            },
+            {
+                label: 'Administración',
+                visible: isAdmin,
+                items: [
+                    {
+                        label: 'Empresas',
+                        icon: 'pi pi-fw pi-building',
+                        routerLink: ['/companies']
+                    },
+                    {
+                        label: 'Usuarios',
+                        icon: 'pi pi-fw pi-users',
+                        routerLink: ['/users']
+                    },
+                    {
+                        label: 'Formularios',
+                        icon: 'pi pi-fw pi-file-edit',
+                        routerLink: ['/forms']
+                    }
+                ]
+            },
+            {
+                label: 'Ergonomía',
+                visible: isErgonomist,
+                items: [
+                    {
+                        label: 'Formularios',
+                        icon: 'pi pi-fw pi-file-edit',
+                        routerLink: ['/forms']
+                    },
+                    {
+                        label: 'Perfiles de clientes',
+                        icon: 'pi pi-fw pi-building',
+                        routerLink: ['/companies']
+                    }
+                ]
+            },
+            {
+                label: 'Evaluación',
+                items: [
+                    {
+                        label: 'Agenda',
+                        icon: 'pi pi-fw pi-calendar',
+                        routerLink: ['/appointments']
+                    },
+                    {
+                        label: 'Evaluación personalizada',
+                        icon: 'pi pi-fw pi-clipboard',
+                        routerLink: ['/personalized-evaluations'],
+                        visible: isErgonomist
+                    },
+                    {
+                        label: 'Historial',
+                        icon: 'pi pi-fw pi-history',
+                        routerLink: ['/history']
+                    }
+                ]
+            },
+            {
+                label: 'Empleados',
+                items: [
+                    {
+                        label: 'Autoevaluación pública',
+                        icon: 'pi pi-fw pi-external-link',
+                        url: '/self-evaluation',
+                        target: '_blank'
+                    }
+                ]
+            },
+            {
+                label: 'Cuenta',
+                items: [
+                    {
+                        label: 'Cambiar contraseña',
+                        icon: 'pi pi-fw pi-key',
+                        routerLink: ['/account/password']
+                    }
+                ]
+            }
         ];
     });
 }
