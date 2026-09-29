@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signa
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { ConfirmationService } from 'primeng/api';
 import { AvatarModule } from 'primeng/avatar';
 import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
@@ -18,7 +17,6 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { StatCardComponent } from '../../../shared/components/stat-card/stat-card.component';
 import { CompanyResponse } from '../../../shared/models/company.model';
-import { ToastService } from '../../../shared/services/toast.service';
 import { DialogService } from '../../../shared/services/dialog.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { getApiErrorMessage } from '../../../shared/utils/api-error';
@@ -66,30 +64,20 @@ interface CompanyRow extends CompanyResponse {
 })
 export class CompanyListComponent {
     private readonly companyService = inject(CompanyService);
-
     private readonly dialogService = inject(DialogService);
-
-    private readonly toastService = inject(ToastService);
-
     private readonly toastService = inject(ToastService);
     private readonly destroyRef = inject(DestroyRef);
-
     private readonly companyList = signal<CompanyResponse[]>([]);
-
     protected readonly isLoading = signal(true);
 
     /** True when the last load failed, so the empty state can offer a retry. */
     protected readonly loadFailed = signal(false);
-
     protected readonly searchText = signal('');
-
     protected readonly statusFilter = signal<StatusFilter>('ALL');
 
     /** Ids of the companies with a request running, to avoid double clicks. */
     protected readonly busyIds = signal<ReadonlySet<number>>(new Set());
-
     protected readonly skeletonRows = SKELETON_ROWS;
-
     protected readonly activeTagClasses = ACTIVE_TAG_CLASSES;
 
     protected readonly statusOptions: { label: string; value: StatusFilter }[] = [
@@ -136,18 +124,6 @@ export class CompanyListComponent {
      */
     protected loadCompanies(): void {
         this.isLoading.set(true);
-
-        this.companyService.findAll().subscribe({
-            next: (companyList) => {
-                this.companyList.set(companyList);
-                this.isLoading.set(false);
-            },
-            error: () => {
-                this.isLoading.set(false);
-
-                this.toastService.error('No se pudieron cargar los clientes', 'Verifique la conexión e intente nuevamente.');
-            }
-        });
         this.loadFailed.set(false);
         this.companyService
             .findAll()
@@ -206,26 +182,6 @@ export class CompanyListComponent {
      *
      * @param row company to activate
      */
-    protected confirmDeactivate(company: CompanyResponse): void {
-        this.confirmationService.confirm({
-            header: 'Desactivar empresa',
-            message: `¿Desea desactivar ${company.businessName}? Su historial de evaluaciones se conserva.`,
-            icon: 'pi pi-exclamation-triangle',
-            acceptLabel: 'Desactivar',
-            rejectLabel: 'Cancelar',
-            rejectButtonProps: {
-                severity: 'secondary',
-                outlined: true
-            },
-            accept: () =>
-                this.companyService.deactivate(company.id).subscribe({
-                    next: () => {
-                        this.toastService.success('Empresa desactivada', company.businessName);
-
-                        this.loadCompanies();
-                    },
-                    error: () => this.toastService.error('No se pudo desactivar la empresa', 'Intente nuevamente en unos minutos.')
-                })
     protected activate(row: CompanyRow): void {
         if (row.active || this.isBusy(row.id)) {
             return;

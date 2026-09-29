@@ -77,9 +77,7 @@ abstract class ApiIntegrationTestSupport {
 
     @MockitoBean
     protected EmailService emailService;
-
     protected final JsonMapper json = JsonMapper.builder().build();
-
     protected MockMvc mvc;
 
     @BeforeEach

@@ -34,33 +34,22 @@ const DEACTIVATE_ERROR_MESSAGE = 'No se pudo desactivar el usuario. Intente de n
 })
 export class DeactivateUserConfirmationComponent {
     private readonly route = inject(ActivatedRoute);
-
     private readonly router = inject(Router);
-
     private readonly userService = inject(UserService);
-
     private readonly toastService = inject(ToastService);
-
     private readonly destroyRef = inject(DestroyRef);
-
     protected readonly authService = inject(AuthService);
-
     protected readonly layoutService = inject(LayoutService);
-
     protected readonly roleLabels = ROLE_LABELS;
 
     /** Identifier taken from the url; the rest of the data comes from the backend. */
     protected readonly userId = Number(this.route.snapshot.queryParamMap.get('id'));
-
     protected readonly hasValidUser = Number.isSafeInteger(this.userId) && this.userId > 0;
 
     /** User as stored in the backend, null while it loads or when it could not be read. */
     protected readonly user = signal<UserResponse | null>(null);
-
     protected readonly isLoadingUser = signal(this.hasValidUser);
-
     protected readonly isDeactivating = signal(false);
-
     protected readonly errorMessage = signal<string | null>(null);
 
     /** Name shown in the card: the stored one, or the one of the url while it loads. */
@@ -90,9 +79,7 @@ export class DeactivateUserConfirmationComponent {
     });
 
     protected readonly canDeactivate = computed(() => this.user() !== null && this.blockedReason() === null && !this.isDeactivating());
-
     protected readonly isSidebarCollapsed = computed(() => !!this.layoutService.layoutState().staticMenuDesktopInactive);
-
     protected readonly isSidebarOpen = computed(() => !!this.layoutService.layoutState().staticMenuMobileActive);
 
     constructor() {

@@ -23,13 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthServiceImpl implements AuthService {
 
     private static final String TOKEN_TYPE = "Bearer";
-
     private final AuthenticationManager authenticationManager;
-
     private final UserRepository userRepository;
-
     private final JwtService jwtService;
-
     private final PasswordEncoder passwordEncoder;
 
     /**
@@ -115,9 +111,7 @@ public class AuthServiceImpl implements AuthService {
      * @return full name without extra blank spaces
      */
     private String buildFullName(User user) {
-        StringBuilder fullName = new StringBuilder(user.getFirstName())
-                .append(' ')
-                .append(user.getFirstLastName());
+        StringBuilder fullName = new StringBuilder(user.getFirstName()).append(' ').append(user.getFirstLastName());
         if (user.getSecondLastName() != null && !user.getSecondLastName().isBlank()) {
             fullName.append(' ').append(user.getSecondLastName());
         }

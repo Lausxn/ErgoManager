@@ -24,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class ErgonomistInitializer implements ApplicationRunner {
 
     private static final String PROPERTY_PREFIX = "ergomanager.bootstrap.ergonomist.";
-
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final Environment environment;

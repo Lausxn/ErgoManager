@@ -100,28 +100,18 @@ interface RiskChoice {
 })
 export class PersonalizedEvaluationFormComponent implements OnInit, HasUnsavedChanges {
     private readonly formBuilder = inject(FormBuilder);
-
     private readonly personalizedEvaluationService = inject(PersonalizedEvaluationService);
-
     private readonly appointmentService = inject(AppointmentService);
-
     private readonly authService = inject(AuthService);
-
     private readonly toastService = inject(ToastService);
-
     private readonly destroyRef = inject(DestroyRef);
-
     private readonly locale = inject(LOCALE_ID);
 
     /** Appointment to preselect, from the ?appointmentId= query parameter. */
     readonly appointmentId = input<number | undefined, unknown>(undefined, { transform: numberAttribute });
-
     protected readonly maxTextLength = MAX_TEXT_LENGTH;
-
     protected readonly skeletonRows = SKELETON_ROWS;
-
     protected readonly riskLevelLabels = RISK_LEVEL_LABELS;
-
     protected readonly riskLevelTagClasses = RISK_LEVEL_TAG_CLASSES;
 
     protected readonly riskChoices: RiskChoice[] = [
@@ -141,27 +131,16 @@ export class PersonalizedEvaluationFormComponent implements OnInit, HasUnsavedCh
     });
 
     protected readonly unsaved = trackUnsavedChanges(this.evaluationForm);
-
     protected readonly appointmentErrors = { required: 'Elija la cita que atendió.' };
-
     protected readonly riskErrors = { required: 'Elija el nivel de riesgo observado.' };
-
     private readonly pendingAppointments = signal<AppointmentResponse[]>([]);
-
     protected readonly isLoadingAppointments = signal(true);
-
     protected readonly appointmentsError = signal<string | null>(null);
-
     private readonly evaluations = signal<PersonalizedEvaluationResponse[]>([]);
-
     protected readonly isLoadingEvaluations = signal(true);
-
     protected readonly evaluationsError = signal<string | null>(null);
-
     protected readonly savedEvaluation = signal<PersonalizedEvaluationResponse | null>(null);
-
     protected readonly isSubmitting = signal(false);
-
     protected readonly errorMessage = signal<string | null>(null);
 
     /** Evaluations whose report is being downloaded. */
@@ -184,9 +163,7 @@ export class PersonalizedEvaluationFormComponent implements OnInit, HasUnsavedCh
     });
 
     protected readonly selectedRisk = computed(() => this.riskChoices.find((choice) => choice.value === this.formValue().riskLevel) ?? null);
-
     protected readonly diagnosisLength = computed(() => this.formValue().diagnosis.length);
-
     protected readonly recommendationsLength = computed(() => this.formValue().recommendations.length);
 
     protected readonly completedCount = computed(() => {

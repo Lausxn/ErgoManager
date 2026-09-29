@@ -31,19 +31,12 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 public class GlobalExceptionHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-
     private static final String UNEXPECTED_ERROR_MESSAGE = "Ocurrió un error inesperado. Intente de nuevo o contacte al administrador.";
-
     private static final String VALIDATION_MESSAGE = "Revise los datos ingresados.";
-
     private static final String BAD_CREDENTIALS_MESSAGE = "El correo o la contraseña son incorrectos.";
-
     private static final String DISABLED_ACCOUNT_MESSAGE = "La cuenta está desactivada. Contacte al administrador.";
-
     private static final String AUTHENTICATION_FAILED_MESSAGE = "No fue posible iniciar sesión.";
-
     private static final String ACCESS_DENIED_MESSAGE = "No tiene permisos para realizar esta acción.";
-
     private static final String UNREADABLE_BODY_MESSAGE = "El cuerpo de la solicitud no es válido.";
 
     /**

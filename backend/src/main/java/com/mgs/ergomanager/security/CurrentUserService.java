@@ -18,9 +18,7 @@ import org.springframework.stereotype.Component;
 public class CurrentUserService {
 
     private static final String ADMIN_AUTHORITY = "ROLE_ADMIN";
-
     private static final String ACCESS_DENIED_MESSAGE = "No tiene permisos para realizar esta acción.";
-
     private final UserRepository userRepository;
 
     /**
@@ -50,8 +48,7 @@ public class CurrentUserService {
      */
     public User getCurrentUser() {
         String email = getCurrentEmail();
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new AccessDeniedException(ACCESS_DENIED_MESSAGE));
+        return userRepository.findByEmail(email).orElseThrow(() -> new AccessDeniedException(ACCESS_DENIED_MESSAGE));
     }
 
     /**

@@ -176,7 +176,7 @@ class ErgonomistInitializerTests {
     }
 
     @Test
-    void initialUserCanLoginAndAccessOnlyExistingErgonomistPermissions() throws Exception {
+    void initialUserCanLoginAndAccessTheErgonomistPermissions() throws Exception {
         MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         String body = mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"" + EMAIL + "\",\"password\":\"" + PASSWORD + "\"}"))
@@ -184,9 +184,11 @@ class ErgonomistInitializerTests {
                 .andExpect(jsonPath("password").doesNotExist())
                 .andReturn().getResponse().getContentAsString();
         String token = JsonPath.read(body, "$.token");
-        for (String path : new String[]{"/api/users", "/api/companies", "/api/forms"}) {
-            mockMvc.perform(get(path).header("Authorization", "Bearer " + token))
-                    .andExpect(status().isForbidden());
+        // User management stays restricted to administrators.
+        mockMvc.perform(get("/api/users").header("Authorization", "Bearer " + token)).andExpect(status().isForbidden());
+        // Ergonomists have full access to companies and forms.
+        for (String path : new String[]{"/api/companies", "/api/forms"}) {
+            mockMvc.perform(get(path).header("Authorization", "Bearer " + token)).andExpect(status().isOk());
         }
         // An empty evaluation reaches DTO validation (400), not access denial (403).
         // Its business implementation belongs to another task and is not mocked here.

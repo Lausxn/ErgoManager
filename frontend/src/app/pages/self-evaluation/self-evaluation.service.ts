@@ -11,7 +11,6 @@ import { SelfEvaluationRequest, SelfEvaluationResponse } from '../../shared/mode
 @Injectable({ providedIn: 'root' })
 export class SelfEvaluationService {
     private readonly http = inject(HttpClient);
-
     private readonly baseUrl = `${environment.apiUrl}/self-evaluations`;
 
     /**

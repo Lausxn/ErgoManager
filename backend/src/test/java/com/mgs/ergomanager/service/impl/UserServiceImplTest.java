@@ -40,7 +40,6 @@ class UserServiceImplTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
-
     private UserServiceImpl userService;
 
     /**
@@ -48,10 +47,7 @@ class UserServiceImplTest {
      */
     @BeforeEach
     void setUp() {
-        userService = new UserServiceImpl(
-                userRepository,
-                passwordEncoder,
-                eventPublisher);
+        userService = new UserServiceImpl(userRepository, passwordEncoder, eventPublisher);
     }
 
     /**
@@ -60,7 +56,6 @@ class UserServiceImplTest {
      */
     @Test
     void createShouldSaveUserAndPublishUserCreatedEvent() {
-
         UserRequestDTO request = new UserRequestDTO(
                 "Carlos",
                 "Perez",
@@ -72,11 +67,9 @@ class UserServiceImplTest {
         when(userRepository.existsByEmail("carlos@example.com"))
                 .thenReturn(false);
 
-        when(passwordEncoder.encode("Temporary123"))
-                .thenReturn("hashed-password");
+        when(passwordEncoder.encode("Temporary123")).thenReturn("hashed-password");
 
-        when(userRepository.saveAndFlush(any(User.class)))
-                .thenAnswer(invocation -> {
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> {
                     User user = invocation.getArgument(0);
                     user.setId(1L);
                     user.setCreatedAt(LocalDateTime.now());
@@ -85,8 +78,7 @@ class UserServiceImplTest {
 
         UserResponseDTO response = userService.create(request);
 
-        ArgumentCaptor<User> userCaptor =
-                ArgumentCaptor.forClass(User.class);
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
 
         verify(userRepository).saveAndFlush(userCaptor.capture());
 
@@ -110,8 +102,7 @@ class UserServiceImplTest {
 
         verify(passwordEncoder).encode("Temporary123");
 
-        ArgumentCaptor<UserCreatedEvent> eventCaptor =
-                ArgumentCaptor.forClass(UserCreatedEvent.class);
+        ArgumentCaptor<UserCreatedEvent> eventCaptor = ArgumentCaptor.forClass(UserCreatedEvent.class);
 
         verify(eventPublisher).publishEvent(eventCaptor.capture());
 
@@ -121,9 +112,7 @@ class UserServiceImplTest {
                 "carlos@example.com",
                 publishedEvent.email());
 
-        assertEquals(
-                "Temporary123",
-                publishedEvent.temporaryPassword());
+        assertEquals("Temporary123", publishedEvent.temporaryPassword());
     }
 
     /**
@@ -131,7 +120,6 @@ class UserServiceImplTest {
      */
     @Test
     void createShouldNormalizeUserData() {
-
         UserRequestDTO request = new UserRequestDTO(
                 "  Carlos  ",
                 "  Perez  ",
@@ -143,11 +131,9 @@ class UserServiceImplTest {
         when(userRepository.existsByEmail("carlos@example.com"))
                 .thenReturn(false);
 
-        when(passwordEncoder.encode("Temporary123"))
-                .thenReturn("hashed-password");
+        when(passwordEncoder.encode("Temporary123")).thenReturn("hashed-password");
 
-        when(userRepository.saveAndFlush(any(User.class)))
-                .thenAnswer(invocation -> {
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> {
                     User user = invocation.getArgument(0);
                     user.setId(2L);
                     user.setCreatedAt(LocalDateTime.now());
@@ -156,8 +142,7 @@ class UserServiceImplTest {
 
         userService.create(request);
 
-        ArgumentCaptor<User> userCaptor =
-                ArgumentCaptor.forClass(User.class);
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
 
         verify(userRepository).saveAndFlush(userCaptor.capture());
 
@@ -175,7 +160,6 @@ class UserServiceImplTest {
      */
     @Test
     void createShouldStoreNullWhenSecondLastNameIsBlank() {
-
         UserRequestDTO request = new UserRequestDTO(
                 "Carlos",
                 "Perez",
@@ -187,11 +171,9 @@ class UserServiceImplTest {
         when(userRepository.existsByEmail("carlos@example.com"))
                 .thenReturn(false);
 
-        when(passwordEncoder.encode("Temporary123"))
-                .thenReturn("hashed-password");
+        when(passwordEncoder.encode("Temporary123")).thenReturn("hashed-password");
 
-        when(userRepository.saveAndFlush(any(User.class)))
-                .thenAnswer(invocation -> {
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> {
                     User user = invocation.getArgument(0);
                     user.setId(3L);
                     user.setCreatedAt(LocalDateTime.now());
@@ -200,8 +182,7 @@ class UserServiceImplTest {
 
         userService.create(request);
 
-        ArgumentCaptor<User> userCaptor =
-                ArgumentCaptor.forClass(User.class);
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
 
         verify(userRepository).saveAndFlush(userCaptor.capture());
 
@@ -216,7 +197,6 @@ class UserServiceImplTest {
      */
     @Test
     void createShouldRejectDuplicatedEmail() {
-
         UserRequestDTO request = new UserRequestDTO(
                 "Carlos",
                 "Perez",
@@ -232,17 +212,12 @@ class UserServiceImplTest {
                 DuplicateResourceException.class,
                 () -> userService.create(request));
 
-        assertEquals(
-                "El correo ya está registrado",
-                exception.getMessage());
+        assertEquals("El correo ya está registrado", exception.getMessage());
 
-        verify(userRepository, never())
-                .saveAndFlush(any(User.class));
+        verify(userRepository, never()).saveAndFlush(any(User.class));
 
-        verify(passwordEncoder, never())
-                .encode(any());
+        verify(passwordEncoder, never()).encode(any());
 
-        verify(eventPublisher, never())
-                .publishEvent(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 }

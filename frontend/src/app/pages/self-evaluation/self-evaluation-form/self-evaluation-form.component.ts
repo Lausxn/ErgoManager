@@ -71,42 +71,25 @@ const SUBMIT_FAILED_MESSAGE = 'No se pudo enviar la autoevaluación. Intente de 
 })
 export class SelfEvaluationFormComponent implements OnInit {
     private readonly formBuilder = inject(FormBuilder);
-
     private readonly formService = inject(FormService);
-
     private readonly selfEvaluationService = inject(SelfEvaluationService);
-
     private readonly destroyRef = inject(DestroyRef);
-
     private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
     /** Company of the employee, bound from the query string when the link includes it. */
     readonly companyId = input<number | undefined, unknown>(undefined, { transform: numberAttribute });
-
     protected readonly answerOptions = ANSWER_OPTIONS;
-
     protected readonly limits = LIMITS;
-
     protected readonly riskLevelLabels = RISK_LEVEL_LABELS;
-
     protected readonly riskLevelTagClasses = RISK_LEVEL_TAG_CLASSES;
-
     protected readonly nextSteps = NEXT_STEPS;
-
     protected readonly activeForm = signal<FormResponse | null>(null);
-
     protected readonly questionList = signal<QuestionResponse[]>([]);
-
     protected readonly result = signal<SelfEvaluationResponse | null>(null);
-
     protected readonly isLoading = signal(true);
-
     protected readonly isSubmitting = signal(false);
-
     protected readonly errorMessage = signal<string | null>(null);
-
     protected readonly hasCompanyInLink = signal(false);
-
     protected readonly hasLoadError = signal(false);
 
     protected readonly employeeForm = this.formBuilder.group({
@@ -119,9 +102,7 @@ export class SelfEvaluationFormComponent implements OnInit {
 
     /** Warns before closing the tab with answers that were not sent. */
     private readonly unsaved = trackUnsavedChanges(this.employeeForm);
-
     private readonly answers = toSignal(this.employeeForm.controls.answerList.valueChanges.pipe(map(() => this.answerList.getRawValue())), { initialValue: [] as (number | null)[] });
-
     protected readonly answeredCount = computed(() => this.answers().filter((answer) => answer !== null).length);
 
     protected readonly progress = computed(() => {

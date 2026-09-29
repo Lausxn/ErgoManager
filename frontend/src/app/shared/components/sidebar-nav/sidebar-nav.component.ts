@@ -76,7 +76,6 @@ const ERGONOMIST_ITEMS: readonly SidebarItem[] = [
 })
 export class SidebarNavComponent {
     readonly user = input<SidebarUser | null>(null);
-
     protected readonly profile = computed(() => this.user() ?? PLACEHOLDER_USER);
 
     protected readonly items = computed<readonly SidebarItem[]>(() =>

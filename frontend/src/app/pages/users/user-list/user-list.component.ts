@@ -73,29 +73,17 @@ interface UserRow extends UserResponse {
 })
 export class UserListComponent {
     private readonly userService = inject(UserService);
-
     private readonly router = inject(Router);
-
     private readonly toastService = inject(ToastService);
-
     private readonly authService = inject(AuthService);
-
     private readonly destroyRef = inject(DestroyRef);
-
     private readonly userList = signal<UserResponse[]>([]);
-
     protected readonly isLoading = signal(true);
-
     protected readonly searchText = signal('');
-
     protected readonly roleFilter = signal<Role | null>(null);
-
     protected readonly statusFilter = signal<StatusFilter>('ALL');
-
     protected readonly activeTagClasses = ACTIVE_TAG_CLASSES;
-
     protected readonly skeletonRows = SKELETON_ROWS;
-
     protected readonly roleOptions = toEnumOptions(ROLE_LABELS);
 
     protected readonly statusOptions: { label: string; value: StatusFilter }[] = [

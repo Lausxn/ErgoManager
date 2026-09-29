@@ -1,63 +1,28 @@
-<div class="dashboard">
-    <header class="dashboard-bar">
-        <nav class="dashboard-breadcrumb" aria-label="Ruta">
-            <span>ErgoManager</span>
-            <span class="dashboard-breadcrumb__separator">/</span>
-            <span class="dashboard-breadcrumb__current" aria-current="page">Inicio</span>
-        </nav>
-        <span class="dashboard-profile">{{ profileLabel() }}</span>
-    </header>
-
-    <div class="dashboard-body">
-        <p class="dashboard-eyebrow">Inicio</p>
-        <h1 class="dashboard-title">{{ getGreeting() }}, {{ userName() }}.</h1>
-        <p class="dashboard-subtitle">{{ subtitle() }}</p>
-
-        <ul class="dashboard-options">
-            @for (card of functionCards(); track card.id) {
-                <li>
-                    <a class="dashboard-option" [attr.data-card]="card.title" [ngClass]="'dashboard-option--' + card.color" [routerLink]="card.route">
-                        <span class="dashboard-option__number">{{ card.id | number: '2.0-0' }}</span>
-                        <span class="dashboard-option__icon" aria-hidden="true"><i [ngClass]="card.icon"></i></span>
-                        <span class="dashboard-option__text">
-                            <span class="dashboard-option__title">{{ card.title }}</span>
-                            <span class="dashboard-option__description">{{ card.description }}</span>
-                        </span>
-                        <span class="dashboard-option__arrow" aria-hidden="true">→</span>
-                    </a>
-                </li>
-            }
-        </ul>
-
-        @if (stats().length > 0) {
-            <section class="dashboard-stats" aria-label="Estadísticas del sistema">
-                @for (stat of stats(); track stat.label) {
-                    <div class="dashboard-stat">
-                        <p class="dashboard-stat__label">{{ stat.label }}</p>
-                        <p class="dashboard-stat__value" [class.dashboard-stat__value--highlight]="stat.highlight">{{ stat.value }}</p>
-                    </div>
-                }
-            </section>
-        }
-    </div>
-</div>
 <section class="mgs-impact dashboard-hero" aria-labelledby="dashboard-title">
     <span class="mgs-impact__rule" aria-hidden="true"></span>
-    <span class="mgs-impact__eyebrow">Panel de administración</span>
+    <span class="mgs-impact__eyebrow">{{ isAdmin() ? 'Panel de administración' : 'Panel del ergonomista' }}</span>
     <h1 id="dashboard-title" class="mgs-impact__title">{{ greeting() }}</h1>
-    <p class="mgs-impact__lead">Estas son las cinco funciones habilitadas para su perfil y el estado actual de ErgoManager.</p>
+    <p class="mgs-impact__lead">
+        @if (isAdmin()) {
+            Estas son las cinco funciones habilitadas para su perfil y el estado actual de ErgoManager.
+        } @else {
+            Estas son las cinco funciones habilitadas para su perfil.
+        }
+    </p>
     <p class="dashboard-hero__date">
         <i class="fa-regular fa-calendar" aria-hidden="true"></i>
         <time [attr.datetime]="today | date: 'yyyy-MM-dd'">{{ today | date: "EEEE, d 'de' MMMM 'de' y" }}</time>
     </p>
 </section>
 
-<section class="mgs-stats" aria-label="Indicadores del sistema">
-    <app-stat-card label="Citas programadas" icon="fa-regular fa-calendar-check" [value]="figures().scheduledAppointments" [loading]="isLoading()" />
-    <app-stat-card label="Empresas activas" icon="fa-solid fa-building" [value]="figures().activeCompanies" [loading]="isLoading()" />
-    <app-stat-card label="Usuarios activos" icon="fa-solid fa-user-check" [value]="figures().activeUsers" [loading]="isLoading()" [accent]="true" />
-    <app-stat-card label="Formularios activos" icon="fa-solid fa-file-lines" [value]="figures().activeForms" [loading]="isLoading()" />
-</section>
+@if (isAdmin()) {
+    <section class="mgs-stats" aria-label="Indicadores del sistema">
+        <app-stat-card label="Citas programadas" icon="fa-regular fa-calendar-check" [value]="figures().scheduledAppointments" [loading]="isLoading()" />
+        <app-stat-card label="Empresas activas" icon="fa-solid fa-building" [value]="figures().activeCompanies" [loading]="isLoading()" />
+        <app-stat-card label="Usuarios activos" icon="fa-solid fa-user-check" [value]="figures().activeUsers" [loading]="isLoading()" [accent]="true" />
+        <app-stat-card label="Formularios activos" icon="fa-solid fa-file-lines" [value]="figures().activeForms" [loading]="isLoading()" />
+    </section>
+}
 
 <section aria-labelledby="dashboard-functions">
     <div class="mgs-card-header">
@@ -67,7 +32,7 @@
         </div>
     </div>
     <ul class="mgs-option-grid">
-        @for (card of functionCards; track card.route) {
+        @for (card of functionCards(); track card.route) {
             <li>
                 <a class="mgs-option" [routerLink]="card.route">
                     <span class="mgs-option__top">

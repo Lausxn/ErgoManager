@@ -45,23 +45,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class PersonalizedEvaluationServiceImpl implements PersonalizedEvaluationService {
 
     private static final String EVALUATION_NOT_FOUND_MESSAGE = "No se encontró la evaluación.";
-
     private static final String ACCESS_DENIED_MESSAGE = "No tiene permisos para realizar esta acción.";
-
     private static final String REPORT_PATH_TEMPLATE = "/api/personalized-evaluations/%d/report";
-
     private static final DateTimeFormatter REPORT_DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-
     private static final Color BRAND_COLOR = new Color(0x1F, 0x5F, 0x8B);
-
     private static final Color LABEL_BACKGROUND = new Color(0xEE, 0xF3, 0xF7);
-
     private final PersonalizedEvaluationRepository personalizedEvaluationRepository;
-
     private final AppointmentRepository appointmentRepository;
-
     private final HistoryRepository historyRepository;
-
     private final CurrentUserService currentUserService;
 
     /**

@@ -163,30 +163,19 @@ const QUESTION_FIELD_PATTERN = /^questionList\[(\d+)\]\.(\w+)$/;
 })
 export class FormDetailComponent implements OnInit, HasUnsavedChanges {
     private readonly formBuilder = inject(FormBuilder);
-
     private readonly formService = inject(FormService);
-
     private readonly toastService = inject(ToastService);
-
     private readonly router = inject(Router);
-
     private readonly destroyRef = inject(DestroyRef);
 
     /** Identifier of the form being edited, absent when creating a new one. */
     readonly id = input<number | undefined, unknown>(undefined, { transform: numberAttribute });
-
     protected readonly limits = LIMITS;
-
     protected readonly firstPublicationYear = FIRST_PUBLICATION_YEAR;
-
     protected readonly maxAnswerScore = MAX_ANSWER_SCORE;
-
     protected readonly activeTagClasses = ACTIVE_TAG_CLASSES;
-
     protected readonly yearErrors = { min: `El año debe ser ${FIRST_PUBLICATION_YEAR} o posterior.`, required: 'Indique el año de publicación.' };
-
     protected readonly weightErrors = { min: 'El peso mínimo es 1.', required: 'Indique el peso de la pregunta.' };
-
     protected readonly statementErrors = { required: 'Escriba el enunciado de la pregunta.', pattern: 'Escriba el enunciado de la pregunta.' };
 
     protected readonly formDetail = this.formBuilder.group({
@@ -204,14 +193,11 @@ export class FormDetailComponent implements OnInit, HasUnsavedChanges {
     });
 
     protected readonly errorMessage = signal<string | null>(null);
-
     protected readonly isSubmitting = signal(false);
-
     protected readonly isLoading = signal(false);
 
     /** Stored form, only when editing: shows its state. */
     protected readonly storedForm = signal<FormResponse | null>(null);
-
     protected readonly isEditing = computed(() => this.id() !== undefined && !Number.isNaN(this.id()));
 
     /** Every value of the form, recomputed after each change of value or status. */

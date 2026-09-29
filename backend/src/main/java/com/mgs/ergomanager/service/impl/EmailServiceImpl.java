@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender mailSender;
-
     private final String senderEmail;
 
     /**
@@ -25,7 +24,6 @@ public class EmailServiceImpl implements EmailService {
     public EmailServiceImpl(
             JavaMailSender mailSender,
             @Value("${spring.mail.username:}") String senderEmail) {
-
         this.mailSender = mailSender;
         this.senderEmail = senderEmail;
     }
@@ -37,10 +35,7 @@ public class EmailServiceImpl implements EmailService {
      * @param temporaryPassword temporary password assigned to the user
      */
     @Override
-    public void sendTemporaryCredentials(
-            String recipientEmail,
-            String temporaryPassword) {
-
+    public void sendTemporaryCredentials(String recipientEmail, String temporaryPassword) {
         SimpleMailMessage message = new SimpleMailMessage();
 
         if (!senderEmail.isBlank()) {
@@ -68,12 +63,7 @@ public class EmailServiceImpl implements EmailService {
      * @param link           address of the self evaluation page
      */
     @Override
-    public void sendFormInvitation(
-            String recipientEmail,
-            String companyName,
-            String formTitle,
-            String link) {
-
+    public void sendFormInvitation(String recipientEmail, String companyName, String formTitle, String link) {
         SimpleMailMessage message = new SimpleMailMessage();
 
         if (!senderEmail.isBlank()) {

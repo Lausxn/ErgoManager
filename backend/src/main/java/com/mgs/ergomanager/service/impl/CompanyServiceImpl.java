@@ -19,9 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class CompanyServiceImpl implements CompanyService {
 
     private static final String COMPANY_NOT_FOUND_MESSAGE = "No se encontró la empresa.";
-
     private static final String DUPLICATE_TAX_ID_MESSAGE = "Ya existe una empresa con esa cédula jurídica.";
-
     private final CompanyRepository companyRepository;
 
     /**

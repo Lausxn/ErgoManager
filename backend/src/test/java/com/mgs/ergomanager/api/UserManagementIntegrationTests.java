@@ -164,8 +164,7 @@ class UserManagementIntegrationTests extends ApiIntegrationTestSupport {
     @Test
     void deactivatesAndActivatesAnotherUser() throws Exception {
         long originalVersion = ergonomist.getTokenVersion();
-        mvc.perform(delete("/api/users/{id}", ergonomist.getId()).with(as(admin)))
-                .andExpect(status().isNoContent());
+        mvc.perform(delete("/api/users/{id}", ergonomist.getId()).with(as(admin))).andExpect(status().isNoContent());
         User stored = userRepository.findById(ergonomist.getId()).orElseThrow();
         assertThat(stored.isActive()).isFalse();
         assertThat(stored.getTokenVersion()).isEqualTo(originalVersion + 1);

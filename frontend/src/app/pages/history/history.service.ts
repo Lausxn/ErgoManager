@@ -11,7 +11,6 @@ import { HistoryResponse } from '../../shared/models/history.model';
 @Injectable({ providedIn: 'root' })
 export class HistoryService {
     private readonly http = inject(HttpClient);
-
     private readonly baseUrl = `${environment.apiUrl}/histories`;
 
     /**

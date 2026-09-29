@@ -39,7 +39,6 @@ public class SelfEvaluationServiceImpl implements SelfEvaluationService {
 
     /** Highest score an answer can have. */
     private static final int MAX_ANSWER_SCORE = 3;
-
     private static final String INCOMPLETE_ANSWERS_MESSAGE = "Responda todas las preguntas del formulario.";
 
     private static final Comparator<Answer> BY_QUESTION_ORDER =
@@ -47,15 +46,10 @@ public class SelfEvaluationServiceImpl implements SelfEvaluationService {
                     .thenComparing(Answer::getId);
 
     private final SelfEvaluationRepository selfEvaluationRepository;
-
     private final AnswerRepository answerRepository;
-
     private final FormRepository formRepository;
-
     private final QuestionRepository questionRepository;
-
     private final CompanyRepository companyRepository;
-
     private final HistoryRepository historyRepository;
 
     /**

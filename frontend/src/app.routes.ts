@@ -1,5 +1,4 @@
 import { Routes } from '@angular/router';
-
 import { authGuard } from './app/core/guards/auth.guard';
 import { homeRedirect } from './app/core/guards/redirect-to-home';
 import { roleGuard } from './app/core/guards/role.guard';
@@ -24,19 +23,10 @@ export const appRoutes: Routes = [
         canActivate: [authGuard],
         canActivateChild: [authGuard],
         children: [
-            {
-                path: '',
-                pathMatch: 'full',
-                redirectTo: homeRedirect
-            },
+            { path: '', pathMatch: 'full', redirectTo: homeRedirect },
             {
                 path: 'dashboard',
                 canActivate: [roleGuard(['ADMIN', 'ERGONOMIST'])],
-                loadChildren: () => import('./app/pages/dashboard/dashboard.routes').then((m) => m.dashboardRoutes)
-            },
-            {
-                path: 'dashboard',
-                canActivate: [roleGuard(['ADMIN'])],
                 loadChildren: () => import('./app/pages/dashboard/dashboard.routes').then((m) => m.dashboardRoutes)
             },
             {
@@ -56,7 +46,6 @@ export const appRoutes: Routes = [
             },
             {
                 path: 'appointments',
-                canActivate: [roleGuard(['ADMIN', 'ERGONOMIST'])],
                 loadChildren: () => import('./app/pages/appointment-scheduling/appointment-scheduling.routes').then((m) => m.appointmentSchedulingRoutes)
             },
             {
@@ -66,7 +55,6 @@ export const appRoutes: Routes = [
             },
             {
                 path: 'history',
-                canActivate: [roleGuard(['ADMIN', 'ERGONOMIST'])],
                 loadChildren: () => import('./app/pages/history/history.routes').then((m) => m.historyRoutes)
             },
             {
@@ -80,17 +68,7 @@ export const appRoutes: Routes = [
         path: 'self-evaluation',
         loadChildren: () => import('./app/pages/self-evaluation/self-evaluation.routes').then((m) => m.selfEvaluationRoutes)
     },
-    {
-        path: 'auth',
-        loadChildren: () => import('./app/pages/auth/auth.routes')
-    },
-    {
-        path: 'notfound',
-        component: Notfound,
-        title: 'ErgoManager - Página no encontrada'
-    },
-    {
-        path: '**',
-        redirectTo: '/notfound'
-    }
+    { path: 'auth', loadChildren: () => import('./app/pages/auth/auth.routes') },
+    { path: 'notfound', component: Notfound, title: 'ErgoManager - Página no encontrada' },
+    { path: '**', redirectTo: '/notfound' }
 ];

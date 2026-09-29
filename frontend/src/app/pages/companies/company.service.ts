@@ -11,7 +11,6 @@ import { CompanyRequest, CompanyResponse } from '../../shared/models/company.mod
 @Injectable({ providedIn: 'root' })
 export class CompanyService {
     private readonly http = inject(HttpClient);
-
     private readonly baseUrl = `${environment.apiUrl}/companies`;
 
     /**

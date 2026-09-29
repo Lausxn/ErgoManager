@@ -25,15 +25,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class UserUpdateIntegrationTest {
 
-    private static final String ORIGINAL_PASSWORD_HASH =
-            "$2a$10$abcdefghijklmnopqrstuv";
+    private static final String ORIGINAL_PASSWORD_HASH = "$2a$10$abcdefghijklmnopqrstuv";
 
     @Autowired
     private MockMvc mockMvc;
 
     @Autowired
     private UserRepository userRepository;
-
     private User existingUser;
 
     /**
@@ -87,9 +85,7 @@ class UserUpdateIntegrationTest {
      * @throws Exception when the request cannot be executed
      */
     @Test
-    void shouldReturnConflictWhenEmailBelongsToAnotherUser()
-            throws Exception {
-
+    void shouldReturnConflictWhenEmailBelongsToAnotherUser() throws Exception {
         createUser(
                 "Ana",
                 "Lopez",
@@ -262,12 +258,9 @@ class UserUpdateIntegrationTest {
                         .content(requestBody))
                 .andExpect(status().isOk());
 
-        User updatedUser = userRepository.findById(existingUser.getId())
-                .orElseThrow();
+        User updatedUser = userRepository.findById(existingUser.getId()).orElseThrow();
 
-        org.junit.jupiter.api.Assertions.assertEquals(
-                ORIGINAL_PASSWORD_HASH,
-                updatedUser.getPassword());
+        org.junit.jupiter.api.Assertions.assertEquals(ORIGINAL_PASSWORD_HASH, updatedUser.getPassword());
     }
 
     /**
@@ -276,9 +269,7 @@ class UserUpdateIntegrationTest {
      * @throws Exception when the request cannot be executed
      */
     @Test
-    void shouldRejectChangingOnlyActiveAdminToErgonomist()
-            throws Exception {
-
+    void shouldRejectChangingOnlyActiveAdminToErgonomist() throws Exception {
         userRepository.deleteAll();
 
         User onlyAdmin = createUser(
@@ -306,12 +297,9 @@ class UserUpdateIntegrationTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest());
 
-        User unchangedAdmin = userRepository.findById(onlyAdmin.getId())
-                .orElseThrow();
+        User unchangedAdmin = userRepository.findById(onlyAdmin.getId()).orElseThrow();
 
-        org.junit.jupiter.api.Assertions.assertEquals(
-                Role.ADMIN,
-                unchangedAdmin.getRole());
+        org.junit.jupiter.api.Assertions.assertEquals(Role.ADMIN, unchangedAdmin.getRole());
     }
 
     /**
@@ -321,9 +309,7 @@ class UserUpdateIntegrationTest {
      * @throws Exception when the request cannot be executed
      */
     @Test
-    void shouldAllowRoleChangeWhenAnotherActiveAdminExists()
-            throws Exception {
-
+    void shouldAllowRoleChangeWhenAnotherActiveAdminExists() throws Exception {
         userRepository.deleteAll();
 
         User firstAdmin = createUser(
@@ -381,7 +367,6 @@ class UserUpdateIntegrationTest {
                             String password,
                             Role role,
                             boolean active) {
-
         User newUser = new User();
         newUser.setFirstName(firstName);
         newUser.setFirstLastName(firstLastName);

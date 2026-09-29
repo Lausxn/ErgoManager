@@ -44,7 +44,6 @@ class UserListIntegrationTests {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
-
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
     private MockMvc mockMvc;
 

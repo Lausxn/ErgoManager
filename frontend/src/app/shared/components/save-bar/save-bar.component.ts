@@ -37,13 +37,9 @@ export class SaveBarComponent {
 
     /** True while the request is running: the bar stays visible with a spinner. */
     readonly saving = input(false);
-
     readonly message = input('Cuidado, tiene cambios sin guardar.');
-
     readonly discardLabel = input('Descartar');
-
     readonly submitLabel = input('Guardar cambios');
-
     readonly submitIcon = input('pi pi-check');
 
     /** Emitted after the changes were discarded, to clear messages of the page. */

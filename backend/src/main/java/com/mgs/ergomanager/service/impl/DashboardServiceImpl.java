@@ -18,11 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class DashboardServiceImpl implements DashboardService {
 
     private final AppointmentRepository appointmentRepository;
-
     private final CompanyRepository companyRepository;
-
     private final UserRepository userRepository;
-
     private final FormRepository formRepository;
 
     /**

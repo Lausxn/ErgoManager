@@ -48,21 +48,13 @@ const DUPLICATED_EMAIL_MESSAGE = 'Ya existe un usuario con este correo.';
 })
 export class UserFormComponent implements HasUnsavedChanges {
     private readonly formBuilder = inject(FormBuilder);
-
     private readonly userService = inject(UserService);
-
     private readonly toastService = inject(ToastService);
-
     private readonly router = inject(Router);
-
     private readonly destroyRef = inject(DestroyRef);
-
     protected readonly limits = { name: MAX_NAME_LENGTH, email: MAX_EMAIL_LENGTH };
-
     protected readonly roleLabels = ROLE_LABELS;
-
     protected readonly roleTagClasses = ROLE_TAG_CLASSES;
-
     protected readonly emailErrors = { duplicated: DUPLICATED_EMAIL_MESSAGE };
 
     protected readonly passwordErrors = {
@@ -92,9 +84,7 @@ export class UserFormComponent implements HasUnsavedChanges {
     );
 
     protected readonly unsaved = trackUnsavedChanges(this.userForm);
-
     protected readonly errorMessage = signal<string | null>(null);
-
     protected readonly isSubmitting = signal(false);
 
     /** Every value of the form, recomputed after each change of value or status. */
@@ -115,7 +105,6 @@ export class UserFormComponent implements HasUnsavedChanges {
 
     /** Fields that must hold a valid value before saving. */
     private readonly requiredFields = ['firstName', 'firstLastName', 'email', 'password', 'confirmPassword'] as const;
-
     protected readonly requiredCount = this.requiredFields.length;
 
     protected readonly completedCount = computed(() => {

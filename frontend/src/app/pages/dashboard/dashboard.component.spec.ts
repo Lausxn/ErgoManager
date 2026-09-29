@@ -6,30 +6,40 @@ import { Router, provideRouter } from '@angular/router';
 import { appRoutes } from '../../../app.routes';
 import { environment } from '../../../environments/environment';
 import { LoginResponse } from '../../shared/models/auth.model';
+import { Role } from '../../shared/models/role.model';
 import { DashboardComponent } from './dashboard.component';
 
 const SESSION_STORAGE_KEY = 'ergomanager.session';
 
-const ADMIN_SESSION: LoginResponse = {
-    token: 'token',
-    tokenType: 'Bearer',
-    expiresAtMs: Number.MAX_SAFE_INTEGER,
-    userId: 1,
-    fullName: 'Admin Prueba',
-    role: 'ADMIN'
+const SUMMARY_URL = `${environment.apiUrl}/dashboard/summary`;
+
+/** Screen that each option has to open according to its name, per profile. */
+const EXPECTED_ROUTES: Record<Role, Record<string, string>> = {
+    ADMIN: {
+        Formularios: '/forms',
+        'Agenda de citas': '/appointments',
+        'Perfiles de clientes': '/companies',
+        'Reportes e historial': '/history',
+        'Gestión de usuarios': '/users'
+    },
+    ERGONOMIST: {
+        Formularios: '/forms',
+        'Agenda de citas': '/appointments',
+        'Perfiles de clientes': '/companies',
+        'Evaluación personalizada': '/personalized-evaluations',
+        'Reportes e historial': '/history'
+    }
 };
 
 /**
- * Screen that each option has to open according to its name and description.
- * Null marks an option whose function does not exist in the backend yet.
+ * Builds the session of a signed in user with the given role.
+ *
+ * @param role role of the user
+ * @returns stored session
  */
-const EXPECTED_ROUTES: Record<string, string | null> = {
-    Formularios: '/forms',
-    Citas: '/appointments',
-    'Perfiles de clientes': '/companies',
-    Reportes: null,
-    'Gestión de usuarios': '/users'
-};
+function sessionOf(role: Role): LoginResponse {
+    return { token: 'token', tokenType: 'Bearer', expiresAtMs: Number.MAX_SAFE_INTEGER, userId: 1, fullName: 'Ana Prueba', role, mustChangePassword: false };
+}
 
 /**
  * Returns the urls of the screens shown inside the main layout.
@@ -43,12 +53,17 @@ function layoutUrls(): string[] {
 
 describe('DashboardComponent', () => {
     let fixture: ComponentFixture<DashboardComponent>;
-    let component: DashboardComponent;
+    let element: HTMLElement;
     let httpTesting: HttpTestingController;
     let navigateSpy: jasmine.Spy;
 
-    beforeEach(() => {
-        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(ADMIN_SESSION));
+    /**
+     * Opens the dashboard with the session of the given role.
+     *
+     * @param role role of the signed in user
+     */
+    function openAs(role: Role): void {
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionOf(role)));
         TestBed.configureTestingModule({
             imports: [DashboardComponent],
             providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()]
@@ -57,110 +72,93 @@ describe('DashboardComponent', () => {
         // The options are router links, which navigate through navigateByUrl.
         navigateSpy = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
         fixture = TestBed.createComponent(DashboardComponent);
-        component = fixture.componentInstance;
         fixture.detectChanges();
-    });
+        element = fixture.nativeElement;
+    }
+
+    /** Options shown on the page, with the screen each one opens. */
+    function options(): { title: string; href: string | null }[] {
+        return Array.from(element.querySelectorAll<HTMLAnchorElement>('.mgs-option')).map((option) => ({
+            title: option.querySelector('.mgs-option__title')?.textContent?.trim() ?? '',
+            href: option.getAttribute('href')
+        }));
+    }
+
+    /** Values shown by the key figures, in order. */
+    function figures(): string[] {
+        return Array.from(element.querySelectorAll('.mgs-stat__value')).map((value) => value.textContent?.trim() ?? '');
+    }
 
     afterEach(() => {
+        httpTesting.verify();
         localStorage.removeItem(SESSION_STORAGE_KEY);
     });
 
-    /**
-     * Answers the three figures that the dashboard reads from the backend.
-     */
-    function answerStats(companies: object[], users: object[], forms: object[]): void {
-        httpTesting.expectOne({ method: 'GET', url: `${environment.apiUrl}/companies` }).flush(companies);
-        httpTesting.expectOne({ method: 'GET', url: `${environment.apiUrl}/users` }).flush(users);
-        httpTesting.expectOne({ method: 'GET', url: `${environment.apiUrl}/forms/active` }).flush(forms);
-        fixture.detectChanges();
+    for (const role of ['ADMIN', 'ERGONOMIST'] as const) {
+        describe(`perfil ${role}`, () => {
+            beforeEach(() => {
+                openAs(role);
+                if (role === 'ADMIN') {
+                    httpTesting.expectOne(SUMMARY_URL).flush({ scheduledAppointments: 3, activeCompanies: 2, activeUsers: 4, activeForms: 1 });
+                    fixture.detectChanges();
+                }
+            });
+
+            it('saluda con el primer nombre del usuario de la sesión', () => {
+                expect(element.querySelector('.mgs-impact__title')?.textContent).toContain('Ana.');
+            });
+
+            it('muestra las cinco opciones del perfil, cada una con la pantalla que corresponde a su nombre', () => {
+                const expected = EXPECTED_ROUTES[role];
+                expect(options().map((option) => option.title)).toEqual(Object.keys(expected));
+                for (const option of options()) {
+                    expect(option.href).withContext(option.title).toBe(expected[option.title]);
+                }
+            });
+
+            it('solo apunta a pantallas registradas en las rutas de la aplicación', () => {
+                const urls = layoutUrls();
+                for (const option of options()) {
+                    expect(urls).withContext(option.title).toContain(option.href!);
+                }
+            });
+
+            it('abre la pantalla de cada opción al hacer clic', () => {
+                const first = element.querySelector<HTMLAnchorElement>('.mgs-option')!;
+                first.click();
+                expect(navigateSpy).toHaveBeenCalled();
+                expect(navigateSpy.calls.mostRecent().args[0].toString()).toBe('/forms');
+            });
+        });
     }
 
-    /**
-     * Reads the value shown by a figure.
-     *
-     * @param label label of the figure
-     * @returns text of the figure without the label
-     */
-    function statText(label: string): string {
-        const card: HTMLElement = fixture.nativeElement.querySelector(`[data-stat="${label}"]`);
-        return card.textContent!.replace(label, '').trim();
-    }
-
-    describe('opciones', () => {
-        it('muestra las cinco opciones del perfil administrador', () => {
-            expect(component.functionCards.map((card) => card.title)).toEqual(Object.keys(EXPECTED_ROUTES));
+    describe('indicadores del administrador', () => {
+        it('lee las cifras del resumen del backend', () => {
+            openAs('ADMIN');
+            httpTesting.expectOne(SUMMARY_URL).flush({ scheduledAppointments: 3, activeCompanies: 2, activeUsers: 4, activeForms: 1 });
+            fixture.detectChanges();
+            expect(figures()).toEqual(['3', '2', '4', '1']);
         });
 
-        it('asigna cada opción a la pantalla que corresponde a su nombre', () => {
-            for (const card of component.functionCards) {
-                expect(card.route).withContext(card.title).toBe(EXPECTED_ROUTES[card.title]);
-            }
-        });
-
-        it('solo apunta a pantallas registradas en las rutas de la aplicación', () => {
-            const urls = layoutUrls();
-            for (const card of component.functionCards.filter((option) => option.route !== null)) {
-                expect(urls).withContext(card.title).toContain(card.route!);
-            }
-        });
-
-        it('abre la pantalla de cada opción al hacer clic', () => {
-            for (const card of component.functionCards.filter((option) => option.route !== null)) {
-                navigateSpy.calls.reset();
-                const option: HTMLAnchorElement = fixture.nativeElement.querySelector(`[data-card="${card.title}"]`);
-                option.click();
-
-                expect(option.getAttribute('href')).withContext(card.title).toBe(card.route);
-                expect(navigateSpy).withContext(card.title).toHaveBeenCalledTimes(1);
-                expect(navigateSpy.calls.mostRecent().args[0].toString()).withContext(card.title).toBe(card.route!);
-            }
-        });
-
-        it('marca como Próximamente la opción sin función en el backend y no navega', () => {
-            const reports: HTMLAnchorElement = fixture.nativeElement.querySelector('[data-card="Reportes"]');
-            reports.click();
-
-            expect(navigateSpy).not.toHaveBeenCalled();
-            expect(reports.hasAttribute('href')).toBeFalse();
-            expect(reports.getAttribute('aria-disabled')).toBe('true');
-            expect(reports.textContent).toContain('Próximamente');
+        it('muestra un guion cuando el backend responde con error, sin inventar cifras', () => {
+            openAs('ADMIN');
+            httpTesting.expectOne(SUMMARY_URL).flush(null, { status: 500, statusText: 'Server Error' });
+            fixture.detectChanges();
+            expect(figures()).toEqual(['—', '—', '—', '—']);
         });
     });
 
-    describe('estadísticas', () => {
-        it('saluda con el nombre del usuario de la sesión', () => {
-            expect(fixture.nativeElement.querySelector('.mgs-title').textContent).toContain('Admin.');
+    describe('ergonomista', () => {
+        it('no muestra los indicadores ni los pide al backend, que solo los da al administrador', () => {
+            openAs('ERGONOMIST');
+            httpTesting.expectNone(SUMMARY_URL);
+            expect(element.querySelector('.mgs-stats')).toBeNull();
+            expect(element.querySelector('.mgs-impact__eyebrow')?.textContent).toContain('Panel del ergonomista');
         });
 
-        it('lee cada cifra de su endpoint y cuenta solo los registros activos', () => {
-            answerStats(
-                [{ active: true }, { active: true }, { active: false }],
-                [{ active: true }, { active: false }],
-                [{ active: true }, { active: true }, { active: true }]
-            );
-
-            expect(statText('Clientes activos')).toBe('2');
-            expect(statText('Usuarios activos')).toBe('1');
-            expect(statText('Formularios activos')).toBe('3');
-        });
-
-        it('muestra No disponible cuando el backend responde con error', () => {
-            const error = { status: 500, statusText: 'Internal Server Error' };
-            httpTesting.expectOne(`${environment.apiUrl}/companies`).flush(null, error);
-            httpTesting.expectOne(`${environment.apiUrl}/users`).flush(null, error);
-            httpTesting.expectOne(`${environment.apiUrl}/forms/active`).flush(null, error);
-            fixture.detectChanges();
-
-            expect(statText('Clientes activos')).toBe('No disponible');
-            expect(statText('Usuarios activos')).toBe('No disponible');
-            expect(statText('Formularios activos')).toBe('No disponible');
-        });
-
-        it('no inventa las citas programadas, que no tienen endpoint en el backend', () => {
-            answerStats([], [], []);
-
-            httpTesting.verify();
-            expect(statText('Citas programadas')).toBe('No disponible');
+        it('no ofrece la gestión de usuarios', () => {
+            openAs('ERGONOMIST');
+            expect(options().map((option) => option.title)).not.toContain('Gestión de usuarios');
         });
     });
 });

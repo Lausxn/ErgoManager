@@ -11,7 +11,6 @@ import { FormRequest, FormResendResponse, FormResponse } from '../../shared/mode
 @Injectable({ providedIn: 'root' })
 export class FormService {
     private readonly http = inject(HttpClient);
-
     private readonly baseUrl = `${environment.apiUrl}/forms`;
 
     /**

@@ -27,10 +27,7 @@ import { BrandLogoComponent } from '../brand-logo/brand-logo.component';
 export class StatusPageComponent {
     /** Short label shown above the title, such as the status code. */
     readonly code = input.required<string>();
-
     readonly title = input.required<string>();
-
     readonly message = input.required<string>();
-
     readonly actionLabel = input<string>('Volver al inicio');
 }

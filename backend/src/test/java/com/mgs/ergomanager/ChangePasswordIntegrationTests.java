@@ -55,19 +55,13 @@ class ChangePasswordIntegrationTests {
 
     @Value("${ergomanager.security.jwt.secret}")
     private String jwtSecret;
-
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
-
     private MockMvc mockMvc;
-
     private User user;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders
-                .webAppContextSetup(context)
-                .apply(springSecurity())
-                .build();
+        mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
 
         userRepository.deleteAll();
         user = createUser(EMAIL, Role.ADMIN);
@@ -98,19 +92,11 @@ class ChangePasswordIntegrationTests {
 
         User stored = storedUser();
 
-        assertThat(stored.getPassword())
-                .startsWith("$2")
-                .isNotEqualTo(NEW_PASSWORD);
+        assertThat(stored.getPassword()).startsWith("$2").isNotEqualTo(NEW_PASSWORD);
 
-        assertThat(passwordEncoder.matches(
-                NEW_PASSWORD,
-                stored.getPassword()))
-                .isTrue();
+        assertThat(passwordEncoder.matches(NEW_PASSWORD, stored.getPassword())).isTrue();
 
-        assertThat(passwordEncoder.matches(
-                CURRENT_PASSWORD,
-                stored.getPassword()))
-                .isFalse();
+        assertThat(passwordEncoder.matches(CURRENT_PASSWORD, stored.getPassword())).isFalse();
 
         assertThat(stored.getTokenVersion()).isEqualTo(1);
         assertThat(stored.getEmail()).isEqualTo(EMAIL);
@@ -122,30 +108,17 @@ class ChangePasswordIntegrationTests {
 
         assertThat(newToken).isNotEqualTo(oldToken);
 
-        Number expiresAt = JsonPath.read(
-                response,
-                "$.expiresAtMs");
+        Number expiresAt = JsonPath.read(response, "$.expiresAtMs");
 
-        assertThat(expiresAt.longValue())
-                .isGreaterThan(System.currentTimeMillis());
+        assertThat(expiresAt.longValue()).isGreaterThan(System.currentTimeMillis());
 
-        change(
-                oldToken,
-                NEW_PASSWORD,
-                "ThirdPassword3!")
-                .andExpect(status().isUnauthorized());
+        change(oldToken, NEW_PASSWORD, "ThirdPassword3!").andExpect(status().isUnauthorized());
 
-        change(
-                newToken,
-                NEW_PASSWORD,
-                "ThirdPassword3!")
-                .andExpect(status().isOk());
+        change(newToken, NEW_PASSWORD, "ThirdPassword3!").andExpect(status().isOk());
 
-        loginRequest(CURRENT_PASSWORD)
-                .andExpect(status().isUnauthorized());
+        loginRequest(CURRENT_PASSWORD).andExpect(status().isUnauthorized());
 
-        loginRequest(NEW_PASSWORD)
-                .andExpect(status().isUnauthorized());
+        loginRequest(NEW_PASSWORD).andExpect(status().isUnauthorized());
 
         login("ThirdPassword3!");
     }
@@ -153,11 +126,7 @@ class ChangePasswordIntegrationTests {
     @ParameterizedTest
     @ValueSource(strings = {"", "not-a-jwt"})
     void requiresValidAuthentication(String token) throws Exception {
-        change(
-                token,
-                CURRENT_PASSWORD,
-                NEW_PASSWORD)
-                .andExpect(status().isUnauthorized());
+        change(token, CURRENT_PASSWORD, NEW_PASSWORD).andExpect(status().isUnauthorized());
 
         assertUnchanged();
     }
@@ -176,28 +145,18 @@ class ChangePasswordIntegrationTests {
     }
 
     @Test
-    void rejectsWrongCurrentPasswordWithoutSigningOut()
-            throws Exception {
-
+    void rejectsWrongCurrentPasswordWithoutSigningOut() throws Exception {
         String token = login(CURRENT_PASSWORD);
         change(token, "Incorrect1!", NEW_PASSWORD).andExpect(status().isBadRequest())
                 .andExpect(jsonPath("message").value("La contraseña actual es incorrecta."));
         assertUnchanged();
 
-        change(
-                token,
-                CURRENT_PASSWORD,
-                NEW_PASSWORD)
-                .andExpect(status().isOk());
+        change(token, CURRENT_PASSWORD, NEW_PASSWORD).andExpect(status().isOk());
     }
 
     @Test
     void rejectsReusingCurrentPassword() throws Exception {
-        change(
-                login(CURRENT_PASSWORD),
-                CURRENT_PASSWORD,
-                CURRENT_PASSWORD)
-                .andExpect(status().isBadRequest());
+        change(login(CURRENT_PASSWORD), CURRENT_PASSWORD, CURRENT_PASSWORD).andExpect(status().isBadRequest());
 
         assertUnchanged();
     }
@@ -214,7 +173,6 @@ class ChangePasswordIntegrationTests {
     })
     void rejectsWeakPasswords(String newPassword)
             throws Exception {
-
         change(
                 login(CURRENT_PASSWORD),
                 CURRENT_PASSWORD,
@@ -235,7 +193,6 @@ class ChangePasswordIntegrationTests {
     })
     void rejectsMissingPasswords(String body)
             throws Exception {
-
         mockMvc.perform(
                 put("/api/auth/password")
                         .header(
@@ -249,52 +206,28 @@ class ChangePasswordIntegrationTests {
     }
 
     @Test
-    void enforcesBcryptByteLimitForUnicodePasswords()
-            throws Exception {
-
+    void enforcesBcryptByteLimitForUnicodePasswords() throws Exception {
         String token = login(CURRENT_PASSWORD);
 
-        change(
-                token,
-                CURRENT_PASSWORD,
-                "Áa1!" + "ñ".repeat(34))
-                .andExpect(status().isBadRequest());
+        change(token, CURRENT_PASSWORD, "Áa1!" + "ñ".repeat(34)).andExpect(status().isBadRequest());
 
-        change(
-                token,
-                CURRENT_PASSWORD,
-                "Aa1!" + "x".repeat(69))
-                .andExpect(status().isBadRequest());
+        change(token, CURRENT_PASSWORD, "Aa1!" + "x".repeat(69)).andExpect(status().isBadRequest());
 
-        change(
-                token,
-                "ñ".repeat(40),
-                NEW_PASSWORD)
-                .andExpect(status().isBadRequest());
+        change(token, "ñ".repeat(40), NEW_PASSWORD).andExpect(status().isBadRequest());
 
         assertUnchanged();
 
-        String boundaryPassword =
-                "Áa1!" + "ñ".repeat(33) + "x";
+        String boundaryPassword = "Áa1!" + "ñ".repeat(33) + "x";
 
-        assertThat(
-                boundaryPassword.getBytes(
-                        StandardCharsets.UTF_8))
-                .hasSize(72);
+        assertThat(boundaryPassword.getBytes(StandardCharsets.UTF_8)).hasSize(72);
 
-        change(
-                token,
-                CURRENT_PASSWORD,
-                boundaryPassword)
-                .andExpect(status().isOk());
+        change(token, CURRENT_PASSWORD, boundaryPassword).andExpect(status().isOk());
 
         login(boundaryPassword);
     }
 
     @Test
-    void changesOnlyAuthenticatedUserEvenWhenAnotherIdentityIsSupplied()
-            throws Exception {
-
+    void changesOnlyAuthenticatedUserEvenWhenAnotherIdentityIsSupplied() throws Exception {
         User other = createUser(
                 "other@example.com",
                 Role.ERGONOMIST);
@@ -321,36 +254,22 @@ class ChangePasswordIntegrationTests {
                 .andExpect(jsonPath("mustChangePassword")
                         .value(false));
 
-        User unchanged =
-                userRepository
-                        .findById(other.getId())
-                        .orElseThrow();
+        User unchanged = userRepository.findById(other.getId()).orElseThrow();
 
-        assertThat(unchanged.getPassword())
-                .isEqualTo(other.getPassword());
+        assertThat(unchanged.getPassword()).isEqualTo(other.getPassword());
 
-        assertThat(unchanged.getTokenVersion())
-                .isZero();
+        assertThat(unchanged.getTokenVersion()).isZero();
 
-        assertThat(unchanged.isMustChangePassword())
-                .isTrue();
+        assertThat(unchanged.isMustChangePassword()).isTrue();
 
-        assertThat(passwordEncoder.matches(
-                NEW_PASSWORD,
-                storedUser().getPassword()))
-                .isTrue();
+        assertThat(passwordEncoder.matches(NEW_PASSWORD, storedUser().getPassword())).isTrue();
 
-        assertThat(storedUser().isMustChangePassword())
-                .isFalse();
+        assertThat(storedUser().isMustChangePassword()).isFalse();
     }
 
     @Test
-    void acceptsTask77TokenOnlyUntilFirstPasswordChange()
-            throws Exception {
-
-        String token = legacyToken(
-                new Date(
-                        System.currentTimeMillis() + 60000));
+    void acceptsTask77TokenOnlyUntilFirstPasswordChange() throws Exception {
+        String token = legacyToken(new Date(System.currentTimeMillis() + 60000));
 
         change(
                 token,
@@ -360,49 +279,33 @@ class ChangePasswordIntegrationTests {
                 .andExpect(jsonPath("mustChangePassword")
                         .value(false));
 
-        assertThat(storedUser().isMustChangePassword())
-                .isFalse();
+        assertThat(storedUser().isMustChangePassword()).isFalse();
 
-        change(
-                token,
-                NEW_PASSWORD,
-                "ThirdPassword3!")
-                .andExpect(status().isUnauthorized());
+        change(token, NEW_PASSWORD, "ThirdPassword3!").andExpect(status().isUnauthorized());
 
         login(NEW_PASSWORD);
     }
 
     @Test
-    void rejectsInactiveUserWithPreviouslyIssuedToken()
-            throws Exception {
-
+    void rejectsInactiveUserWithPreviouslyIssuedToken() throws Exception {
         String token = login(CURRENT_PASSWORD);
 
         user.setActive(false);
         userRepository.saveAndFlush(user);
 
-        change(
-                token,
-                CURRENT_PASSWORD,
-                NEW_PASSWORD)
-                .andExpect(status().isUnauthorized());
+        change(token, CURRENT_PASSWORD, NEW_PASSWORD).andExpect(status().isUnauthorized());
 
         assertUnchanged();
     }
 
-    private User createUser(
-            String email,
-            Role role) {
-
+    private User createUser(String email, Role role) {
         User created = new User();
 
         created.setFirstName("Test");
         created.setFirstLastName("User");
         created.setEmail(email);
 
-        created.setPassword(
-                passwordEncoder.encode(
-                        CURRENT_PASSWORD));
+        created.setPassword(passwordEncoder.encode(CURRENT_PASSWORD));
 
         created.setRole(role);
 
@@ -410,27 +313,20 @@ class ChangePasswordIntegrationTests {
     }
 
     private User storedUser() {
-        return userRepository
-                .findById(user.getId())
-                .orElseThrow();
+        return userRepository.findById(user.getId()).orElseThrow();
     }
 
     private void assertUnchanged() {
         User stored = storedUser();
 
-        assertThat(stored.getPassword())
-                .isEqualTo(user.getPassword());
+        assertThat(stored.getPassword()).isEqualTo(user.getPassword());
 
-        assertThat(stored.getTokenVersion())
-                .isZero();
+        assertThat(stored.getTokenVersion()).isZero();
 
-        assertThat(stored.isMustChangePassword())
-                .isTrue();
+        assertThat(stored.isMustChangePassword()).isTrue();
     }
 
-    private ResultActions loginRequest(String password)
-            throws Exception {
-
+    private ResultActions loginRequest(String password) throws Exception {
         return mockMvc.perform(
                 post("/api/auth/login")
                         .contentType(
@@ -444,26 +340,13 @@ class ChangePasswordIntegrationTests {
                                                 password))));
     }
 
-    private String login(String password)
-            throws Exception {
+    private String login(String password) throws Exception {
+        String body = loginRequest(password).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 
-        String body = loginRequest(password)
-                .andExpect(status().isOk())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        return JsonPath.read(
-                body,
-                "$.token");
+        return JsonPath.read(body, "$.token");
     }
 
-    private ResultActions change(
-            String token,
-            String currentPassword,
-            String newPassword)
-            throws Exception {
-
+    private ResultActions change(String token, String currentPassword, String newPassword) throws Exception {
         var request = put("/api/auth/password")
                 .contentType(
                         MediaType.APPLICATION_JSON)
@@ -476,9 +359,7 @@ class ChangePasswordIntegrationTests {
                                         newPassword)));
 
         if (!token.isEmpty()) {
-            request.header(
-                    "Authorization",
-                    "Bearer " + token);
+            request.header("Authorization", "Bearer " + token);
         }
 
         return mockMvc.perform(request);

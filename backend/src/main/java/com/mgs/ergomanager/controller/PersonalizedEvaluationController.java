@@ -29,7 +29,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class PersonalizedEvaluationController {
 
     private static final String REPORT_FILE_PREFIX = "personalized-evaluation-";
-
     private final PersonalizedEvaluationService personalizedEvaluationService;
 
     /**

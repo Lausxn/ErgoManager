@@ -12,7 +12,6 @@ import { AppointmentRequest, AppointmentResponse, AvailabilityRequest, Availabil
 @Injectable({ providedIn: 'root' })
 export class AppointmentService {
     private readonly http = inject(HttpClient);
-
     private readonly baseUrl = `${environment.apiUrl}/appointments`;
 
     /**

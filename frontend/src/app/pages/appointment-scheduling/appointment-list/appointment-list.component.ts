@@ -1,7 +1,4 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { ConfirmationService } from 'primeng/api';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, input, numberAttribute, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -19,8 +16,6 @@ import { TooltipModule } from 'primeng/tooltip';
 import { AuthService } from '../../../core/services/auth.service';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
-import { AppointmentResponse } from '../../../shared/models/appointment.model';
-import { ToastService } from '../../../shared/services/toast.service';
 import { StatCardComponent } from '../../../shared/components/stat-card/stat-card.component';
 import { AppointmentResponse, AvailabilityResponse } from '../../../shared/models/appointment.model';
 import { UserResponse } from '../../../shared/models/user.model';
@@ -88,23 +83,15 @@ interface AppointmentRow extends AppointmentResponse {
 })
 export class AppointmentListComponent implements OnInit {
     private readonly appointmentService = inject(AppointmentService);
-
     private readonly userService = inject(UserService);
-
     private readonly authService = inject(AuthService);
-
     private readonly dialogService = inject(DialogService);
-
     private readonly toastService = inject(ToastService);
-
     private readonly router = inject(Router);
-
     private readonly destroyRef = inject(DestroyRef);
 
     /** Ergonomist to show first, from the ?userId= query parameter (administrator only). */
     readonly userId = input<number | undefined, unknown>(undefined, { transform: numberAttribute });
-
-    private readonly toastService = inject(ToastService);
     protected readonly isAdmin = computed(() => this.authService.session()?.role === 'ADMIN');
 
     protected readonly periodOptions: { label: string; value: Period }[] = [
@@ -114,36 +101,22 @@ export class AppointmentListComponent implements OnInit {
     ];
 
     protected readonly skeletonRows = SKELETON_ROWS;
-
     protected readonly period = signal<Period>('NEXT_7');
-
     protected readonly ergonomists = signal<ErgonomistOption[]>([]);
-
     protected readonly isLoadingErgonomists = signal(false);
-
     protected readonly ergonomistError = signal<string | null>(null);
-
     protected readonly selectedErgonomistId = signal<number | null>(null);
-
     private readonly appointments = signal<AppointmentResponse[]>([]);
-
     protected readonly isLoading = signal(true);
-
     protected readonly loadError = signal<string | null>(null);
-
     private readonly slots = signal<AvailabilityResponse[]>([]);
-
     protected readonly isLoadingSlots = signal(true);
-
     protected readonly slotError = signal<string | null>(null);
 
     /** False when the period is in the past, where there are no free slots to offer. */
     protected readonly periodHasFuture = computed(() => PERIOD_DAYS[this.period()] > 0);
-
     protected readonly deletingSlotId = signal<number | null>(null);
-
     protected readonly cancellingId = signal<number | null>(null);
-
     protected readonly isBookingOpen = signal(false);
 
     /** Range of the last load, used to decide whether a booked appointment belongs to it. */
@@ -191,7 +164,6 @@ export class AppointmentListComponent implements OnInit {
     });
 
     protected readonly slotCount = computed(() => this.slots().length);
-
     protected readonly slotDays = computed(() => groupSlotsByDay(this.slots()).map((day) => ({ ...day, slots: day.slots.map((slot) => ({ ...slot, duration: formatDuration(minutesBetween(slot.startDateTime, slot.endDateTime)) })) })));
 
     /** Self evaluations that already hold a pending appointment, so the dialog can warn about them. */
@@ -213,15 +185,6 @@ export class AppointmentListComponent implements OnInit {
         this.reload();
     }
 
-    /**
-     * Reads the appointments of the signed in ergonomist.
-     */
-    protected loadAgenda(): void {
-        const userId = this.authService.session()?.userId;
-
-        if (userId === undefined) {
-            this.isLoading.set(false);
-            this.toastService.warning('No se pudo identificar el usuario', 'Inicie sesión nuevamente.');
     /** Reads the active ergonomists the administrator can choose from. */
     protected loadErgonomists(): void {
         this.isLoadingErgonomists.set(true);
@@ -279,16 +242,6 @@ export class AppointmentListComponent implements OnInit {
 
         this.agendaRequest?.unsubscribe();
         this.isLoading.set(true);
-
-        this.appointmentService.findAgenda(userId, from.toISOString(), to.toISOString()).subscribe({
-            next: (appointmentList) => {
-                this.appointmentList.set(appointmentList);
-                this.isLoading.set(false);
-            },
-            error: () => {
-                this.isLoading.set(false);
-                this.toastService.error('No se pudo cargar la agenda', 'Verifique la conexión con el servicio e intente nuevamente.');
-            }
         this.loadError.set(null);
         this.agendaRequest = this.appointmentService
             .findAgenda(userId, toLocalDateTime(this.range.from), toLocalDateTime(this.range.to))
@@ -411,25 +364,6 @@ export class AppointmentListComponent implements OnInit {
      *
      * @param slot slot to remove
      */
-    protected confirmCancel(appointment: AppointmentResponse): void {
-        this.confirmationService.confirm({
-            header: 'Cancelar cita',
-            message: `¿Desea cancelar la cita de ${appointment.employeeName}? El espacio quedará libre de nuevo.`,
-            icon: 'pi pi-exclamation-triangle',
-            acceptLabel: 'Cancelar cita',
-            rejectLabel: 'Volver',
-            rejectButtonProps: {
-                severity: 'secondary',
-                outlined: true
-            },
-            accept: () =>
-                this.appointmentService.cancel(appointment.id).subscribe({
-                    next: () => {
-                        this.toastService.success('Cita cancelada', appointment.employeeName);
-                        this.loadAgenda();
-                    },
-                    error: () => this.toastService.error('No se pudo cancelar la cita', 'Intente nuevamente en unos minutos.')
-                })
     protected async confirmDeleteSlot(slot: AvailabilityResponse): Promise<void> {
         if (this.deletingSlotId() !== null) {
             return;

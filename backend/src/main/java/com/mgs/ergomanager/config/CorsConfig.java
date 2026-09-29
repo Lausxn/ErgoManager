@@ -16,11 +16,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class CorsConfig {
 
     private static final String API_PATH_PATTERN = "/api/**";
-
     private static final List<String> ALLOWED_METHODS = List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS");
-
     private static final long MAX_AGE_SECONDS = 3600L;
-
     private final List<String> allowedOrigins;
 
     /**

@@ -47,7 +47,6 @@ class UserRoleIntegrationTest {
     private PasswordEncoder passwordEncoder;
     @Value("${ergomanager.security.jwt.secret}")
     private String jwtSecret;
-
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
     private User admin;
     private User target;
