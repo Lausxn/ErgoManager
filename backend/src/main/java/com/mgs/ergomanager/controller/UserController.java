@@ -73,26 +73,23 @@ public class UserController {
     }
 
     /**
-     * Updates the data of an existing user. The password is optional: when it
-     * is omitted the current one is kept.
+     * Updates the data and the role of an existing user. The password is not
+     * edited here; each user replaces their own one.
      *
-     * @param id        identifier of the user
-     * @param request   new data of the user
-     * @param principal signed in administrator
+     * @param id      identifier of the user
+     * @param request new data of the user
      * @return the updated user
      */
     @PutMapping("/{id}")
-    public ResponseEntity<UserResponseDTO> update(@PathVariable Long id,
-                                                  @Valid @RequestBody UserUpdateRequestDTO request,
-                                                  Principal principal) {
-        return ResponseEntity.ok(userService.update(id, request, principal.getName()));
+    public ResponseEntity<UserResponseDTO> update(@PathVariable Long id, @Valid @RequestBody UserUpdateRequestDTO request) {
+        return ResponseEntity.ok(userService.update(id, request));
     }
 
     /**
      * Deactivates a user so it can no longer sign in.
      *
      * @param id        identifier of the user
-     * @param principal signed in administrator
+     * @param principal authenticated administrator, who cannot deactivate themselves
      * @return empty response with HTTP status 204
      */
     @DeleteMapping("/{id}")

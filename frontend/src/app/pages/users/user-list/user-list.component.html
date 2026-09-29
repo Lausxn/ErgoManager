@@ -82,7 +82,7 @@
                         <div class="mgs-row-actions">
                             <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="secondary" [routerLink]="['/users', row.id]" pTooltip="Editar" tooltipPosition="top" ariaLabel="Editar usuario" />
                             @if (row.canDeactivate) {
-                                <p-button icon="pi pi-ban" [rounded]="true" [text]="true" (onClick)="confirmDeactivate(row)" pTooltip="Desactivar" tooltipPosition="top" ariaLabel="Desactivar usuario" />
+                                <p-button icon="pi pi-ban" [rounded]="true" [text]="true" (onClick)="goToDeactivateConfirmation(row)" pTooltip="Desactivar" tooltipPosition="top" ariaLabel="Desactivar usuario" />
                             } @else if (!row.active) {
                                 <p-button icon="pi pi-replay" [rounded]="true" [text]="true" severity="secondary" (onClick)="activate(row)" pTooltip="Reactivar" tooltipPosition="top" ariaLabel="Reactivar usuario" />
                             }

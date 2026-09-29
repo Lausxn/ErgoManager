@@ -34,26 +34,26 @@ public interface UserService {
     UserResponseDTO create(UserRequestDTO request);
 
     /**
-     * Updates the data of an existing user. A new password is hashed and
-     * revokes the sessions of the user; a missing password keeps the current one.
+     * Updates the data and the role of an existing user. The password is not
+     * edited here. Changing the role revokes the sessions of the user.
      *
-     * @param id          identifier of the user
-     * @param request     new data of the user
-     * @param actorEmail  email of the administrator performing the change
+     * @param id      identifier of the user
+     * @param request new data of the user
      * @return the updated user
      */
-    UserResponseDTO update(Long id, UserUpdateRequestDTO request, String actorEmail);
+    UserResponseDTO update(Long id, UserUpdateRequestDTO request);
 
     /**
-     * Deactivates a user so it can no longer sign in, and revokes their sessions.
+     * Deactivates a user so it can no longer sign in, keeping the row.
      *
-     * @param id         identifier of the user
-     * @param actorEmail email of the administrator performing the change
+     * @param id               identifier of the user
+     * @param currentUserEmail email of the administrator making the request
      */
-    void deactivate(Long id, String actorEmail);
+    void deactivate(Long id, String currentUserEmail);
 
     /**
-     * Activates a user that had been deactivated.
+     * Activates a user that had been deactivated. The sessions revoked by the
+     * deactivation stay revoked: the user has to sign in again.
      *
      * @param id identifier of the user
      * @return the activated user

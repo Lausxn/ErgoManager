@@ -1,4 +1,4 @@
-<app-page-header eyebrow="Gestión de usuarios" [title]="isEditing() ? 'Editar usuario' : 'Creación de usuario'" subtitle="Datos para identificar a la persona, su acceso y su rol dentro de ErgoManager.">
+<app-page-header eyebrow="Gestión de usuarios" title="Creación de usuario" subtitle="Datos para identificar a la persona, su acceso y su rol dentro de ErgoManager.">
     <p-button label="Volver a usuarios" icon="pi pi-arrow-left" severity="secondary" [text]="true" routerLink="/users" />
 </app-page-header>
 
@@ -11,49 +11,31 @@
                     <p class="mgs-section-lead">Tal como aparecerán en la agenda y en los reportes.</p>
                 </div>
             </div>
-            @if (isLoading()) {
-                <div class="mgs-form-grid">
-                    <p-skeleton height="3.5rem" styleClass="col-span-12" />
-                    <p-skeleton height="3.5rem" styleClass="col-span-6" />
-                    <p-skeleton height="3.5rem" styleClass="col-span-6" />
-                </div>
-            } @else {
-                <div class="mgs-form-grid">
-                    <app-form-field label="Nombre" inputId="firstName" [control]="userForm.controls.firstName">
-                        <input pInputText id="firstName" formControlName="firstName" [maxlength]="limits.name" autocomplete="given-name" placeholder="Ej. María Fernanda" />
-                    </app-form-field>
-                    <app-form-field label="Primer apellido" inputId="firstLastName" [control]="userForm.controls.firstLastName" [half]="true">
-                        <input pInputText id="firstLastName" formControlName="firstLastName" [maxlength]="limits.name" autocomplete="family-name" placeholder="Ej. Madrigal" />
-                    </app-form-field>
-                    <app-form-field label="Segundo apellido" inputId="secondLastName" [control]="userForm.controls.secondLastName" [half]="true" [optional]="true">
-                        <input pInputText id="secondLastName" formControlName="secondLastName" [maxlength]="limits.name" placeholder="Ej. Solano" />
-                    </app-form-field>
-                </div>
-            }
+            <div class="mgs-form-grid">
+                <app-form-field label="Nombre" inputId="firstName" [control]="userForm.controls.firstName">
+                    <input pInputText id="firstName" formControlName="firstName" [maxlength]="limits.name" autocomplete="given-name" placeholder="Ej. María Fernanda" />
+                </app-form-field>
+                <app-form-field label="Primer apellido" inputId="firstLastName" [control]="userForm.controls.firstLastName" [half]="true">
+                    <input pInputText id="firstLastName" formControlName="firstLastName" [maxlength]="limits.name" autocomplete="family-name" placeholder="Ej. Madrigal" />
+                </app-form-field>
+                <app-form-field label="Segundo apellido" inputId="secondLastName" [control]="userForm.controls.secondLastName" [half]="true" [optional]="true">
+                    <input pInputText id="secondLastName" formControlName="secondLastName" [maxlength]="limits.name" placeholder="Ej. Solano" />
+                </app-form-field>
+            </div>
         </section>
 
         <section class="mgs-card">
             <div class="mgs-card-header">
                 <div>
                     <h2 class="mgs-section-title">Acceso</h2>
-                    <p class="mgs-section-lead">
-                        @if (isEditing()) {
-                            Deje la contraseña vacía para conservar la actual. Si la cambia, se cerrarán las sesiones abiertas de la persona.
-                        } @else {
-                            Al crear la cuenta enviaremos al correo el usuario y la contraseña temporal.
-                        }
-                    </p>
+                    <p class="mgs-section-lead">Al crear la cuenta enviaremos al correo el usuario y la contraseña temporal.</p>
                 </div>
             </div>
             <div class="mgs-form-grid">
                 <app-form-field label="Correo electrónico" inputId="email" [control]="userForm.controls.email" [errors]="emailErrors" hint="Es el usuario con el que inicia sesión.">
-                    @if (isLoading()) {
-                        <p-skeleton height="2.6rem" />
-                    } @else {
-                        <input pInputText id="email" type="email" formControlName="email" [maxlength]="limits.email" autocomplete="off" placeholder="nombre@empresa.com" />
-                    }
+                    <input pInputText id="email" type="email" formControlName="email" [maxlength]="limits.email" autocomplete="off" placeholder="nombre@empresa.com" />
                 </app-form-field>
-                <app-form-field [label]="isEditing() ? 'Nueva contraseña' : 'Contraseña temporal'" inputId="password" [control]="userForm.controls.password" [errors]="passwordErrors" [half]="true" [optional]="isEditing()">
+                <app-form-field label="Contraseña temporal" inputId="password" [control]="userForm.controls.password" [errors]="passwordErrors" [half]="true">
                     <p-password inputId="password" formControlName="password" [feedback]="false" [toggleMask]="true" [fluid]="true" autocomplete="new-password" />
                 </app-form-field>
                 <app-form-field label="Confirmar contraseña" inputId="confirmPassword" [control]="userForm.controls.confirmPassword" [half]="true">
@@ -69,19 +51,13 @@
             <div class="mgs-card-header">
                 <div>
                     <h2 class="mgs-section-title">Rol</h2>
-                    <p class="mgs-section-lead">
-                        @if (isOwnAccount()) {
-                            No puede cambiar el rol de su propia cuenta.
-                        } @else {
-                            Define qué puede hacer la persona dentro de ErgoManager.
-                        }
-                    </p>
+                    <p class="mgs-section-lead">Define qué puede hacer la persona dentro de ErgoManager.</p>
                 </div>
             </div>
             <div class="mgs-form-grid" role="radiogroup" aria-label="Rol del usuario">
                 @for (choice of roleChoices; track choice.value) {
-                    <label class="mgs-field mgs-field--half mgs-choice" [class.mgs-choice--selected]="preview().role === choice.value" [class.opacity-60]="isOwnAccount()" [for]="'role-' + choice.value">
-                        <p-radiobutton [inputId]="'role-' + choice.value" formControlName="role" [value]="choice.value" [disabled]="isOwnAccount()" />
+                    <label class="mgs-field mgs-field--half mgs-choice" [class.mgs-choice--selected]="preview().role === choice.value" [for]="'role-' + choice.value">
+                        <p-radiobutton [inputId]="'role-' + choice.value" formControlName="role" [value]="choice.value" />
                         <i [class]="choice.icon + ' mgs-choice__icon'" aria-hidden="true"></i>
                         <span class="flex flex-col gap-1">
                             <span class="font-semibold">{{ roleLabels[choice.value] }}</span>
@@ -94,43 +70,29 @@
     </div>
 
     <aside class="mgs-card mgs-sticky flex flex-col gap-6">
-        @if (isLoading()) {
-            <div class="flex flex-col items-center gap-3" aria-hidden="true">
-                <p-skeleton shape="circle" size="4rem" />
-                <p-skeleton width="11rem" height="1.2rem" />
-                <p-skeleton width="13rem" height="0.85rem" />
-                <div class="flex gap-2"><p-skeleton width="6rem" height="1.5rem" borderRadius="999px" /><p-skeleton width="4.5rem" height="1.5rem" borderRadius="999px" /></div>
+        <div class="flex flex-col items-center text-center gap-3">
+            <p-avatar [label]="preview().initials || undefined" [icon]="preview().initials ? undefined : 'pi pi-user'" shape="circle" size="xlarge" styleClass="mgs-avatar" />
+            <div class="min-w-0">
+                <div class="mgs-section-title !m-0">{{ preview().name || 'Nuevo usuario' }}</div>
+                <div class="text-sm text-muted-color break-all">{{ preview().email || 'Sin correo' }}</div>
             </div>
-        } @else {
-            <div class="flex flex-col items-center text-center gap-3">
-                <p-avatar [label]="preview().initials || undefined" [icon]="preview().initials ? undefined : 'pi pi-user'" shape="circle" size="xlarge" styleClass="mgs-avatar" />
-                <div class="min-w-0">
-                    <div class="mgs-section-title !m-0">{{ preview().name || 'Nuevo usuario' }}</div>
-                    <div class="text-sm text-muted-color break-all">{{ preview().email || 'Sin correo' }}</div>
-                </div>
-                <div class="flex flex-wrap justify-center gap-2">
-                    <p-tag [value]="roleLabels[preview().role]" [styleClass]="roleTagClasses[preview().role]" />
-                    @if (storedUser(); as user) {
-                        <p-tag [value]="user.active ? 'Activo' : 'Inactivo'" [styleClass]="user.active ? 'mgs-tag mgs-tag--accent' : 'mgs-tag mgs-tag--muted'" />
-                    }
-                </div>
+            <div class="flex flex-wrap justify-center gap-2">
+                <p-tag [value]="roleLabels[preview().role]" [styleClass]="roleTagClasses[preview().role]" />
             </div>
-        }
+        </div>
 
         <div class="flex flex-col gap-2">
             <div class="flex justify-between items-baseline">
                 <span class="mgs-eyebrow">Datos obligatorios</span>
-                <span class="font-semibold tabular-nums">{{ completedCount() }} de {{ requiredCount() }}</span>
+                <span class="font-semibold tabular-nums">{{ completedCount() }} de {{ requiredCount }}</span>
             </div>
             <p-progressbar [value]="progress()" [showValue]="false" styleClass="h-2" />
         </div>
 
-        @if (!isEditing()) {
-            <div class="mgs-details-note">
-                <i class="fa-regular fa-envelope" aria-hidden="true"></i>
-                <span>La persona recibirá un correo con sus credenciales y deberá cambiar la contraseña al iniciar sesión.</span>
-            </div>
-        }
+        <div class="mgs-details-note">
+            <i class="fa-regular fa-envelope" aria-hidden="true"></i>
+            <span>La persona recibirá un correo con sus credenciales y deberá cambiar la contraseña al iniciar sesión.</span>
+        </div>
     </aside>
 
     @if (errorMessage(); as message) {
@@ -139,12 +101,5 @@
         </div>
     }
 
-    <app-save-bar
-        [tracker]="unsaved"
-        [saving]="isSubmitting()"
-        [message]="isEditing() ? 'Cuidado, tiene cambios sin guardar.' : 'Cuidado, el usuario todavía no se ha creado.'"
-        [discardLabel]="isEditing() ? 'Restablecer' : 'Vaciar campos'"
-        [submitLabel]="isEditing() ? 'Guardar cambios' : 'Crear usuario'"
-        (discarded)="clearError()"
-    />
+    <app-save-bar [tracker]="unsaved" [saving]="isSubmitting()" message="Cuidado, el usuario todavía no se ha creado." discardLabel="Vaciar campos" submitLabel="Crear usuario" (discarded)="clearError()" />
 </form>

@@ -1,11 +1,7 @@
 import { Role } from './role.model';
 
-/**
- * Body sent to POST and PUT /api/users. The supplied temporary password is
- * hashed by the backend and sent to the email of the new user.
- */
-export interface UserRequest {
-    password: string;
+/** Body sent to PUT /api/users/{id}, mirrors UserUpdateRequestDTO. The password is not edited here. */
+export interface UserUpdateRequest {
     firstName: string;
     firstLastName: string;
     secondLastName?: string;
@@ -14,10 +10,12 @@ export interface UserRequest {
 }
 
 /**
- * Body sent to PUT /api/users/{id}. Without a password the stored one is kept;
- * with one, it is replaced and the previous sessions of the user are revoked.
+ * Body sent to POST /api/users, mirrors UserRequestDTO. The supplied temporary
+ * password is hashed by the backend and sent to the email of the new user.
  */
-export type UserUpdateRequest = Omit<UserRequest, 'password'> & { password?: string };
+export interface UserRequest extends UserUpdateRequest {
+    password: string;
+}
 
 /** Administrator or ergonomist returned by /api/users. */
 export interface UserResponse {

@@ -4,15 +4,16 @@ import com.mgs.ergomanager.dto.user.UserRequestDTO;
 import com.mgs.ergomanager.dto.user.UserResponseDTO;
 import com.mgs.ergomanager.dto.user.UserUpdateRequestDTO;
 import com.mgs.ergomanager.event.UserCreatedEvent;
+import com.mgs.ergomanager.exception.BusinessException;
 import com.mgs.ergomanager.exception.DuplicateResourceException;
 import com.mgs.ergomanager.exception.ResourceNotFoundException;
 import com.mgs.ergomanager.model.User;
+import com.mgs.ergomanager.model.enums.Role;
 import com.mgs.ergomanager.repository.UserRepository;
 import com.mgs.ergomanager.service.UserService;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
-import java.nio.charset.StandardCharsets;
-import com.mgs.ergomanager.exception.BusinessException;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,6 +29,10 @@ public class UserServiceImpl implements UserService {
     private static final String USER_NOT_FOUND_MESSAGE = "No se encontró el usuario.";
 
     private static final String DUPLICATE_EMAIL_MESSAGE = "El correo ya está registrado";
+
+    private static final String ONLY_ADMIN_ROLE_MESSAGE = "No se puede cambiar el rol del único administrador activo.";
+
+    private static final String ONLY_ADMIN_DEACTIVATION_MESSAGE = "No se puede desactivar al único administrador activo.";
 
     private static final int BCRYPT_MAX_BYTES = 72;
 
@@ -87,11 +92,10 @@ public class UserServiceImpl implements UserService {
                 .toLowerCase(Locale.ROOT);
 
         if (userRepository.existsByEmail(normalizedEmail)) {
-            throw new DuplicateResourceException(
-                    "El correo ya está registrado");
+            throw new DuplicateResourceException(DUPLICATE_EMAIL_MESSAGE);
         }
 
-        if (request.password().getBytes(StandardCharsets.UTF_8).length > 72) {
+        if (request.password().getBytes(StandardCharsets.UTF_8).length > BCRYPT_MAX_BYTES) {
             throw new BusinessException("La contraseña no puede superar 72 bytes UTF-8.");
         }
 
@@ -127,72 +131,98 @@ public class UserServiceImpl implements UserService {
             return toResponse(createdUser);
 
         } catch (DataIntegrityViolationException exception) {
-            throw new DuplicateResourceException(
-                    "El correo ya está registrado");
+            throw new DuplicateResourceException(DUPLICATE_EMAIL_MESSAGE);
         }
     }
 
     /**
-     * Updates an administrator or ergonomist. The password is only replaced
-     * when the request carries one; in that case the sessions of the user are
-     * revoked. An administrator cannot change their own role.
+     * Updates the data and the role of an administrator or ergonomist. Changing
+     * the role revokes the sessions of the user, and the only active
+     * administrator cannot lose that role.
      *
-     * @param id         identifier of the user
-     * @param request    new data of the user
-     * @param actorEmail email of the administrator performing the change
+     * @param id      identifier of the user
+     * @param request new data of the user
      * @return updated user without exposing the password
      */
     @Override
     @Transactional
-    public UserResponseDTO update(Long id, UserUpdateRequestDTO request, String actorEmail) {
-        User user = getUser(id);
+    public UserResponseDTO update(Long id, UserUpdateRequestDTO request) {
 
-        if (isSameAccount(user, actorEmail) && user.getRole() != request.role()) {
-            throw new BusinessException("No puede cambiar su propio rol.");
-        }
-        if (userRepository.existsByEmailAndIdNot(request.email(), id)) {
-            throw new DuplicateResourceException(DUPLICATE_EMAIL_MESSAGE);
-        }
-        if (request.password() != null
-                && request.password().getBytes(StandardCharsets.UTF_8).length > BCRYPT_MAX_BYTES) {
-            throw new BusinessException("La contraseña no puede superar 72 bytes UTF-8.");
+        User user = userRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE));
+
+        String normalizedEmail = request.email()
+                .trim()
+                .toLowerCase(Locale.ROOT);
+
+        userRepository.findByEmail(normalizedEmail)
+                .filter(existingUser -> !existingUser.getId().equals(id))
+                .ifPresent(existingUser -> {
+                    throw new DuplicateResourceException(DUPLICATE_EMAIL_MESSAGE);
+                });
+
+        boolean changingOnlyActiveAdminRole =
+                user.getRole() == Role.ADMIN
+                        && request.role() == Role.ERGONOMIST
+                        && user.isActive()
+                        && userRepository.countByRoleAndActiveTrue(Role.ADMIN) == 1;
+
+        if (changingOnlyActiveAdminRole) {
+            throw new BusinessException(ONLY_ADMIN_ROLE_MESSAGE);
         }
 
         user.setFirstName(request.firstName());
         user.setFirstLastName(request.firstLastName());
         user.setSecondLastName(request.secondLastName());
-        user.setEmail(request.email());
-        user.setRole(request.role());
-        if (request.password() != null) {
-            user.setPassword(passwordEncoder.encode(request.password()));
+        user.setEmail(normalizedEmail);
+        if (user.getRole() != request.role()) {
             user.setTokenVersion(user.getTokenVersion() + 1);
+            user.setRole(request.role());
         }
 
         try {
-            return toResponse(userRepository.saveAndFlush(user));
+            User updatedUser = userRepository.saveAndFlush(user);
+            return toResponse(updatedUser);
         } catch (DataIntegrityViolationException exception) {
             throw new DuplicateResourceException(DUPLICATE_EMAIL_MESSAGE);
         }
     }
 
     /**
-     * Deactivates a user without deleting the row and revokes their sessions.
-     *
-     * @param id         identifier of the user
-     * @param actorEmail email of the administrator performing the change
+     * Soft deletes the user: the row is kept so its records stay linked, the
+     * account can no longer sign in and its open sessions are revoked.
+     * Deactivating an inactive user changes nothing.
      */
     @Override
     @Transactional
-    public void deactivate(Long id, String actorEmail) {
-        User user = getUser(id);
-        if (isSameAccount(user, actorEmail)) {
+    public void deactivate(Long id, String currentUserEmail) {
+        User user = userRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE));
+
+        if (user.getEmail().equalsIgnoreCase(currentUserEmail)) {
             throw new BusinessException("No puede desactivar su propia cuenta.");
         }
+        if (!user.isActive()) {
+            return;
+        }
+        if (user.getRole() == Role.ADMIN
+                && userRepository.countByRoleAndActiveTrue(Role.ADMIN) == 1) {
+            throw new BusinessException(ONLY_ADMIN_DEACTIVATION_MESSAGE);
+        }
+
         user.setActive(false);
+        // A new version rejects the tokens issued before, even after a reactivation.
         user.setTokenVersion(user.getTokenVersion() + 1);
-        userRepository.save(user);
+        userRepository.saveAndFlush(user);
     }
 
+    /**
+     * Gives back the access to a deactivated user. The sessions revoked by the
+     * deactivation stay revoked, so the user has to sign in again.
+     *
+     * @param id identifier of the user
+     * @return the activated user
+     */
     @Override
     @Transactional
     public UserResponseDTO activate(Long id) {
@@ -210,17 +240,6 @@ public class UserServiceImpl implements UserService {
     private User getUser(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE));
-    }
-
-    /**
-     * Tells whether the target user is the administrator performing the change.
-     *
-     * @param user       target user
-     * @param actorEmail email of the signed in administrator
-     * @return true when both are the same account
-     */
-    private boolean isSameAccount(User user, String actorEmail) {
-        return actorEmail != null && user.getEmail().equalsIgnoreCase(actorEmail.trim());
     }
 
     /**

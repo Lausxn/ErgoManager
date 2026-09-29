@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, input, numberAttribute, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -9,17 +9,15 @@ import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { RadioButtonModule } from 'primeng/radiobutton';
-import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
 
-import { AuthService } from '../../../core/services/auth.service';
 import { HasUnsavedChanges } from '../../../core/guards/unsaved-changes.guard';
 import { FormFieldComponent } from '../../../shared/components/form-field/form-field.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { SaveBarComponent } from '../../../shared/components/save-bar/save-bar.component';
 import { trackUnsavedChanges } from '../../../shared/forms/unsaved-changes';
 import { Role } from '../../../shared/models/role.model';
-import { UserRequest, UserResponse } from '../../../shared/models/user.model';
+import { UserRequest } from '../../../shared/models/user.model';
 import { ToastService } from '../../../shared/services/toast.service';
 import { applyApiErrors, isConflict } from '../../../shared/utils/api-error';
 import { markFormAsDirty, notBlank } from '../../../shared/utils/form';
@@ -37,33 +35,27 @@ const MIN_PASSWORD_LENGTH = 8;
 const DUPLICATED_EMAIL_MESSAGE = 'Ya existe un usuario con este correo.';
 
 /**
- * Form used to register a new administrator or ergonomist, or to edit one.
- * When creating, the temporary password is required and is emailed to the
- * person; when editing, it is optional and only replaces the stored one when
- * typed.
+ * Form used to register a new administrator or ergonomist. The temporary
+ * password is required and is emailed to the person. Existing users are
+ * edited in the edition page of HU-014.
  */
 @Component({
     selector: 'app-user-form',
     standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [ReactiveFormsModule, RouterLink, AvatarModule, ButtonModule, InputTextModule, PasswordModule, ProgressBarModule, RadioButtonModule, SkeletonModule, TagModule, FormFieldComponent, PageHeaderComponent, SaveBarComponent],
+    imports: [ReactiveFormsModule, RouterLink, AvatarModule, ButtonModule, InputTextModule, PasswordModule, ProgressBarModule, RadioButtonModule, TagModule, FormFieldComponent, PageHeaderComponent, SaveBarComponent],
     templateUrl: './user-form.component.html'
 })
-export class UserFormComponent implements OnInit, HasUnsavedChanges {
+export class UserFormComponent implements HasUnsavedChanges {
     private readonly formBuilder = inject(FormBuilder);
 
     private readonly userService = inject(UserService);
-
-    private readonly authService = inject(AuthService);
 
     private readonly toastService = inject(ToastService);
 
     private readonly router = inject(Router);
 
     private readonly destroyRef = inject(DestroyRef);
-
-    /** Identifier of the user being edited, absent when creating a new one. */
-    readonly id = input<number | undefined, unknown>(undefined, { transform: numberAttribute });
 
     protected readonly limits = { name: MAX_NAME_LENGTH, email: MAX_EMAIL_LENGTH };
 
@@ -105,16 +97,6 @@ export class UserFormComponent implements OnInit, HasUnsavedChanges {
 
     protected readonly isSubmitting = signal(false);
 
-    protected readonly isLoading = signal(false);
-
-    /** Stored user, only when editing: shows its state and creation date. */
-    protected readonly storedUser = signal<UserResponse | null>(null);
-
-    protected readonly isEditing = computed(() => this.id() !== undefined && !Number.isNaN(this.id()));
-
-    /** An administrator cannot change their own role, the backend rejects it too. */
-    protected readonly isOwnAccount = computed(() => this.isEditing() && this.id() === this.authService.session()?.userId);
-
     /** Every value of the form, recomputed after each change of value or status. */
     private readonly formValue = toSignal(merge(this.userForm.valueChanges, this.userForm.statusChanges).pipe(map(() => this.userForm.getRawValue())), { initialValue: this.userForm.getRawValue() });
 
@@ -132,44 +114,16 @@ export class UserFormComponent implements OnInit, HasUnsavedChanges {
     });
 
     /** Fields that must hold a valid value before saving. */
-    private readonly requiredFields = computed(() => (this.isEditing() ? (['firstName', 'firstLastName', 'email'] as const) : (['firstName', 'firstLastName', 'email', 'password', 'confirmPassword'] as const)));
+    private readonly requiredFields = ['firstName', 'firstLastName', 'email', 'password', 'confirmPassword'] as const;
 
-    protected readonly requiredCount = computed(() => this.requiredFields().length);
+    protected readonly requiredCount = this.requiredFields.length;
 
     protected readonly completedCount = computed(() => {
         this.formValue();
-        return this.requiredFields().filter((field) => this.userForm.controls[field].valid).length;
+        return this.requiredFields.filter((field) => this.userForm.controls[field].valid).length;
     });
 
-    protected readonly progress = computed(() => Math.round((this.completedCount() / this.requiredCount()) * 100));
-
-    ngOnInit(): void {
-        if (!this.isEditing()) {
-            return;
-        }
-        // Editing: the password is optional and only replaces the stored one when typed.
-        this.userForm.controls.password.setValidators([Validators.minLength(MIN_PASSWORD_LENGTH), passwordByteLimit]);
-        this.userForm.controls.confirmPassword.clearValidators();
-        this.userForm.controls.password.updateValueAndValidity({ emitEvent: false });
-        this.userForm.controls.confirmPassword.updateValueAndValidity({ emitEvent: false });
-
-        this.isLoading.set(true);
-        this.userService
-            .findById(this.id()!)
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe({
-                next: (user) => {
-                    this.storedUser.set(user);
-                    this.userForm.reset({ firstName: user.firstName, firstLastName: user.firstLastName, secondLastName: user.secondLastName ?? '', email: user.email, password: '', confirmPassword: '', role: user.role });
-                    this.unsaved.markSaved();
-                    this.isLoading.set(false);
-                },
-                error: () => {
-                    this.toastService.error('No se encontró el usuario', 'Puede que ya no exista.');
-                    void this.router.navigate(['/users']);
-                }
-            });
-    }
+    protected readonly progress = computed(() => Math.round((this.completedCount() / this.requiredCount) * 100));
 
     /** Called by unsavedChangesGuard before leaving the page. */
     canLeave(): boolean {
@@ -194,40 +148,30 @@ export class UserFormComponent implements OnInit, HasUnsavedChanges {
 
         this.errorMessage.set(null);
         this.isSubmitting.set(true);
-        const request = this.buildRequest();
-        const saved$ = this.isEditing() ? this.userService.update(this.id()!, { ...request, password: request.password || undefined }) : this.userService.create(request);
 
-        saved$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-            next: (user) => {
-                this.isSubmitting.set(false);
-                this.userForm.patchValue({ password: '', confirmPassword: '' });
-                this.unsaved.markSaved();
-                // The session is tied to the email: changing one's own email ends it.
-                if (this.isOwnAccount() && user.email !== this.storedUser()?.email) {
-                    this.toastService.info('Correo actualizado', 'Inicie sesión de nuevo con su nuevo correo.');
-                    this.authService.logout();
-                    void this.router.navigate(['/auth/login']);
-                    return;
-                }
-                if (this.isEditing()) {
-                    this.toastService.success('Usuario actualizado', `${user.firstName} ${user.firstLastName}`);
-                } else {
+        this.userService
+            .create(this.buildRequest())
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: (user) => {
+                    this.isSubmitting.set(false);
+                    this.userForm.patchValue({ password: '', confirmPassword: '' });
+                    this.unsaved.markSaved();
                     this.toastService.success('Usuario creado con éxito', `Enviamos las credenciales de acceso a ${user.email}.`);
+                    void this.router.navigate(['/users']);
+                },
+                error: (error: unknown) => {
+                    this.isSubmitting.set(false);
+                    if (isConflict(error)) {
+                        const email = this.userForm.controls.email;
+                        email.setErrors({ ...email.errors, duplicated: true });
+                        email.markAsTouched();
+                        this.errorMessage.set(DUPLICATED_EMAIL_MESSAGE);
+                        return;
+                    }
+                    this.errorMessage.set(applyApiErrors(this.userForm, error, 'No se pudo guardar. Intente de nuevo.'));
                 }
-                void this.router.navigate(['/users']);
-            },
-            error: (error: unknown) => {
-                this.isSubmitting.set(false);
-                if (isConflict(error)) {
-                    const email = this.userForm.controls.email;
-                    email.setErrors({ ...email.errors, duplicated: true });
-                    email.markAsTouched();
-                    this.errorMessage.set(DUPLICATED_EMAIL_MESSAGE);
-                    return;
-                }
-                this.errorMessage.set(applyApiErrors(this.userForm, error, 'No se pudo guardar. Intente de nuevo.'));
-            }
-        });
+            });
     }
 
     /**

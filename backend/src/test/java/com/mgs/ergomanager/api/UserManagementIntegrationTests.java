@@ -17,7 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
-/** Administration of users: listing, update, activation and role restrictions. */
+/** Administration of users: listing, update, deactivation, activation and role restrictions. */
 class UserManagementIntegrationTests extends ApiIntegrationTestSupport {
 
     private User admin;
@@ -29,14 +29,20 @@ class UserManagementIntegrationTests extends ApiIntegrationTestSupport {
         ergonomist = persistUser("ergo.users@example.test", Role.ERGONOMIST);
     }
 
-    private Map<String, Object> updateBody(User user, String password, Role role) {
+    private Map<String, Object> updateBody(User user, Role role) {
         Map<String, Object> body = new HashMap<>();
         body.put("firstName", " Nuevo ");
         body.put("firstLastName", "Apellido");
         body.put("secondLastName", " ");
         body.put("email", " " + user.getEmail().toUpperCase() + " ");
-        body.put("password", password);
         body.put("role", role.name());
+        return body;
+    }
+
+    private Map<String, Object> creationBody() {
+        Map<String, Object> body = updateBody(ergonomist, Role.ADMIN);
+        body.put("email", "nuevo.users@example.test");
+        body.put("password", "Temporal123!");
         return body;
     }
 
@@ -61,13 +67,13 @@ class UserManagementIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
-    void updateWithoutPasswordKeepsHashAndSessions() throws Exception {
+    void updateKeepsPasswordAndSessionsWhenRoleDoesNotChange() throws Exception {
         String originalHash = ergonomist.getPassword();
         long originalVersion = ergonomist.getTokenVersion();
 
         mvc.perform(put("/api/users/{id}", ergonomist.getId()).with(as(admin))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(updateBody(ergonomist, null, Role.ERGONOMIST))))
+                        .content(toJson(updateBody(ergonomist, Role.ERGONOMIST))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("firstName").value("Nuevo"))
                 .andExpect(jsonPath("email").value("ergo.users@example.test"))
@@ -80,41 +86,33 @@ class UserManagementIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
-    void blankPasswordAlsoKeepsHash() throws Exception {
+    void roleChangeRevokesSessionsWithoutTouchingThePassword() throws Exception {
         String originalHash = ergonomist.getPassword();
+        long originalVersion = ergonomist.getTokenVersion();
         mvc.perform(put("/api/users/{id}", ergonomist.getId()).with(as(admin))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(updateBody(ergonomist, "", Role.ERGONOMIST))))
+                        .content(toJson(updateBody(ergonomist, Role.ADMIN))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("role").value("ADMIN"));
+        User stored = userRepository.findById(ergonomist.getId()).orElseThrow();
+        assertThat(stored.getPassword()).isEqualTo(originalHash);
+        assertThat(stored.getTokenVersion()).isEqualTo(originalVersion + 1);
+    }
+
+    @Test
+    void passwordSentInAnUpdateIsIgnored() throws Exception {
+        String originalHash = ergonomist.getPassword();
+        Map<String, Object> body = updateBody(ergonomist, Role.ERGONOMIST);
+        body.put("password", "Cambiada123!");
+        mvc.perform(put("/api/users/{id}", ergonomist.getId()).with(as(admin))
+                        .contentType(MediaType.APPLICATION_JSON).content(toJson(body)))
                 .andExpect(status().isOk());
         assertThat(userRepository.findById(ergonomist.getId()).orElseThrow().getPassword()).isEqualTo(originalHash);
     }
 
     @Test
-    void updateWithPasswordRehashesAndRevokesSessions() throws Exception {
-        long originalVersion = ergonomist.getTokenVersion();
-        mvc.perform(put("/api/users/{id}", ergonomist.getId()).with(as(admin))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(updateBody(ergonomist, "Cambiada123!", Role.ADMIN))))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("role").value("ADMIN"));
-        User stored = userRepository.findById(ergonomist.getId()).orElseThrow();
-        assertThat(passwordEncoder.matches("Cambiada123!", stored.getPassword())).isTrue();
-        assertThat(stored.getTokenVersion()).isEqualTo(originalVersion + 1);
-    }
-
-    @Test
-    void updateRejectsPasswordRulesAndInvalidFields() throws Exception {
-        mvc.perform(put("/api/users/{id}", ergonomist.getId()).with(as(admin))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(updateBody(ergonomist, "corta", Role.ERGONOMIST))))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("fieldErrors.password").value("La contraseña debe tener entre 8 y 100 caracteres."));
-        mvc.perform(put("/api/users/{id}", ergonomist.getId()).with(as(admin))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(updateBody(ergonomist, "ñ".repeat(37), Role.ERGONOMIST))))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("message").value("La contraseña no puede superar 72 bytes UTF-8."));
-        Map<String, Object> blankName = updateBody(ergonomist, null, Role.ERGONOMIST);
+    void updateRejectsInvalidFields() throws Exception {
+        Map<String, Object> blankName = updateBody(ergonomist, Role.ERGONOMIST);
         blankName.put("firstName", "  ");
         mvc.perform(put("/api/users/{id}", ergonomist.getId()).with(as(admin))
                         .contentType(MediaType.APPLICATION_JSON).content(toJson(blankName)))
@@ -124,7 +122,7 @@ class UserManagementIntegrationTests extends ApiIntegrationTestSupport {
 
     @Test
     void updateRejectsEmailOfAnotherUser() throws Exception {
-        Map<String, Object> body = updateBody(ergonomist, null, Role.ERGONOMIST);
+        Map<String, Object> body = updateBody(ergonomist, Role.ERGONOMIST);
         body.put("email", "ADMIN.users@example.test");
         mvc.perform(put("/api/users/{id}", ergonomist.getId()).with(as(admin))
                         .contentType(MediaType.APPLICATION_JSON).content(toJson(body)))
@@ -133,23 +131,33 @@ class UserManagementIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
-    void adminCannotChangeOwnRoleButCanEditOwnData() throws Exception {
+    void onlyActiveAdministratorCannotLoseTheRoleButCanEditOwnData() throws Exception {
         mvc.perform(put("/api/users/{id}", admin.getId()).with(as(admin))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(updateBody(admin, null, Role.ERGONOMIST))))
+                        .content(toJson(updateBody(admin, Role.ERGONOMIST))))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("message").value("No puede cambiar su propio rol."));
+                .andExpect(jsonPath("message").value("No se puede cambiar el rol del único administrador activo."));
         mvc.perform(put("/api/users/{id}", admin.getId()).with(as(admin))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(updateBody(admin, null, Role.ADMIN))))
+                        .content(toJson(updateBody(admin, Role.ADMIN))))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void administratorCanChangeOwnRoleWhenAnotherAdministratorRemains() throws Exception {
+        persistUser("second.admin@example.test", Role.ADMIN);
+        mvc.perform(put("/api/users/{id}", admin.getId()).with(as(admin))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(updateBody(admin, Role.ERGONOMIST))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("role").value("ERGONOMIST"));
     }
 
     @Test
     void updateOfMissingUserAnswers404() throws Exception {
         mvc.perform(put("/api/users/{id}", 999_999).with(as(admin))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(updateBody(ergonomist, null, Role.ERGONOMIST))))
+                        .content(toJson(updateBody(ergonomist, Role.ERGONOMIST))))
                 .andExpect(status().isNotFound());
     }
 
@@ -165,6 +173,9 @@ class UserManagementIntegrationTests extends ApiIntegrationTestSupport {
         mvc.perform(patch("/api/users/{id}/activate", ergonomist.getId()).with(as(admin)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("active").value(true));
+        // The sessions revoked by the deactivation stay revoked.
+        assertThat(userRepository.findById(ergonomist.getId()).orElseThrow().getTokenVersion())
+                .isEqualTo(originalVersion + 1);
     }
 
     @Test
@@ -179,11 +190,11 @@ class UserManagementIntegrationTests extends ApiIntegrationTestSupport {
     void ergonomistIsForbiddenAndAnonymousIsUnauthorized() throws Exception {
         mvc.perform(get("/api/users").with(as(ergonomist))).andExpect(status().isForbidden());
         mvc.perform(post("/api/users").with(as(ergonomist)).contentType(MediaType.APPLICATION_JSON)
-                .content(toJson(updateBody(ergonomist, "Temporal123!", Role.ADMIN))))
+                .content(toJson(creationBody())))
                 .andExpect(status().isForbidden());
         mvc.perform(put("/api/users/{id}", ergonomist.getId()).with(as(ergonomist))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(updateBody(ergonomist, null, Role.ADMIN))))
+                        .content(toJson(updateBody(ergonomist, Role.ADMIN))))
                 .andExpect(status().isForbidden());
         mvc.perform(delete("/api/users/{id}", admin.getId()).with(as(ergonomist))).andExpect(status().isForbidden());
         mvc.perform(patch("/api/users/{id}/activate", admin.getId()).with(as(ergonomist)))

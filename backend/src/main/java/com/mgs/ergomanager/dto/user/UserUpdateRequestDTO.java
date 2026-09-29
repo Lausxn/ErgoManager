@@ -8,15 +8,13 @@ import jakarta.validation.constraints.Size;
 import java.util.Locale;
 
 /**
- * Data needed to update an administrator or an ergonomist. Unlike
- * {@link UserRequestDTO}, the password is optional: when it is omitted or blank
- * the current password is kept.
+ * Data needed to update an existing administrator or ergonomist. The password
+ * is not edited here: each user replaces their own one (HU-019).
  *
  * @param firstName      given name of the user
  * @param firstLastName  first surname of the user
  * @param secondLastName second surname of the user, optional
  * @param email          email used as sign in credential
- * @param password       new plain password, optional
  * @param role           role granted to the user
  */
 public record UserUpdateRequestDTO(
@@ -37,18 +35,14 @@ public record UserUpdateRequestDTO(
         @Size(max = 120, message = "Use un máximo de 120 caracteres.")
         String email,
 
-        @Size(min = 8, max = 100, message = "La contraseña debe tener entre 8 y 100 caracteres.")
-        String password,
-
         @NotNull(message = "Seleccione un rol.")
         Role role) {
 
-    /** Normalizes identity fields before validation; a blank password means "keep the current one". */
+    /** Normalizes identity fields before validation. */
     public UserUpdateRequestDTO {
         firstName = firstName == null ? null : firstName.trim();
         firstLastName = firstLastName == null ? null : firstLastName.trim();
         secondLastName = secondLastName == null || secondLastName.isBlank() ? null : secondLastName.trim();
         email = email == null ? null : email.trim().toLowerCase(Locale.ROOT);
-        password = password == null || password.isBlank() ? null : password;
     }
 }

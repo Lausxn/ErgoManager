@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AvatarModule } from 'primeng/avatar';
 import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
@@ -21,7 +21,6 @@ import { StatCardComponent } from '../../../shared/components/stat-card/stat-car
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { Role } from '../../../shared/models/role.model';
 import { UserResponse } from '../../../shared/models/user.model';
-import { DialogService } from '../../../shared/services/dialog.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { getApiErrorMessage } from '../../../shared/utils/api-error';
 import { ACTIVE_TAG_CLASSES, ROLE_LABELS, ROLE_TAG_CLASSES, toEnumOptions } from '../../../shared/utils/labels';
@@ -75,7 +74,7 @@ interface UserRow extends UserResponse {
 export class UserListComponent {
     private readonly userService = inject(UserService);
 
-    private readonly dialogService = inject(DialogService);
+    private readonly router = inject(Router);
 
     private readonly toastService = inject(ToastService);
 
@@ -172,33 +171,16 @@ export class UserListComponent {
     }
 
     /**
-     * Asks for confirmation and deactivates the user, who can no longer sign in.
+     * Opens the page that asks for confirmation before deactivating the user
+     * (HU-015). The list reloads when the administrator comes back.
      *
      * @param row user to deactivate
      */
-    protected async confirmDeactivate(row: UserRow): Promise<void> {
+    protected goToDeactivateConfirmation(row: UserRow): void {
         if (!row.canDeactivate) {
             return;
         }
-        const confirmed = await this.dialogService.confirm({
-            title: 'Desactivar usuario',
-            message: `${row.fullName} ya no podrá iniciar sesión y sus sesiones abiertas se cerrarán. Puede reactivarlo cuando quiera.`,
-            confirmLabel: 'Desactivar',
-            destructive: true
-        });
-        if (!confirmed) {
-            return;
-        }
-        this.userService
-            .deactivate(row.id)
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe({
-                next: () => {
-                    this.toastService.success('Usuario desactivado', row.fullName);
-                    this.updateUser(row.id, { active: false });
-                },
-                error: (error: unknown) => this.toastService.error('No se pudo desactivar', getApiErrorMessage(error, 'Intente de nuevo en unos minutos.'))
-            });
+        void this.router.navigate(['/users/deactivate-confirmation'], { queryParams: { id: row.id, name: row.fullName } });
     }
 
     /**
