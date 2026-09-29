@@ -1,23 +1,146 @@
-/* Only what the shared mgs-* classes do not cover: spacing and the date line of the impact band. */
-.dashboard-hero {
-    margin-bottom: 1.75rem;
+// Header, cards, labels and figures come from the shared styles (_mgs.scss);
+// only the layout of the options and figures lives here. Every color is a
+// brand or theme token, so the light and dark themes need no overrides.
+:host {
+  display: block;
+}
 
-    &__date {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin: 1.5rem 0 0;
-        font-size: 0.85rem;
-        font-weight: 600;
-        letter-spacing: 0.04em;
-        color: var(--p-surface-300);
+.dashboard-options {
+  padding: 0;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
 
-        time {
-            display: inline-block;
-        }
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
 
-        time::first-letter {
-            text-transform: uppercase;
-        }
+  li + li {
+    border-top: 1px solid var(--surface-border);
+  }
+}
+
+.dashboard-option {
+  --option-block: var(--mgs-wine);
+
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 3.5rem;
+  padding-right: 1.25rem;
+  color: var(--text-color);
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+
+  &--gray {
+    --option-block: var(--mgs-graphite);
+  }
+
+  &:hover,
+  &:focus-visible {
+    background: var(--surface-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mgs-wine);
+    outline-offset: -2px;
+  }
+
+  &__number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: stretch;
+    flex-shrink: 0;
+    width: 3.25rem;
+    background: var(--option-block);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  &__icon {
+    flex-shrink: 0;
+    color: var(--mgs-accent-text);
+  }
+
+  &__text {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.15rem 0.9rem;
+    min-width: 0;
+    padding: 0.8rem 0;
+  }
+
+  &__title {
+    font-weight: 700;
+    color: var(--heading-color);
+  }
+
+  &__description {
+    font-size: 0.875rem;
+    color: var(--text-color-secondary);
+  }
+
+  &__arrow {
+    color: var(--mgs-accent-text);
+    transition: transform 0.2s ease;
+  }
+
+  &:hover &__arrow {
+    transform: translateX(4px);
+  }
+
+  // Option whose function does not exist in the backend yet.
+  &--disabled {
+    cursor: default;
+
+    &:hover {
+      background: transparent;
     }
+
+    .dashboard-option__icon,
+    .dashboard-option__text {
+      opacity: 0.6;
+    }
+  }
+}
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.dashboard-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+
+  p {
+    margin: 0;
+  }
+
+  &__label {
+    color: var(--text-color-secondary);
+  }
+
+  &__value--highlight {
+    color: var(--mgs-accent-text);
+  }
+
+  &__unavailable {
+    font-weight: 600;
+    color: var(--text-color-secondary);
+  }
+}
+
+@media (max-width: 991px) {
+  .dashboard-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

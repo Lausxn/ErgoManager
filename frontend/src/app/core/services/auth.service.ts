@@ -90,6 +90,23 @@ export class AuthService {
     }
 
     /**
+     * Hides the temporary-password reminder only in the current in-memory
+     * session. The stored session keeps mustChangePassword=true.
+     */
+    dismissPasswordReminder(): void {
+        const session = this.currentSession();
+
+        if (session === null || !session.mustChangePassword) {
+            return;
+        }
+
+        this.currentSession.set({
+            ...session,
+            mustChangePassword: false
+        });
+    }
+
+    /**
      * Clears the stored session.
      */
     logout(): void {
