@@ -59,7 +59,7 @@ export class AuthService {
      * @returns url of the home page
      */
     getHomeUrl(): string {
-        return this.currentSession()?.role === 'ADMIN' ? '/companies' : '/appointments';
+        return this.currentSession()?.role === 'ADMIN' ? '/dashboard' : '/appointments';
     }
 
     /**

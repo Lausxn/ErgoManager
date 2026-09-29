@@ -1,13 +1,17 @@
 import { Role } from './role.model';
 
-/** Body sent to POST and PUT /api/users. */
-export interface UserRequest {
+/** Body sent to PUT /api/users/{id}, mirrors UserUpdateRequestDTO. The password is not edited here. */
+export interface UserUpdateRequest {
     firstName: string;
     firstLastName: string;
     secondLastName?: string;
     email: string;
-    password: string;
     role: Role;
+}
+
+/** Body sent to POST /api/users, mirrors UserRequestDTO. */
+export interface UserRequest extends UserUpdateRequest {
+    password: string;
 }
 
 /** Administrator or ergonomist returned by /api/users. */

@@ -7,16 +7,15 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
- * Data needed to create an administrator or an ergonomist.
+ * Data needed to update an existing administrator or ergonomist.
  *
  * @param firstName      given name of the user
  * @param firstLastName  first surname of the user
  * @param secondLastName second surname of the user, optional
  * @param email          email used as sign in credential
- * @param password       plain password, hashed before being stored
  * @param role           role granted to the user
  */
-public record UserRequestDTO(
+public record UserUpdateRequestDTO(
 
         @NotBlank
         @Size(max = 60)
@@ -33,10 +32,6 @@ public record UserRequestDTO(
         @Email
         @Size(max = 120)
         String email,
-
-        @NotBlank
-        @Size(min = 8, max = 100)
-        String password,
 
         @NotNull
         Role role) {
