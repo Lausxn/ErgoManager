@@ -10,7 +10,7 @@ import java.util.List;
 public interface CompanyService {
 
     /**
-     * Returns every registered company.
+     * Returns every registered company, ordered by business name.
      *
      * @return list of companies
      */
@@ -47,4 +47,12 @@ public interface CompanyService {
      * @param id identifier of the company
      */
     void deactivate(Long id);
+
+    /**
+     * Activates a company that had been deactivated.
+     *
+     * @param id identifier of the company
+     * @return the activated company
+     */
+    CompanyResponseDTO activate(Long id);
 }

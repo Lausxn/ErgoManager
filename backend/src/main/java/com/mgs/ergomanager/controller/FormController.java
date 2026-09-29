@@ -1,6 +1,7 @@
 package com.mgs.ergomanager.controller;
 
 import com.mgs.ergomanager.dto.form.FormRequestDTO;
+import com.mgs.ergomanager.dto.form.FormResendResponseDTO;
 import com.mgs.ergomanager.dto.form.FormResponseDTO;
 import com.mgs.ergomanager.service.FormService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -10,6 +11,7 @@ import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -105,15 +107,26 @@ public class FormController {
     }
 
     /**
+     * Activates a form that had been deactivated.
+     *
+     * @param id identifier of the form
+     * @return the activated form
+     */
+    @PatchMapping("/{id}/activate")
+    public ResponseEntity<FormResponseDTO> activate(@PathVariable Long id) {
+        return ResponseEntity.ok(formService.activate(id));
+    }
+
+    /**
      * Sends a form again to the employees of a company, as the yearly follow up.
      *
      * @param id        identifier of the form to resend
      * @param companyId identifier of the company to notify
-     * @return empty response with HTTP status 202
+     * @return number of emails sent, with HTTP status 202
      */
     @PostMapping("/{id}/resend/{companyId}")
-    public ResponseEntity<Void> resendAnnually(@PathVariable Long id, @PathVariable Long companyId) {
-        formService.resendAnnually(id, companyId);
-        return ResponseEntity.accepted().build();
+    public ResponseEntity<FormResendResponseDTO> resendAnnually(@PathVariable Long id,
+                                                                @PathVariable Long companyId) {
+        return ResponseEntity.accepted().body(formService.resendAnnually(id, companyId));
     }
 }

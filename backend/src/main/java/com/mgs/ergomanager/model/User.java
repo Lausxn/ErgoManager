@@ -86,6 +86,20 @@ public class User {
         this.secondLastName = secondLastName;
     }
 
+    /**
+     * Joins the name parts into a single display name. It is not persisted:
+     * the entity uses field access, so JPA ignores this getter.
+     *
+     * @return full name without extra blank spaces
+     */
+    public String getFullName() {
+        StringBuilder fullName = new StringBuilder(firstName).append(' ').append(firstLastName);
+        if (secondLastName != null && !secondLastName.isBlank()) {
+            fullName.append(' ').append(secondLastName);
+        }
+        return fullName.toString();
+    }
+
     public String getEmail() {
         return email;
     }

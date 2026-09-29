@@ -1,4 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { AbstractControl } from '@angular/forms';
 
 import { ApiError } from '../models/api-error.model';
 
@@ -35,4 +36,35 @@ export function getApiFieldErrors(error: unknown): Record<string, string> {
     }
     const body = error.error as Partial<ApiError> | null;
     return body?.fieldErrors ?? {};
+}
+
+/**
+ * Shows the errors of a failed save on the form: every field the backend
+ * rejected gets a "server" error with its message, so the template can print
+ * it under the field.
+ *
+ * @param form     form that was sent
+ * @param error    error received by the subscriber of the HTTP call
+ * @param fallback text used when the response carries no message
+ * @returns general message to show above the actions
+ */
+export function applyApiErrors(form: AbstractControl, error: unknown, fallback: string): string {
+    for (const [field, message] of Object.entries(getApiFieldErrors(error))) {
+        const control = form.get(field);
+        if (control) {
+            control.setErrors({ ...control.errors, server: message });
+            control.markAsTouched();
+        }
+    }
+    return getApiErrorMessage(error, fallback);
+}
+
+/**
+ * Tells whether a failed call was rejected because a unique value is taken.
+ *
+ * @param error error received by the subscriber of an HTTP call
+ * @returns true for HTTP 409
+ */
+export function isConflict(error: unknown): boolean {
+    return error instanceof HttpErrorResponse && error.status === 409;
 }

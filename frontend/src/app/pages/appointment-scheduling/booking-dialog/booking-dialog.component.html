@@ -1,0 +1,196 @@
+<p-dialog [visible]="visible()" (visibleChange)="visible.set($event)" (onShow)="onShow()" [modal]="true" [draggable]="false" [resizable]="false" [dismissableMask]="!isSubmitting()" [closeOnEscape]="!isSubmitting()" [closable]="!isSubmitting()" styleClass="booking-dialog" [style]="{ width: 'min(46rem, calc(100vw - 2rem))' }" [breakpoints]="{ '640px': '100vw' }">
+    <ng-template #header>
+        <div class="booking-dialog__header">
+            <span class="mgs-eyebrow">Agenda</span>
+            <h2 class="booking-dialog__title">Agendar cita</h2>
+            <p class="booking-dialog__lead">
+                Con
+                <strong>{{ ergonomistName() || 'el ergonomista seleccionado' }}</strong>
+                en los próximos 30 días.
+            </p>
+        </div>
+    </ng-template>
+
+    <ol class="booking-steps">
+        <!-- 1. Company -->
+        <li class="booking-step" [class.booking-step--done]="companyId() !== null">
+            <span class="booking-step__marker" aria-hidden="true">
+                @if (companyId() !== null) {
+                    <i class="fa-solid fa-check"></i>
+                } @else {
+                    1
+                }
+            </span>
+            <div class="booking-step__body">
+                <label class="booking-step__title" for="booking-company">Empresa</label>
+                @if (isLoadingCompanies()) {
+                    <p-skeleton height="2.6rem" />
+                } @else {
+                    <p-select
+                        inputId="booking-company"
+                        [options]="companies()"
+                        [ngModel]="companyId()"
+                        (ngModelChange)="selectCompany($event)"
+                        optionLabel="businessName"
+                        optionValue="id"
+                        placeholder="Elija la empresa del colaborador"
+                        [filter]="true"
+                        filterBy="businessName,taxId"
+                        emptyMessage="No hay empresas activas"
+                        emptyFilterMessage="Ninguna empresa coincide"
+                        [fluid]="true"
+                        appendTo="body"
+                    >
+                        <ng-template #item let-company>
+                            <div class="flex flex-col">
+                                <span class="font-semibold">{{ company.businessName }}</span>
+                                <span class="text-xs text-muted-color">{{ company.taxId }}</span>
+                            </div>
+                        </ng-template>
+                    </p-select>
+                }
+            </div>
+        </li>
+
+        <!-- 2. Self evaluation -->
+        <li class="booking-step" [class.booking-step--done]="selfEvaluationId() !== null" [class.booking-step--locked]="companyId() === null">
+            <span class="booking-step__marker" aria-hidden="true">
+                @if (selfEvaluationId() !== null) {
+                    <i class="fa-solid fa-check"></i>
+                } @else {
+                    2
+                }
+            </span>
+            <div class="booking-step__body">
+                <div class="booking-step__row">
+                    <span class="booking-step__title">Colaborador</span>
+                    @if (evaluationChoices().length > 4) {
+                        <p-iconfield>
+                            <p-inputicon class="fa-solid fa-magnifying-glass" />
+                            <input pInputText type="search" [ngModel]="evaluationSearch()" (ngModelChange)="evaluationSearch.set($event)" placeholder="Buscar por nombre o correo" aria-label="Buscar colaborador" class="booking-search" />
+                        </p-iconfield>
+                    }
+                </div>
+                @if (companyId() === null) {
+                    <p class="booking-step__hint">Elija primero la empresa para ver las autoevaluaciones de sus colaboradores.</p>
+                } @else if (isLoadingEvaluations()) {
+                    <div class="flex flex-col gap-2">
+                        <p-skeleton height="3.5rem" />
+                        <p-skeleton height="3.5rem" />
+                    </div>
+                } @else if (evaluationError()) {
+                    <div class="mgs-alert" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ evaluationError() }}</span></div>
+                } @else if (evaluationChoices().length === 0) {
+                    <app-empty-state icon="fa-regular fa-file-lines" title="Sin autoevaluaciones" message="Ningún colaborador de esta empresa ha completado la autoevaluación todavía." />
+                } @else {
+                    <div class="booking-list" role="radiogroup" aria-label="Autoevaluación del colaborador">
+                        @for (choice of filteredEvaluations(); track choice.id) {
+                            <button
+                                type="button"
+                                class="booking-person"
+                                role="radio"
+                                [attr.aria-checked]="selfEvaluationId() === choice.id"
+                                [class.booking-person--selected]="selfEvaluationId() === choice.id"
+                                [disabled]="choice.hasPendingAppointment"
+                                (click)="selectEvaluation(choice)"
+                            >
+                                <span class="booking-person__text">
+                                    <span class="booking-person__name">{{ choice.employeeName }}</span>
+                                    <span class="booking-person__meta">{{ choice.employeeEmail }}</span>
+                                </span>
+                                <span class="booking-person__side">
+                                    <p-tag [value]="'Riesgo ' + choice.riskLabel" [styleClass]="choice.riskTagClass" />
+                                    <span class="booking-person__date">
+                                        @if (choice.hasPendingAppointment) {
+                                            Ya tiene cita pendiente
+                                        } @else {
+                                            {{ choice.submittedAt | date: 'd MMM y' }}
+                                        }
+                                    </span>
+                                </span>
+                            </button>
+                        } @empty {
+                            <p class="booking-step__hint">Ningún colaborador coincide con la búsqueda.</p>
+                        }
+                    </div>
+                }
+            </div>
+        </li>
+
+        <!-- 3. Free slot -->
+        <li class="booking-step" [class.booking-step--done]="availabilityId() !== null">
+            <span class="booking-step__marker" aria-hidden="true">
+                @if (availabilityId() !== null) {
+                    <i class="fa-solid fa-check"></i>
+                } @else {
+                    3
+                }
+            </span>
+            <div class="booking-step__body">
+                <span class="booking-step__title">Espacio disponible</span>
+                @if (isLoadingSlots()) {
+                    <div class="flex gap-2">
+                        <p-skeleton width="8rem" height="3rem" />
+                        <p-skeleton width="8rem" height="3rem" />
+                        <p-skeleton width="8rem" height="3rem" />
+                    </div>
+                } @else if (slotError()) {
+                    <div class="mgs-alert" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ slotError() }}</span></div>
+                } @else if (slotDays().length === 0) {
+                    <p class="booking-step__hint">El ergonomista no tiene espacios libres en los próximos 30 días. Publique disponibilidad primero.</p>
+                } @else {
+                    <div class="booking-days">
+                        @for (day of slotDays(); track day.key) {
+                            <div class="booking-day">
+                                <span class="booking-day__label">{{ day.date | date: 'EEE d MMM' }}</span>
+                                <div class="booking-day__slots" role="radiogroup" [attr.aria-label]="'Espacios del ' + (day.date | date: 'd MMMM')">
+                                    @for (slot of day.slots; track slot.id) {
+                                        <button type="button" class="booking-slot" role="radio" [attr.aria-checked]="availabilityId() === slot.id" [class.booking-slot--selected]="availabilityId() === slot.id" (click)="selectSlot(slot)">
+                                            <span class="booking-slot__time">{{ slot.startDateTime | date: 'shortTime' }} – {{ slot.endDateTime | date: 'shortTime' }}</span>
+                                            <span class="booking-slot__duration">{{ slot.duration }}</span>
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </li>
+
+        <!-- 4. Notes -->
+        <li class="booking-step">
+            <span class="booking-step__marker" aria-hidden="true">4</span>
+            <div class="booking-step__body">
+                <div class="booking-step__row">
+                    <label class="booking-step__title" for="booking-notes">Notas <span class="mgs-field__optional">Opcional</span></label>
+                    <span class="booking-counter" [class.booking-counter--over]="notes().length > maxNotesLength">{{ notes().length }} / {{ maxNotesLength }}</span>
+                </div>
+                <textarea pTextarea id="booking-notes" rows="3" [autoResize]="true" [ngModel]="notes()" (ngModelChange)="notes.set($event)" [maxlength]="maxNotesLength" placeholder="Ej. Revisar puesto de trabajo en planta 2." class="w-full"></textarea>
+            </div>
+        </li>
+    </ol>
+
+    @if (errorMessage(); as message) {
+        <div class="mgs-alert mt-4" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ message }}</span></div>
+    }
+
+    <ng-template #footer>
+        <div class="booking-dialog__footer">
+            <span class="booking-dialog__summary">
+                @if (selectedEvaluation(); as evaluation) {
+                    <strong>{{ evaluation.employeeName }}</strong>
+                    @if (selectedSlot(); as slot) {
+                        · {{ slot.startDateTime | date: "EEE d MMM, h:mm a" }}
+                    }
+                } @else {
+                    Complete los pasos para agendar.
+                }
+            </span>
+            <div class="flex gap-2">
+                <p-button label="Cancelar" [text]="true" severity="secondary" [disabled]="isSubmitting()" (onClick)="close()" />
+                <p-button label="Agendar cita" icon="fa-solid fa-calendar-check" [disabled]="!canSubmit()" [loading]="isSubmitting()" (onClick)="submit()" />
+            </div>
+        </div>
+    </ng-template>
+</p-dialog>

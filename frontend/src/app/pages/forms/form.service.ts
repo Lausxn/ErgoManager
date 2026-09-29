@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { FormRequest, FormResponse } from '../../shared/models/form.model';
+import { FormRequest, FormResendResponse, FormResponse } from '../../shared/models/form.model';
 
 /**
  * HTTP access to the /api/forms endpoints.
@@ -80,7 +80,17 @@ export class FormService {
      * @param companyId identifier of the company to notify
      * @returns an empty response
      */
-    resendAnnually(id: number, companyId: number): Observable<void> {
-        return this.http.post<void>(`${this.baseUrl}/${id}/resend/${companyId}`, {});
+    resendAnnually(id: number, companyId: number): Observable<FormResendResponse> {
+        return this.http.post<FormResendResponse>(`${this.baseUrl}/${id}/resend/${companyId}`, {});
+    }
+
+    /**
+     * Activates a form that was deactivated before.
+     *
+     * @param id identifier of the form
+     * @returns the activated form
+     */
+    activate(id: number): Observable<FormResponse> {
+        return this.http.patch<FormResponse>(`${this.baseUrl}/${id}/activate`, {});
     }
 }

@@ -1,59 +1,127 @@
-<app-page-header eyebrow="Administración" title="Empresas" subtitle="Empresas cliente que reciben las evaluaciones ergonómicas.">
-    <p-button label="Nueva empresa" icon="pi pi-plus" routerLink="/companies/new" />
+<app-page-header eyebrow="Administración" title="Empresas cliente" subtitle="Organizaciones cuyos colaboradores responden las autoevaluaciones ergonómicas.">
+    <p-button label="Registrar empresa" icon="fa-solid fa-building" routerLink="/companies/new" />
 </app-page-header>
 
-<div class="mgs-card !p-0 overflow-hidden">
-    <p-table
-        #table
-        [value]="companyList()"
-        [loading]="isLoading()"
-        [paginator]="true"
-        [rows]="10"
-        [rowsPerPageOptions]="[10, 25, 50]"
-        [globalFilterFields]="['businessName', 'taxId', 'contactEmail']"
-        [rowHover]="true"
-        dataKey="id"
-        responsiveLayout="scroll"
-    >
+<section class="mgs-stats" aria-label="Resumen de empresas">
+    <app-stat-card label="Empresas registradas" icon="fa-solid fa-building" [value]="summary().total" [loading]="isLoading()" [dark]="true" />
+    <app-stat-card label="Activas" icon="fa-solid fa-circle-check" [value]="summary().active" [loading]="isLoading()" note="Reciben formularios" [accent]="true" />
+    <app-stat-card label="Inactivas" icon="fa-solid fa-ban" [value]="summary().inactive" [loading]="isLoading()" note="Historial conservado" />
+</section>
+
+<div class="mgs-table-card">
+    <p-table [value]="isLoading() ? skeletonRows : filteredRows()" [paginator]="!isLoading() && filteredRows().length > 10" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [rowHover]="true" dataKey="id" sortField="businessName" [sortOrder]="1">
         <ng-template #caption>
-            <div class="flex flex-wrap items-center justify-between gap-4 p-2">
-                <span class="mgs-section-title !m-0">Empresas registradas</span>
+            <div class="mgs-toolbar">
+                <div class="mgs-toolbar__title">
+                    <strong>Empresas actuales</strong>
+                    @if (isLoading()) {
+                        <p-skeleton width="7rem" height="0.75rem" />
+                    } @else {
+                        <span>{{ filteredRows().length }} de {{ summary().total }} empresas</span>
+                    }
+                </div>
                 <p-iconfield>
-                    <p-inputicon class="pi pi-search" />
-                    <input pInputText type="text" (input)="filterTable(table, $event)" placeholder="Buscar empresa" aria-label="Buscar empresa" />
+                    <p-inputicon class="fa-solid fa-magnifying-glass" />
+                    <input pInputText type="search" [ngModel]="searchText()" (ngModelChange)="searchText.set($event)" placeholder="Buscar por nombre, cédula o correo" aria-label="Buscar empresa" />
                 </p-iconfield>
+                <p-selectbutton [options]="statusOptions" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event ?? 'ALL')" optionLabel="label" optionValue="value" [allowEmpty]="false" ariaLabel="Filtrar por estado" />
             </div>
         </ng-template>
         <ng-template #header>
             <tr>
-                <th pSortableColumn="businessName">Razón social <p-sortIcon field="businessName" /></th>
-                <th pSortableColumn="taxId">Cédula jurídica <p-sortIcon field="taxId" /></th>
-                <th>Correo de contacto</th>
-                <th>Teléfono</th>
+                <th pSortableColumn="businessName">Empresa <p-sortIcon field="businessName" /></th>
+                <th pSortableColumn="contactEmail">Contacto <p-sortIcon field="contactEmail" /></th>
                 <th pSortableColumn="active">Estado <p-sortIcon field="active" /></th>
-                <th class="w-32"></th>
+                <th class="w-36"><span class="sr-only">Acciones</span></th>
             </tr>
         </ng-template>
-        <ng-template #body let-company>
-            <tr>
-                <td class="font-semibold">{{ company.businessName }}</td>
-                <td>{{ company.taxId }}</td>
-                <td>{{ company.contactEmail }}</td>
-                <td>{{ company.phoneNumber || '—' }}</td>
-                <td>
-                    <p-tag [value]="company.active ? 'Activa' : 'Inactiva'" [styleClass]="company.active ? activeTagClasses.active : activeTagClasses.inactive" />
-                </td>
-                <td class="text-right whitespace-nowrap">
-                    <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="secondary" [routerLink]="['/companies', company.id]" pTooltip="Editar" ariaLabel="Editar" />
-                    @if (company.active) {
-                        <p-button icon="pi pi-ban" [rounded]="true" [text]="true" (onClick)="confirmDeactivate(company)" pTooltip="Desactivar" ariaLabel="Desactivar" />
-                    }
-                </td>
-            </tr>
+        <ng-template #body let-row>
+            @if (isLoading()) {
+                <tr aria-hidden="true">
+                    <td>
+                        <div class="mgs-identity">
+                            <p-skeleton shape="circle" size="2.5rem" />
+                            <div class="mgs-identity__text gap-2">
+                                <p-skeleton width="11rem" height="0.9rem" />
+                                <p-skeleton width="8rem" height="0.75rem" />
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="mgs-identity__text gap-2">
+                            <p-skeleton width="12rem" height="0.9rem" />
+                            <p-skeleton width="6rem" height="0.75rem" />
+                        </div>
+                    </td>
+                    <td><p-skeleton width="4.5rem" height="1.5rem" borderRadius="999px" /></td>
+                    <td>
+                        <div class="flex justify-end gap-2"><p-skeleton shape="circle" size="2rem" /><p-skeleton shape="circle" size="2rem" /></div>
+                    </td>
+                </tr>
+            } @else {
+                <tr [class.opacity-70]="!row.active">
+                    <td>
+                        <div class="mgs-identity">
+                            <p-avatar [label]="row.initials || undefined" [icon]="row.initials ? undefined : 'fa-solid fa-building'" shape="circle" styleClass="mgs-avatar" />
+                            <div class="mgs-identity__text">
+                                <span class="mgs-identity__name">{{ row.businessName }}</span>
+                                <span class="mgs-identity__meta">Cédula jurídica {{ row.taxId }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="mgs-identity__text">
+                            <span class="break-all">{{ row.contactEmail }}</span>
+                            <span class="mgs-identity__meta">
+                                @if (row.phoneNumber) {
+                                    <i class="fa-solid fa-phone text-xs mr-1" aria-hidden="true"></i>{{ row.phoneNumber }}
+                                } @else {
+                                    Sin teléfono
+                                }
+                            </span>
+                        </div>
+                    </td>
+                    <td>
+                        <p-tag [value]="row.active ? 'Activa' : 'Inactiva'" [styleClass]="row.active ? activeTagClasses.active : activeTagClasses.inactive" />
+                    </td>
+                    <td class="text-right">
+                        <div class="mgs-row-actions">
+                            <p-button icon="fa-solid fa-pen" [rounded]="true" [text]="true" severity="secondary" [routerLink]="['/companies', row.id]" pTooltip="Editar" tooltipPosition="top" ariaLabel="Editar empresa" />
+                            @if (row.active) {
+                                <p-button icon="fa-solid fa-ban" [rounded]="true" [text]="true" [loading]="isBusy(row.id)" (onClick)="confirmDeactivate(row)" pTooltip="Desactivar" tooltipPosition="top" ariaLabel="Desactivar empresa" />
+                            } @else {
+                                <p-button
+                                    icon="fa-solid fa-rotate-left"
+                                    [rounded]="true"
+                                    [text]="true"
+                                    severity="secondary"
+                                    [loading]="isBusy(row.id)"
+                                    (onClick)="activate(row)"
+                                    pTooltip="Reactivar"
+                                    tooltipPosition="top"
+                                    ariaLabel="Reactivar empresa"
+                                />
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
         </ng-template>
         <ng-template #emptymessage>
             <tr>
-                <td colspan="6" class="text-center py-10 text-muted-color">Todavía no hay empresas registradas.</td>
+                <td colspan="4">
+                    @if (loadFailed()) {
+                        <app-empty-state icon="fa-solid fa-circle-exclamation" title="No se pudieron cargar las empresas" message="Revise su conexión e intente de nuevo.">
+                            <p-button label="Reintentar" icon="fa-solid fa-rotate-right" severity="secondary" [outlined]="true" (onClick)="loadCompanies()" />
+                        </app-empty-state>
+                    } @else if (summary().total === 0) {
+                        <app-empty-state icon="fa-solid fa-building" title="Todavía no hay empresas" message="Registre la primera empresa cliente para enviarle formularios de autoevaluación.">
+                            <p-button label="Registrar empresa" icon="fa-solid fa-building" routerLink="/companies/new" />
+                        </app-empty-state>
+                    } @else {
+                        <app-empty-state icon="fa-solid fa-filter-circle-xmark" title="Sin coincidencias" message="Ninguna empresa coincide con la búsqueda o el filtro de estado." />
+                    }
+                </td>
             </tr>
         </ng-template>
     </p-table>

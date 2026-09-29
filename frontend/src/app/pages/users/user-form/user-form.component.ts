@@ -1,56 +1,60 @@
-import { HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, input, numberAttribute, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { map } from 'rxjs';
+import { map, merge } from 'rxjs';
 import { AvatarModule } from 'primeng/avatar';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
+import { PasswordModule } from 'primeng/password';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { RadioButtonModule } from 'primeng/radiobutton';
+import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
 
+import { AuthService } from '../../../core/services/auth.service';
 import { HasUnsavedChanges } from '../../../core/guards/unsaved-changes.guard';
+import { FormFieldComponent } from '../../../shared/components/form-field/form-field.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
+import { SaveBarComponent } from '../../../shared/components/save-bar/save-bar.component';
+import { trackUnsavedChanges } from '../../../shared/forms/unsaved-changes';
 import { Role } from '../../../shared/models/role.model';
-import { UserRequest } from '../../../shared/models/user.model';
+import { UserRequest, UserResponse } from '../../../shared/models/user.model';
 import { ToastService } from '../../../shared/services/toast.service';
-import { isControlInvalid, markFormAsDirty } from '../../../shared/utils/form';
+import { applyApiErrors, isConflict } from '../../../shared/utils/api-error';
+import { markFormAsDirty, notBlank } from '../../../shared/utils/form';
 import { ROLE_LABELS, ROLE_TAG_CLASSES } from '../../../shared/utils/labels';
-import { getApiErrorMessage, getApiFieldErrors } from '../../../shared/utils/api-error';
 import { compareFieldsValidator } from '../../../shared/utils/password';
-import { passwordByteLimit, userEmailValidator } from './user-validation';
 import { UserService } from '../user.service';
+import { passwordByteLimit, userEmailValidator } from './user-validation';
 
 /** Limits of UserRequestDTO in the backend. */
 const MAX_NAME_LENGTH = 60;
 const MAX_EMAIL_LENGTH = 120;
+const MIN_PASSWORD_LENGTH = 8;
 
-/** Rejects values made only of spaces, which required alone lets through. */
-const NOT_BLANK = Validators.pattern(/\S/);
-
-/** Time the save bar stays in its alert state, a bit longer than the shake. */
-const ALERT_DURATION_MS = 900;
-
-/** Fields the user has to fill in before saving. */
-const REQUIRED_FIELDS = ['firstName', 'firstLastName', 'email', 'password', 'confirmPassword'] as const;
+/** Message shown under the email when the backend answers HTTP 409. */
+const DUPLICATED_EMAIL_MESSAGE = 'Ya existe un usuario con este correo.';
 
 /**
  * Form used to register a new administrator or ergonomist, or to edit one.
+ * When creating, the temporary password is required and is emailed to the
+ * person; when editing, it is optional and only replaces the stored one when
+ * typed.
  */
 @Component({
     selector: 'app-user-form',
     standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [ReactiveFormsModule, RouterLink, AvatarModule, ButtonModule, InputTextModule, ProgressBarModule, RadioButtonModule, TagModule, PageHeaderComponent],
-    templateUrl: './user-form.component.html',
-    host: { '(window:beforeunload)': 'onBeforeUnload($event)' }
+    imports: [ReactiveFormsModule, RouterLink, AvatarModule, ButtonModule, InputTextModule, PasswordModule, ProgressBarModule, RadioButtonModule, SkeletonModule, TagModule, FormFieldComponent, PageHeaderComponent, SaveBarComponent],
+    templateUrl: './user-form.component.html'
 })
 export class UserFormComponent implements OnInit, HasUnsavedChanges {
     private readonly formBuilder = inject(FormBuilder);
 
     private readonly userService = inject(UserService);
+
+    private readonly authService = inject(AuthService);
 
     private readonly toastService = inject(ToastService);
 
@@ -67,54 +71,55 @@ export class UserFormComponent implements OnInit, HasUnsavedChanges {
 
     protected readonly roleTagClasses = ROLE_TAG_CLASSES;
 
+    protected readonly emailErrors = { duplicated: DUPLICATED_EMAIL_MESSAGE };
+
+    protected readonly passwordErrors = {
+        passwordBytes: 'La contraseña no puede superar 72 bytes; las tildes y emojis ocupan más de uno.',
+        minlength: `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`
+    };
+
+    protected readonly confirmErrors = { passwordMismatch: 'Las contraseñas no coinciden.' };
+
     /** Roles offered in the form, with what each one allows. */
     protected readonly roleChoices: { value: Role; description: string; icon: string }[] = [
-        { value: 'ERGONOMIST', description: 'Realiza evaluaciones personalizadas y gestiona su propia agenda.', icon: 'pi pi-heart' },
-        { value: 'ADMIN', description: 'Acceso completo: gestiona empresas, usuarios y formularios.', icon: 'pi pi-shield' }
+        { value: 'ERGONOMIST', description: 'Realiza evaluaciones personalizadas y gestiona su propia agenda.', icon: 'fa-solid fa-user-doctor' },
+        { value: 'ADMIN', description: 'Acceso completo: gestiona empresas, usuarios y formularios.', icon: 'fa-solid fa-user-shield' }
     ];
 
     protected readonly userForm = this.formBuilder.nonNullable.group(
         {
-            firstName: ['', [Validators.required, NOT_BLANK, Validators.maxLength(MAX_NAME_LENGTH)]],
-            firstLastName: ['', [Validators.required, NOT_BLANK, Validators.maxLength(MAX_NAME_LENGTH)]],
+            firstName: ['', [Validators.required, notBlank, Validators.maxLength(MAX_NAME_LENGTH)]],
+            firstLastName: ['', [Validators.required, notBlank, Validators.maxLength(MAX_NAME_LENGTH)]],
             secondLastName: ['', [Validators.maxLength(MAX_NAME_LENGTH)]],
             email: ['', [userEmailValidator]],
-            password: ['', [Validators.required, NOT_BLANK, Validators.minLength(8), passwordByteLimit]],
+            password: ['', [Validators.required, notBlank, Validators.minLength(MIN_PASSWORD_LENGTH), passwordByteLimit]],
             confirmPassword: ['', [Validators.required]],
             role: ['ERGONOMIST' as Role, [Validators.required]]
         },
         { validators: compareFieldsValidator('confirmPassword', 'password', true, 'passwordMismatch') }
     );
 
+    protected readonly unsaved = trackUnsavedChanges(this.userForm);
+
     protected readonly errorMessage = signal<string | null>(null);
 
     protected readonly isSubmitting = signal(false);
 
-    protected readonly isEditing = signal(false);
+    protected readonly isLoading = signal(false);
 
-    /** True while the save bar shakes to remind that there are unsaved changes. */
-    protected readonly isAlerting = signal(false);
+    /** Stored user, only when editing: shows its state and creation date. */
+    protected readonly storedUser = signal<UserResponse | null>(null);
 
-    private alertTimer?: ReturnType<typeof setTimeout>;
+    protected readonly isEditing = computed(() => this.id() !== undefined && !Number.isNaN(this.id()));
 
-    /** Values the form started with: empty when creating, the stored user when editing. */
-    private readonly initialValue = signal(this.userForm.getRawValue());
+    /** An administrator cannot change their own role, the backend rejects it too. */
+    protected readonly isOwnAccount = computed(() => this.isEditing() && this.id() === this.authService.session()?.userId);
 
-    /**
-     * Every value of the form, typed and complete. valueChanges fires after
-     * validation, so validity is already current when it emits.
-     */
-    private readonly formValue = toSignal(this.userForm.valueChanges.pipe(map(() => this.userForm.getRawValue())), { initialValue: this.userForm.getRawValue() });
-
-    /** True when something was typed that would be lost when leaving. */
-    protected readonly hasChanges = computed(() => {
-        const current = this.formValue();
-        const initial = this.initialValue();
-        return (Object.keys(initial) as (keyof typeof initial)[]).some((field) => current[field] !== initial[field]);
-    });
+    /** Every value of the form, recomputed after each change of value or status. */
+    private readonly formValue = toSignal(merge(this.userForm.valueChanges, this.userForm.statusChanges).pipe(map(() => this.userForm.getRawValue())), { initialValue: this.userForm.getRawValue() });
 
     protected readonly preview = computed(() => {
-        const { firstName = '', firstLastName = '', secondLastName = '', email = '', role = 'ERGONOMIST' } = this.formValue();
+        const { firstName, firstLastName, secondLastName, email, role } = this.formValue();
         return {
             name: [firstName, firstLastName, secondLastName]
                 .map((part) => part.trim())
@@ -126,36 +131,38 @@ export class UserFormComponent implements OnInit, HasUnsavedChanges {
         };
     });
 
-    protected readonly requiredCount = REQUIRED_FIELDS.length;
+    /** Fields that must hold a valid value before saving. */
+    private readonly requiredFields = computed(() => (this.isEditing() ? (['firstName', 'firstLastName', 'email'] as const) : (['firstName', 'firstLastName', 'email', 'password', 'confirmPassword'] as const)));
 
-    /** Required fields that already hold a valid value. */
-    private readonly formStatus = toSignal(this.userForm.statusChanges, { initialValue: this.userForm.status });
+    protected readonly requiredCount = computed(() => this.requiredFields().length);
 
     protected readonly completedCount = computed(() => {
-        this.formStatus();
         this.formValue();
-        return REQUIRED_FIELDS.filter((field) => this.userForm.controls[field].valid).length;
+        return this.requiredFields().filter((field) => this.userForm.controls[field].valid).length;
     });
 
-    protected readonly progress = computed(() => Math.round((this.completedCount() / this.requiredCount) * 100));
-
-    constructor() {
-        this.destroyRef.onDestroy(() => clearTimeout(this.alertTimer));
-    }
+    protected readonly progress = computed(() => Math.round((this.completedCount() / this.requiredCount()) * 100));
 
     ngOnInit(): void {
-        const userId = this.id();
-        if (userId === undefined || Number.isNaN(userId)) {
+        if (!this.isEditing()) {
             return;
         }
-        this.isEditing.set(true);
+        // Editing: the password is optional and only replaces the stored one when typed.
+        this.userForm.controls.password.setValidators([Validators.minLength(MIN_PASSWORD_LENGTH), passwordByteLimit]);
+        this.userForm.controls.confirmPassword.clearValidators();
+        this.userForm.controls.password.updateValueAndValidity({ emitEvent: false });
+        this.userForm.controls.confirmPassword.updateValueAndValidity({ emitEvent: false });
+
+        this.isLoading.set(true);
         this.userService
-            .findById(userId)
+            .findById(this.id()!)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
-                next: ({ firstName, firstLastName, secondLastName, email, role }) => {
-                    this.userForm.patchValue({ firstName, firstLastName, secondLastName: secondLastName ?? '', email, role });
-                    this.initialValue.set(this.userForm.getRawValue());
+                next: (user) => {
+                    this.storedUser.set(user);
+                    this.userForm.reset({ firstName: user.firstName, firstLastName: user.firstLastName, secondLastName: user.secondLastName ?? '', email: user.email, password: '', confirmPassword: '', role: user.role });
+                    this.unsaved.markSaved();
+                    this.isLoading.set(false);
                 },
                 error: () => {
                     this.toastService.error('No se encontró el usuario', 'Puede que ya no exista.');
@@ -164,165 +171,61 @@ export class UserFormComponent implements OnInit, HasUnsavedChanges {
             });
     }
 
-    /**
-     * Called by unsavedChangesGuard before leaving the page. With pending
-     * changes it keeps the user here and shakes the save bar, like Discord.
-     *
-     * @returns true when there is nothing to lose
-     */
+    /** Called by unsavedChangesGuard before leaving the page. */
     canLeave(): boolean {
-        if (!this.hasChanges()) {
-            return true;
-        }
-        this.alertUnsavedChanges();
-        return false;
+        return this.unsaved.canLeave();
     }
 
-    /**
-     * Asks the browser to confirm before closing or reloading the tab with
-     * unsaved changes. Browsers only allow their own dialog here, so the save
-     * bar also shakes and is waiting in its alert state if the user stays.
-     *
-     * @param event unload event of the window
-     */
-    protected onBeforeUnload(event: BeforeUnloadEvent): void {
-        if (!this.hasChanges()) {
-            return;
-        }
-        event.preventDefault();
-        // Safari and older Chromium versions only show the dialog when returnValue is set.
-        event.returnValue = true;
-        this.alertUnsavedChanges();
-    }
-
-    /**
-     * Empties the form when creating, or puts the stored values back when
-     * editing, and clears the error messages.
-     */
-    protected resetForm(): void {
-        this.userForm.reset(this.initialValue());
+    /** Clears the messages of a failed save after the changes were discarded. */
+    protected clearError(): void {
         this.errorMessage.set(null);
     }
 
-    /**
-     * Validador asincrónico para verificar si el email ya existe.
-     */
-    emailDuplicateValidator(control: AbstractControl): Promise<ValidationErrors | null> {
-        if (!control.value) {
-            return Promise.resolve(null);
-        }
-
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                this.userService.findAll().subscribe({
-                    next: (users) => {
-                        const emailExists = users.some(
-                            (user) => user.email.toLowerCase() === control.value.trim().toLowerCase() && user.id !== this.currentUserId
-                        );
-                        resolve(emailExists ? { emailDuplicate: true } : null);
-                    },
-                    // Without the list the backend still rejects a duplicate with HTTP 409 on save.
-                    error: () => resolve(null)
-                });
-            }, 500);
-        });
-    }
-
-    /**
-     * Obtiene el mensaje de error para un campo.
-     */
-    protected getErrorMessage(field: string): string {
-        const control = this.userForm.get(field);
-        if (!control || !control.errors) {
-            return '';
-        }
-
-        if (control.hasError('required')) {
-            if (field === 'firstName') return 'El nombre es obligatorio.';
-            if (field === 'firstLastName') return 'El primer apellido es obligatorio.';
-            if (field === 'email') return 'El correo es obligatorio.';
-            if (field === 'password') return 'La contraseña es obligatoria.';
-        }
-
-        if (field === 'email' && control.hasError('email')) {
-            return 'Ingrese un correo válido.';
-        }
-
-        if (field === 'email' && control.hasError('emailDuplicate')) {
-            return 'Este correo ya está registrado.';
-        }
-
-        if (field === 'password' && control.hasError('minlength')) {
-            return 'La contraseña debe tener al menos 8 caracteres.';
-        }
-
-        return 'Este campo no es válido.';
-    }
-
-    /**
-     * Checks whether a field has to show its error message.
-     *
-     * @param field name of the control
-     * @returns true when the value is invalid and the user worked on it
-     */
-    protected isInvalid(field: string): boolean {
-        return isControlInvalid(this.userForm.get(field));
-    }
-
-    /** Gives each field an actionable message, including server validation. */
-    protected fieldError(field: string): string {
-        const control = this.userForm.get(field);
-        if (control?.hasError('server')) return control.getError('server');
-        if (control?.hasError('duplicated')) return 'Ya existe un usuario con este correo.';
-        if (control?.hasError('required') || control?.hasError('pattern')) return 'Este campo es obligatorio.';
-        if (control?.hasError('email')) return 'Escriba un correo válido, por ejemplo nombre@empresa.com.';
-        if (control?.hasError('minlength')) return 'La contraseña debe tener al menos 8 caracteres.';
-        if (control?.hasError('passwordBytes')) return 'La contraseña no puede superar 72 bytes; las tildes y emojis ocupan más de uno.';
-        if (control?.hasError('maxlength')) return `Use un máximo de ${control.getError('maxlength').requiredLength} caracteres.`;
-        return 'Revise este campo.';
-    }
-    /** Sends validated data to the backend, preserving values after an error. */
+    /** Sends validated data to the backend, keeping the values after an error. */
     protected submit(): void {
         if (this.isSubmitting()) {
             return;
         }
         if (this.userForm.invalid) {
             markFormAsDirty(this.userForm);
+            this.errorMessage.set('Revise los campos marcados antes de guardar.');
             return;
         }
 
         this.errorMessage.set(null);
         this.isSubmitting.set(true);
         const request = this.buildRequest();
-        const userId = this.id();
-        const saved$ = this.isEditing() && userId !== undefined ? this.userService.update(userId, request) : this.userService.create(request);
+        const saved$ = this.isEditing() ? this.userService.update(this.id()!, { ...request, password: request.password || undefined }) : this.userService.create(request);
 
         saved$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-            next: () => {
+            next: (user) => {
                 this.isSubmitting.set(false);
-                this.userForm.controls.password.reset();
-                this.userForm.controls.confirmPassword.reset();
-                this.initialValue.set(this.userForm.getRawValue());
-                this.toastService.success(this.isEditing() ? 'Usuario actualizado' : 'Usuario creado', request.email);
+                this.userForm.patchValue({ password: '', confirmPassword: '' });
+                this.unsaved.markSaved();
+                // The session is tied to the email: changing one's own email ends it.
+                if (this.isOwnAccount() && user.email !== this.storedUser()?.email) {
+                    this.toastService.info('Correo actualizado', 'Inicie sesión de nuevo con su nuevo correo.');
+                    this.authService.logout();
+                    void this.router.navigate(['/auth/login']);
+                    return;
+                }
+                if (this.isEditing()) {
+                    this.toastService.success('Usuario actualizado', `${user.firstName} ${user.firstLastName}`);
+                } else {
+                    this.toastService.success('Usuario creado con éxito', `Enviamos las credenciales de acceso a ${user.email}.`);
+                }
                 void this.router.navigate(['/users']);
             },
-            error: (error: HttpErrorResponse) => {
+            error: (error: unknown) => {
                 this.isSubmitting.set(false);
-                if (error.status === HttpStatusCode.Conflict) {
+                if (isConflict(error)) {
                     const email = this.userForm.controls.email;
                     email.setErrors({ ...email.errors, duplicated: true });
                     email.markAsTouched();
+                    this.errorMessage.set(DUPLICATED_EMAIL_MESSAGE);
                     return;
                 }
-                const fieldErrors = getApiFieldErrors(error);
-                for (const [field, message] of Object.entries(fieldErrors)) {
-                    const control = this.userForm.get(field);
-                    if (control) {
-                        control.setErrors({ ...control.errors, server: message });
-                        control.markAsTouched();
-                    }
-                }
-                this.errorMessage.set(getApiErrorMessage(error, 'No se pudo guardar. Intente de nuevo.'));
+                this.errorMessage.set(applyApiErrors(this.userForm, error, 'No se pudo guardar. Intente de nuevo.'));
             }
         });
     }
@@ -330,8 +233,6 @@ export class UserFormComponent implements OnInit, HasUnsavedChanges {
     /**
      * Builds the body of the request with clean values: trimmed names, email in
      * lower case and no empty second last name.
-     *
-     * @returns body for POST or PUT /api/users
      */
     private buildRequest(): UserRequest {
         const { firstName, firstLastName, secondLastName, email, password, role } = this.userForm.getRawValue();
@@ -343,19 +244,5 @@ export class UserFormComponent implements OnInit, HasUnsavedChanges {
             password,
             role
         };
-    }
-
-    /**
-     * Shakes the save bar and paints it in the alert color. Removing the class
-     * first and adding it back on the next frame restarts the animation when
-     * the user insists.
-     */
-    private alertUnsavedChanges(): void {
-        clearTimeout(this.alertTimer);
-        this.isAlerting.set(false);
-        requestAnimationFrame(() => {
-            this.isAlerting.set(true);
-            this.alertTimer = setTimeout(() => this.isAlerting.set(false), ALERT_DURATION_MS);
-        });
     }
 }

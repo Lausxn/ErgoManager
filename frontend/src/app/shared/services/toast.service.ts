@@ -46,6 +46,16 @@ export class ToastService {
     }
 
     /**
+     * Gives neutral information, such as a process that keeps running.
+     *
+     * @param title  short summary
+     * @param detail optional context
+     */
+    info(title: string, detail?: string): void {
+        this.show('info', title, detail);
+    }
+
+    /**
      * Opens the toast. Texts go through title and text, never html, so
      * SweetAlert2 escapes them and data typed by users cannot inject markup.
      */

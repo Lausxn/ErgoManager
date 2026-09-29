@@ -18,8 +18,10 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
  * Turns every exception raised by a controller into an {@link ErrorResponse},
@@ -117,6 +119,35 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUnreadableBody(HttpMessageNotReadableException exception,
                                                               HttpServletRequest request) {
         return buildResponse(HttpStatus.BAD_REQUEST, UNREADABLE_BODY_MESSAGE, request, null);
+    }
+
+    /**
+     * Handles a request that lacks a required query parameter.
+     *
+     * @param exception exception raised by Spring MVC
+     * @param request   request being processed
+     * @return response with HTTP status 400
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParameter(MissingServletRequestParameterException exception,
+                                                                HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST,
+                "Falta el parámetro " + exception.getParameterName() + ".", request, null);
+    }
+
+    /**
+     * Handles a path variable or query parameter that cannot be converted, such
+     * as a malformed date or a text where a number is expected.
+     *
+     * @param exception exception raised by Spring MVC
+     * @param request   request being processed
+     * @return response with HTTP status 400
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException exception,
+                                                            HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST,
+                "El valor del parámetro " + exception.getName() + " no es válido.", request, null);
     }
 
     /**

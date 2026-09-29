@@ -58,4 +58,38 @@ public class EmailServiceImpl implements EmailService {
 
         mailSender.send(message);
     }
+
+    /**
+     * Invites a recipient to answer a self evaluation form.
+     *
+     * @param recipientEmail destination email address
+     * @param companyName    business name of the company
+     * @param formTitle      title of the form to answer
+     * @param link           address of the self evaluation page
+     */
+    @Override
+    public void sendFormInvitation(
+            String recipientEmail,
+            String companyName,
+            String formTitle,
+            String link) {
+
+        SimpleMailMessage message = new SimpleMailMessage();
+
+        if (!senderEmail.isBlank()) {
+            message.setFrom(senderEmail);
+        }
+
+        message.setTo(recipientEmail);
+        message.setSubject("Autoevaluación ergonómica - " + companyName);
+
+        message.setText(
+                "Hola:\n\n"
+                        + "MGS le invita a completar la autoevaluación ergonómica \"" + formTitle + "\""
+                        + " para " + companyName + ".\n\n"
+                        + "Ingrese al siguiente enlace para responderla:\n" + link + "\n\n"
+                        + "Gracias por su colaboración.");
+
+        mailSender.send(message);
+    }
 }

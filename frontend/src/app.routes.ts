@@ -50,14 +50,13 @@ export const appRoutes: Routes = [
             {
                 path: 'history',
                 loadChildren: () => import('./app/pages/history/history.routes').then((m) => m.historyRoutes)
+            },
+            {
+                // Account of the signed in user, available to every role.
+                path: 'account',
+                loadChildren: () => import('./app/pages/account/account.routes').then((m) => m.accountRoutes)
             }
         ]
-    },
-    {
-        // Full screen pages of the signed in user, outside the main layout.
-        path: 'account',
-        canActivate: [authGuard],
-        loadChildren: () => import('./app/pages/account/account.routes').then((m) => m.accountRoutes)
     },
     {
         path: 'self-evaluation',

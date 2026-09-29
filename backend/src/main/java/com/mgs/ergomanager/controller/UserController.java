@@ -2,14 +2,17 @@ package com.mgs.ergomanager.controller;
 
 import com.mgs.ergomanager.dto.user.UserRequestDTO;
 import com.mgs.ergomanager.dto.user.UserResponseDTO;
+import com.mgs.ergomanager.dto.user.UserUpdateRequestDTO;
 import com.mgs.ergomanager.service.UserService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.security.Principal;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -37,7 +40,7 @@ public class UserController {
     }
 
     /**
-     * Returns every registered user.
+     * Returns every registered user, newest first.
      *
      * @return list of users
      */
@@ -70,26 +73,42 @@ public class UserController {
     }
 
     /**
-     * Updates the data of an existing user.
+     * Updates the data of an existing user. The password is optional: when it
+     * is omitted the current one is kept.
      *
-     * @param id      identifier of the user
-     * @param request new data of the user
+     * @param id        identifier of the user
+     * @param request   new data of the user
+     * @param principal signed in administrator
      * @return the updated user
      */
     @PutMapping("/{id}")
-    public ResponseEntity<UserResponseDTO> update(@PathVariable Long id, @Valid @RequestBody UserRequestDTO request) {
-        return ResponseEntity.ok(userService.update(id, request));
+    public ResponseEntity<UserResponseDTO> update(@PathVariable Long id,
+                                                  @Valid @RequestBody UserUpdateRequestDTO request,
+                                                  Principal principal) {
+        return ResponseEntity.ok(userService.update(id, request, principal.getName()));
     }
 
     /**
      * Deactivates a user so it can no longer sign in.
      *
-     * @param id identifier of the user
+     * @param id        identifier of the user
+     * @param principal signed in administrator
      * @return empty response with HTTP status 204
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deactivate(@PathVariable Long id) {
-        userService.deactivate(id);
+    public ResponseEntity<Void> deactivate(@PathVariable Long id, Principal principal) {
+        userService.deactivate(id, principal.getName());
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Activates a user that had been deactivated.
+     *
+     * @param id identifier of the user
+     * @return the activated user
+     */
+    @PatchMapping("/{id}/activate")
+    public ResponseEntity<UserResponseDTO> activate(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.activate(id));
     }
 }

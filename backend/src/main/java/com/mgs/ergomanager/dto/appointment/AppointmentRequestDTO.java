@@ -12,12 +12,17 @@ import jakarta.validation.constraints.Size;
  */
 public record AppointmentRequestDTO(
 
-        @NotNull
+        @NotNull(message = "Este campo es obligatorio.")
         Long selfEvaluationId,
 
-        @NotNull
+        @NotNull(message = "Este campo es obligatorio.")
         Long availabilityId,
 
-        @Size(max = 500)
+        @Size(max = 500, message = "Use un máximo de 500 caracteres.")
         String notes) {
+
+    /** Trims the notes and turns blank notes into null. */
+    public AppointmentRequestDTO {
+        notes = notes == null || notes.isBlank() ? null : notes.trim();
+    }
 }

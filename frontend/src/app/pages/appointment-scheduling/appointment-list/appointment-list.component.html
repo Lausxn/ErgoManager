@@ -1,53 +1,241 @@
-<app-page-header eyebrow="Evaluación" title="Agenda" [subtitle]="'Citas de los próximos ' + daysShownAhead + ' días.'">
-    @if (isErgonomist()) {
-        <p-button label="Publicar disponibilidad" icon="pi pi-calendar-plus" routerLink="/appointments/availabilities/new" />
+<app-page-header eyebrow="Citas" title="Agenda" subtitle="Programe visitas y evaluaciones presenciales con los clientes.">
+    @if (selectedErgonomistId() !== null) {
+        <p-button label="Publicar disponibilidad" icon="fa-regular fa-calendar-plus" severity="secondary" [outlined]="true" (onClick)="publishAvailability()" />
+        <p-button label="Agendar cita" icon="fa-solid fa-calendar-check" (onClick)="openBooking()" />
     }
 </app-page-header>
 
-<div class="grid grid-cols-12 gap-6 mb-6">
-    <div class="col-span-12 sm:col-span-6 xl:col-span-3 mgs-card">
-        <span class="mgs-eyebrow">Citas en agenda</span>
-        <div class="mgs-kpi mt-2">{{ appointmentList().length }}</div>
+@if (isAdmin() && !isLoadingErgonomists() && ergonomistError(); as message) {
+    <div class="mgs-card">
+        <app-empty-state icon="fa-solid fa-plug-circle-exclamation" title="No se pudieron cargar los ergonomistas" [message]="message">
+            <p-button label="Reintentar" icon="fa-solid fa-rotate-right" severity="secondary" [outlined]="true" (onClick)="loadErgonomists()" />
+        </app-empty-state>
     </div>
-    <div class="col-span-12 sm:col-span-6 xl:col-span-3 mgs-card">
-        <span class="mgs-eyebrow">Pendientes</span>
-        <div class="mgs-kpi mt-2">{{ pendingCount() }}</div>
+} @else if (isAdmin() && !isLoadingErgonomists() && ergonomists().length === 0) {
+    <div class="mgs-card">
+        <app-empty-state icon="fa-solid fa-user-doctor" title="Todavía no hay ergonomistas activos" message="Cree una cuenta de ergonomista para poder publicar disponibilidad y agendar citas.">
+            <p-button label="Crear ergonomista" icon="fa-solid fa-user-plus" routerLink="/users/new" />
+        </app-empty-state>
     </div>
-</div>
+} @else {
+    <div class="agenda-controls">
+        @if (isAdmin()) {
+            <div class="agenda-controls__ergonomist">
+                <label class="mgs-eyebrow" for="agenda-ergonomist">Ergonomista</label>
+                @if (isLoadingErgonomists()) {
+                    <p-skeleton width="18rem" height="2.6rem" />
+                } @else {
+                    <p-select
+                        inputId="agenda-ergonomist"
+                        [options]="ergonomists()"
+                        [ngModel]="selectedErgonomistId()"
+                        (ngModelChange)="selectErgonomist($event)"
+                        optionLabel="fullName"
+                        optionValue="id"
+                        [filter]="ergonomists().length > 6"
+                        filterBy="fullName,email"
+                        styleClass="agenda-controls__select"
+                    >
+                        <ng-template #item let-ergonomist>
+                            <div class="flex flex-col">
+                                <span class="font-semibold">{{ ergonomist.fullName }}</span>
+                                <span class="text-xs text-muted-color">{{ ergonomist.email }}</span>
+                            </div>
+                        </ng-template>
+                    </p-select>
+                }
+            </div>
+        }
+        <p-selectbutton [options]="periodOptions" [ngModel]="period()" (ngModelChange)="selectPeriod($event)" optionLabel="label" optionValue="value" [allowEmpty]="false" ariaLabel="Periodo de la agenda" />
+    </div>
 
-<div class="mgs-card !p-0 overflow-hidden">
-    <p-table [value]="appointmentList()" [loading]="isLoading()" [paginator]="true" [rows]="10" [rowHover]="true" dataKey="id" sortField="startDateTime" [sortOrder]="1">
-        <ng-template #header>
-            <tr>
-                <th pSortableColumn="employeeName">Colaborador <p-sortIcon field="employeeName" /></th>
-                <th pSortableColumn="startDateTime">Fecha <p-sortIcon field="startDateTime" /></th>
-                <th>Horario</th>
-                <th pSortableColumn="status">Estado <p-sortIcon field="status" /></th>
-                <th class="w-20"></th>
-            </tr>
-        </ng-template>
-        <ng-template #body let-appointment>
-            <tr>
-                <td>
-                    <div class="font-semibold">{{ appointment.employeeName }}</div>
-                    @if (appointment.notes) {
-                        <div class="text-sm text-muted-color line-clamp-1">{{ appointment.notes }}</div>
-                    }
-                </td>
-                <td>{{ appointment.startDateTime | date: 'EEEE d MMM y' }}</td>
-                <td>{{ appointment.startDateTime | date: 'shortTime' }} – {{ appointment.endDateTime | date: 'shortTime' }}</td>
-                <td><p-tag [value]="statusLabels[appointment.status]" [styleClass]="statusTagClasses[appointment.status]" /></td>
-                <td class="text-right">
-                    @if (appointment.status === 'SCHEDULED' || appointment.status === 'CONFIRMED') {
-                        <p-button icon="pi pi-times" [rounded]="true" [text]="true" (onClick)="confirmCancel(appointment)" pTooltip="Cancelar cita" ariaLabel="Cancelar cita" />
-                    }
-                </td>
-            </tr>
-        </ng-template>
-        <ng-template #emptymessage>
-            <tr>
-                <td colspan="5" class="text-center py-10 text-muted-color">No hay citas agendadas en este periodo.</td>
-            </tr>
-        </ng-template>
-    </p-table>
-</div>
+    <section class="mgs-stats" aria-label="Resumen de la agenda">
+        <app-stat-card label="Citas en el periodo" icon="fa-regular fa-calendar" [value]="summary().total" [loading]="isLoading()" [dark]="true" />
+        <app-stat-card label="Pendientes" icon="fa-regular fa-clock" [value]="summary().pending" [loading]="isLoading()" note="Agendadas o confirmadas" [accent]="true" />
+        <app-stat-card label="Completadas" icon="fa-regular fa-circle-check" [value]="summary().completed" [loading]="isLoading()" />
+        <app-stat-card label="Espacios libres" icon="fa-solid fa-door-open" [value]="periodHasFuture() ? slotCount() : '—'" [loading]="isLoadingSlots()" [note]="periodHasFuture() ? 'Listos para reservar' : 'Solo en periodos futuros'" />
+    </section>
+
+    <div class="mgs-table-card">
+        <p-table [value]="isLoading() ? skeletonRows : rows()" [paginator]="!isLoading() && rows().length > 10" [rows]="10" [rowHover]="true" dataKey="id" sortField="startDateTime" [sortOrder]="period() === 'LAST_30' ? -1 : 1">
+            <ng-template #caption>
+                <div class="mgs-toolbar">
+                    <div class="mgs-toolbar__title">
+                        <strong>Citas</strong>
+                        <span>{{ rows().length }} {{ rows().length === 1 ? 'cita' : 'citas' }} en el periodo</span>
+                    </div>
+                </div>
+            </ng-template>
+            <ng-template #header>
+                <tr>
+                    <th pSortableColumn="employeeName">Colaborador <p-sortIcon field="employeeName" /></th>
+                    <th pSortableColumn="companyName">Empresa <p-sortIcon field="companyName" /></th>
+                    <th pSortableColumn="startDateTime">Fecha y horario <p-sortIcon field="startDateTime" /></th>
+                    <th pSortableColumn="status">Estado <p-sortIcon field="status" /></th>
+                    <th pSortableColumn="evaluated">Evaluación <p-sortIcon field="evaluated" /></th>
+                    <th class="w-44"><span class="sr-only">Acciones</span></th>
+                </tr>
+            </ng-template>
+            <ng-template #body let-row>
+                @if (isLoading()) {
+                    <tr aria-hidden="true">
+                        <td>
+                            <div class="mgs-identity">
+                                <p-skeleton shape="circle" size="2rem" />
+                                <div class="flex flex-col gap-2">
+                                    <p-skeleton width="9rem" height="0.9rem" />
+                                    <p-skeleton width="12rem" height="0.75rem" />
+                                </div>
+                            </div>
+                        </td>
+                        <td><p-skeleton width="8rem" height="0.9rem" /></td>
+                        <td>
+                            <div class="flex flex-col gap-2">
+                                <p-skeleton width="7rem" height="0.9rem" />
+                                <p-skeleton width="5.5rem" height="0.75rem" />
+                            </div>
+                        </td>
+                        <td><p-skeleton width="5.5rem" height="1.5rem" borderRadius="999px" /></td>
+                        <td><p-skeleton width="5rem" height="0.9rem" /></td>
+                        <td><div class="flex justify-end"><p-skeleton shape="circle" size="2rem" /></div></td>
+                    </tr>
+                } @else {
+                <tr [class.opacity-70]="row.status === 'CANCELLED'">
+                    <td>
+                        <div class="mgs-identity">
+                            <p-avatar [label]="row.initials" shape="circle" styleClass="mgs-avatar" />
+                            <div class="mgs-identity__text">
+                                <span class="mgs-identity__name">{{ row.employeeName }}</span>
+                                <span class="mgs-identity__meta">{{ row.employeeEmail }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="font-medium">{{ row.companyName }}</span>
+                        @if (row.notes) {
+                            <span class="agenda-note" [pTooltip]="row.notes" tooltipPosition="top">{{ row.notes }}</span>
+                        }
+                    </td>
+                    <td class="whitespace-nowrap">
+                        <div class="agenda-when">
+                            <span class="agenda-when__day">{{ row.startDateTime | date: 'EEE d MMM y' }}</span>
+                            <span class="agenda-when__time">{{ row.startDateTime | date: 'shortTime' }} – {{ row.endDateTime | date: 'shortTime' }}</span>
+                        </div>
+                    </td>
+                    <td><p-tag [value]="row.statusLabel" [styleClass]="row.statusTagClass" /></td>
+                    <td>
+                        @if (row.evaluated) {
+                            <span class="agenda-evaluated"><i class="fa-solid fa-circle-check" aria-hidden="true"></i>Evaluada</span>
+                        } @else {
+                            <span class="agenda-evaluated agenda-evaluated--pending"><i class="fa-regular fa-circle" aria-hidden="true"></i>Sin evaluar</span>
+                        }
+                    </td>
+                    <td class="text-right">
+                        <div class="mgs-row-actions">
+                            @if (row.canEvaluate) {
+                                <p-button label="Registrar evaluación" icon="fa-solid fa-notes-medical" size="small" severity="secondary" [outlined]="true" (onClick)="evaluate(row)" />
+                            }
+                            @if (row.isPending) {
+                                <p-button icon="fa-solid fa-ban" [rounded]="true" [text]="true" [loading]="cancellingId() === row.id" (onClick)="confirmCancel(row)" pTooltip="Cancelar cita" tooltipPosition="top" ariaLabel="Cancelar cita" />
+                            }
+                        </div>
+                    </td>
+                </tr>
+                }
+            </ng-template>
+            <ng-template #emptymessage>
+                <tr>
+                    <td colspan="6">
+                        @if (loadError(); as message) {
+                            <app-empty-state icon="fa-solid fa-plug-circle-exclamation" title="No se pudo cargar la agenda" [message]="message">
+                                <p-button label="Reintentar" icon="fa-solid fa-rotate-right" severity="secondary" [outlined]="true" (onClick)="reload()" />
+                            </app-empty-state>
+                        } @else {
+                            <app-empty-state icon="fa-regular fa-calendar-xmark" title="Sin citas en este periodo" message="Agende una cita sobre un espacio libre o elija otro periodo.">
+                                @if (selectedErgonomistId() !== null) {
+                                    <p-button label="Agendar cita" icon="fa-solid fa-calendar-check" (onClick)="openBooking()" />
+                                }
+                            </app-empty-state>
+                        }
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+
+    <section class="mgs-card agenda-slots" aria-labelledby="agenda-slots-title">
+        <div class="mgs-card-header">
+            <div>
+                <h2 class="mgs-section-title" id="agenda-slots-title">Espacios disponibles</h2>
+                <p class="mgs-section-lead">Horarios publicados que todavía nadie ha reservado.</p>
+            </div>
+            @if (selectedErgonomistId() !== null) {
+                <p-button label="Publicar disponibilidad" icon="fa-regular fa-calendar-plus" [text]="true" severity="secondary" (onClick)="publishAvailability()" />
+            }
+        </div>
+
+        @if (!periodHasFuture()) {
+            <app-empty-state icon="fa-solid fa-clock-rotate-left" title="Periodo pasado" message="Los espacios libres solo se muestran para los próximos días. Elija un periodo futuro." />
+        } @else if (isLoadingSlots()) {
+            <ol class="agenda-days" aria-hidden="true">
+                @for (day of [1, 2]; track day) {
+                    <li class="agenda-day">
+                        <p-skeleton height="4.6rem" borderRadius="var(--mgs-radius-sm)" />
+                        <ul class="agenda-day__slots">
+                            @for (slot of [1, 2, 3]; track slot) {
+                                <li class="agenda-slot">
+                                    <p-skeleton shape="circle" size="1rem" />
+                                    <span class="agenda-slot__text gap-2">
+                                        <p-skeleton width="7rem" height="0.9rem" />
+                                        <p-skeleton width="3rem" height="0.7rem" />
+                                    </span>
+                                </li>
+                            }
+                        </ul>
+                    </li>
+                }
+            </ol>
+        } @else if (slotError()) {
+            <div class="mgs-alert" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ slotError() }}</span></div>
+        } @else if (slotDays().length === 0) {
+            <app-empty-state icon="fa-regular fa-calendar" title="Sin espacios libres" message="Publique disponibilidad para que se puedan agendar citas en este periodo." />
+        } @else {
+            <ol class="agenda-days">
+                @for (day of slotDays(); track day.key) {
+                    <li class="agenda-day">
+                        <div class="agenda-day__date">
+                            <span class="agenda-day__weekday">{{ day.date | date: 'EEE' }}</span>
+                            <span class="agenda-day__number">{{ day.date | date: 'd' }}</span>
+                            <span class="agenda-day__month">{{ day.date | date: 'MMM' }}</span>
+                        </div>
+                        <ul class="agenda-day__slots">
+                            @for (slot of day.slots; track slot.id) {
+                                <li class="agenda-slot">
+                                    <i class="fa-regular fa-clock agenda-slot__icon" aria-hidden="true"></i>
+                                    <span class="agenda-slot__text">
+                                        <span class="agenda-slot__time">{{ slot.startDateTime | date: 'shortTime' }} – {{ slot.endDateTime | date: 'shortTime' }}</span>
+                                        <span class="agenda-slot__duration">{{ slot.duration }}</span>
+                                    </span>
+                                    <p-button
+                                        icon="fa-regular fa-trash-can"
+                                        [rounded]="true"
+                                        [text]="true"
+                                        size="small"
+                                        severity="secondary"
+                                        [loading]="deletingSlotId() === slot.id"
+                                        (onClick)="confirmDeleteSlot(slot)"
+                                        pTooltip="Eliminar espacio"
+                                        tooltipPosition="top"
+                                        ariaLabel="Eliminar espacio"
+                                    />
+                                </li>
+                            }
+                        </ul>
+                    </li>
+                }
+            </ol>
+        }
+    </section>
+}
+
+<app-booking-dialog [(visible)]="isBookingOpen" [ergonomistId]="selectedErgonomistId()" [ergonomistName]="selectedErgonomistName()" [pendingSelfEvaluationIds]="pendingSelfEvaluationIds()" (booked)="onBooked($event)" />

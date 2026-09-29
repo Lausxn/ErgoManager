@@ -13,14 +13,14 @@ import java.time.LocalDateTime;
  */
 public record AvailabilityRequestDTO(
 
-        @NotNull
+        @NotNull(message = "Este campo es obligatorio.")
         Long userId,
 
-        @NotNull
-        @Future
+        @NotNull(message = "Este campo es obligatorio.")
+        @Future(message = "La fecha debe ser futura.")
         LocalDateTime startDateTime,
 
-        @NotNull
-        @Future
+        @NotNull(message = "Este campo es obligatorio.")
+        @Future(message = "La fecha debe ser futura.")
         LocalDateTime endDateTime) {
 }

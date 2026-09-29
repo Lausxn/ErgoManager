@@ -2,7 +2,6 @@ import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/
 import { ApplicationConfig, LOCALE_ID } from '@angular/core';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter, withComponentInputBinding, withEnabledBlockingInitialNavigation, withInMemoryScrolling } from '@angular/router';
-import { ConfirmationService, MessageService } from 'primeng/api';
 import { providePrimeNG } from 'primeng/config';
 import { appRoutes } from './app.routes';
 import { errorInterceptor } from './app/core/interceptors/error.interceptor';
@@ -16,8 +15,6 @@ export const appConfig: ApplicationConfig = {
         provideHttpClient(withFetch(), withInterceptors([jwtInterceptor, errorInterceptor])),
         provideAnimationsAsync(),
         providePrimeNG({ theme: { preset: MGS_PRESET, options: { darkModeSelector: '.app-dark' } }, translation: PRIMENG_SPANISH }),
-        { provide: LOCALE_ID, useValue: 'es' },
-        MessageService,
-        ConfirmationService
+        { provide: LOCALE_ID, useValue: 'es' }
     ]
 };

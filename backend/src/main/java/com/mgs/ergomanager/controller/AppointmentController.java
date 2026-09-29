@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -68,6 +69,18 @@ public class AppointmentController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
         return ResponseEntity.ok(appointmentService.findFreeAvailabilities(userId, from, to));
+    }
+
+    /**
+     * Deletes a slot that has not been booked.
+     *
+     * @param id identifier of the slot
+     * @return empty response with HTTP status 204
+     */
+    @DeleteMapping("/availabilities/{id}")
+    public ResponseEntity<Void> deleteAvailability(@PathVariable Long id) {
+        appointmentService.deleteAvailability(id);
+        return ResponseEntity.noContent().build();
     }
 
     /**

@@ -6,8 +6,8 @@ export const environment = {
     production: false,
     apiUrl: 'http://localhost:8080/api',
     /**
-     * TEMPORARY: opens every page without signing in, with a demo user, to
-     * review the interface. Set it to false to turn the guards back on.
+     * Opens every page without signing in, with a demo user, to review the
+     * interface without the backend. Keep it false to use the real API.
      */
-    previewMode: true
+    previewMode: false
 };

@@ -1,59 +1,98 @@
-import { Component, OnInit, computed, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { DatePipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
+
 import { AuthService } from '../../core/services/auth.service';
+import { StatCardComponent } from '../../shared/components/stat-card/stat-card.component';
+import { DashboardSummary } from '../../shared/models/dashboard.model';
+import { ToastService } from '../../shared/services/toast.service';
+import { DashboardService } from './dashboard.service';
 
+/** Function of the administrator, shown as a numbered option card. */
 interface FunctionCard {
-  id: number;
-  title: string;
-  description: string;
-  /** PrimeIcons class shown next to the title. */
-  icon: string;
-  color: 'red' | 'gray';
-  route: string;
+    number: string;
+    title: string;
+    description: string;
+    /** Font Awesome class shown in the graphite square. */
+    icon: string;
+    route: string;
 }
 
-interface StatCard {
-  label: string;
-  value: number;
-  /** Shows the value in the brand color. */
-  highlight?: boolean;
-}
+/** Value shown by a key figure while it is unknown, after a failed load. */
+const UNKNOWN_VALUE = '—';
 
+/** The five functions enabled for the administrator profile (HU-001). */
+const FUNCTION_CARDS: readonly FunctionCard[] = [
+    { number: '01', title: 'Formularios', description: 'Cree, edite y desactive los formularios del sistema.', icon: 'fa-solid fa-file-lines', route: '/forms' },
+    { number: '02', title: 'Agenda de citas', description: 'Programe visitas y evaluaciones presenciales con los clientes.', icon: 'fa-solid fa-calendar-plus', route: '/appointments' },
+    { number: '03', title: 'Perfiles de clientes', description: 'Cree y gestione los perfiles de todas las empresas cliente.', icon: 'fa-solid fa-building', route: '/companies' },
+    { number: '04', title: 'Reportes e historial', description: 'Genere y descargue los informes de resultados ergonómicos.', icon: 'fa-solid fa-chart-column', route: '/history' },
+    { number: '05', title: 'Gestión de usuarios', description: 'Cree, edite y desactive cuentas de Administrador y Ergonomista.', icon: 'fa-solid fa-users-gear', route: '/users' }
+];
+
+/**
+ * Home page of the administrator: dark impact band with the greeting, the key
+ * figures of the system and the five functions of the profile.
+ */
 @Component({
-  selector: 'app-dashboard',
-  standalone: true,
-  imports: [CommonModule, RouterModule],
-  templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.scss']
+    selector: 'app-dashboard',
+    standalone: true,
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [DatePipe, RouterLink, StatCardComponent],
+    templateUrl: './dashboard.component.html',
+    styleUrl: './dashboard.component.scss'
 })
-export class DashboardComponent implements OnInit {
-  private readonly authService = inject(AuthService);
+export class DashboardComponent {
+    private readonly authService = inject(AuthService);
 
-  /** First name of the signed in user, shown in the greeting. */
-  userName = computed(() => this.authService.session()?.fullName.split(' ')[0] ?? '');
-  currentHour = new Date().getHours();
+    private readonly dashboardService = inject(DashboardService);
 
-  functionCards: FunctionCard[] = [
-    { id: 1, title: 'Formularios', description: 'Cree, edite y desactive los formularios del sistema.', icon: 'pi pi-file', color: 'red', route: '/forms' },
-    { id: 2, title: 'Citas', description: 'Programe visitas y evaluaciones presenciales con los clientes.', icon: 'pi pi-calendar-plus', color: 'gray', route: '/appointments' },
-    { id: 3, title: 'Perfiles de clientes', description: 'Cree y gestione los perfiles de todas las empresas cliente.', icon: 'pi pi-building', color: 'red', route: '/companies' },
-    { id: 4, title: 'Reportes', description: 'Genere y descargue los informes de resultados ergonómicos.', icon: 'pi pi-chart-bar', color: 'gray', route: '/history' },
-    { id: 5, title: 'Gestión de usuarios', description: 'Cree, edite y desactive cuentas de Administrador y Ergonomista.', icon: 'pi pi-users', color: 'red', route: '/users' }
-  ];
+    private readonly toastService = inject(ToastService);
 
-  stats: StatCard[] = [
-    { label: 'Citas programadas', value: 3 },
-    { label: 'Clientes activos', value: 28 },
-    { label: 'Usuarios activos', value: 4, highlight: true },
-    { label: 'Formularios activos', value: 5 }
-  ];
+    private readonly destroyRef = inject(DestroyRef);
 
-  getGreeting(): string {
-    if (this.currentHour < 12) return 'Buenos días';
-    if (this.currentHour < 18) return 'Buenas tardes';
-    return 'Buenas noches';
-  }
+    protected readonly functionCards = FUNCTION_CARDS;
 
-  ngOnInit(): void {}
+    protected readonly today = new Date();
+
+    /** First name of the signed in user, shown in the greeting. */
+    protected readonly firstName = computed(() => this.authService.session()?.fullName.trim().split(/\s+/)[0] ?? '');
+
+    protected readonly greeting = computed(() => {
+        const hour = this.today.getHours();
+        const greeting = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
+        return this.firstName() ? `${greeting}, ${this.firstName()}.` : `${greeting}.`;
+    });
+
+    private readonly summary = signal<DashboardSummary | null>(null);
+
+    protected readonly isLoading = signal(true);
+
+    /** Figures of the cards, with a dash while they could not be read. */
+    protected readonly figures = computed(() => {
+        const summary = this.summary();
+        return {
+            scheduledAppointments: summary?.scheduledAppointments ?? UNKNOWN_VALUE,
+            activeCompanies: summary?.activeCompanies ?? UNKNOWN_VALUE,
+            activeUsers: summary?.activeUsers ?? UNKNOWN_VALUE,
+            activeForms: summary?.activeForms ?? UNKNOWN_VALUE
+        };
+    });
+
+    constructor() {
+        this.dashboardService
+            .getSummary()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: (summary) => {
+                    this.summary.set(summary);
+                    this.isLoading.set(false);
+                },
+                error: () => {
+                    this.isLoading.set(false);
+                    this.toastService.error('No se pudieron cargar los indicadores', 'Intente de nuevo en unos minutos.');
+                }
+            });
+    }
 }

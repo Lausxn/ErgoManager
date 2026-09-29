@@ -18,18 +18,24 @@ import java.util.List;
  */
 public record FormRequestDTO(
 
-        @NotBlank
-        @Size(max = 150)
+        @NotBlank(message = "Este campo es obligatorio.")
+        @Size(max = 150, message = "Use un máximo de 150 caracteres.")
         String title,
 
-        @Size(max = 500)
+        @Size(max = 500, message = "Use un máximo de 500 caracteres.")
         String description,
 
-        @NotNull
-        @Min(2000)
+        @NotNull(message = "Este campo es obligatorio.")
+        @Min(value = 2000, message = "El año debe ser 2000 o posterior.")
         Integer publicationYear,
 
-        @NotEmpty
+        @NotEmpty(message = "Agregue al menos una pregunta.")
         @Valid
         List<QuestionRequestDTO> questionList) {
+
+    /** Trims the texts and turns a blank description into null. */
+    public FormRequestDTO {
+        title = title == null ? null : title.trim();
+        description = description == null || description.isBlank() ? null : description.trim();
+    }
 }

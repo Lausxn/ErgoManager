@@ -33,26 +33,26 @@ export class AppMenu {
                 label: 'Administración',
                 visible: isAdmin,
                 items: [
-                    { label: 'Empresas', icon: 'pi pi-fw pi-building', routerLink: ['/companies'] },
-                    { label: 'Usuarios', icon: 'pi pi-fw pi-users', routerLink: ['/users'] },
-                    { label: 'Formularios', icon: 'pi pi-fw pi-file-edit', routerLink: ['/forms'] }
+                    { label: 'Empresas', icon: 'fa-solid fa-building fa-fw', routerLink: ['/companies'] },
+                    { label: 'Usuarios', icon: 'fa-solid fa-users fa-fw', routerLink: ['/users'] },
+                    { label: 'Formularios', icon: 'fa-solid fa-file-pen fa-fw', routerLink: ['/forms'] }
                 ]
             },
             {
                 label: 'Evaluación',
                 items: [
-                    { label: 'Agenda', icon: 'pi pi-fw pi-calendar', routerLink: ['/appointments'] },
-                    { label: 'Evaluación personalizada', icon: 'pi pi-fw pi-clipboard', routerLink: ['/personalized-evaluations'], visible: isErgonomist },
-                    { label: 'Historial', icon: 'pi pi-fw pi-history', routerLink: ['/history'] }
+                    { label: 'Agenda', icon: 'fa-regular fa-calendar-days fa-fw', routerLink: ['/appointments'] },
+                    { label: 'Evaluación personalizada', icon: 'fa-solid fa-clipboard-user fa-fw', routerLink: ['/personalized-evaluations'], visible: isErgonomist },
+                    { label: 'Historial', icon: 'fa-solid fa-chart-line fa-fw', routerLink: ['/history'] }
                 ]
             },
             {
                 label: 'Empleados',
-                items: [{ label: 'Autoevaluación pública', icon: 'pi pi-fw pi-external-link', url: '/self-evaluation', target: '_blank' }]
+                items: [{ label: 'Autoevaluación pública', icon: 'fa-solid fa-arrow-up-right-from-square fa-fw', url: '/self-evaluation', target: '_blank' }]
             },
             {
                 label: 'Cuenta',
-                items: [{ label: 'Cambiar contraseña', icon: 'pi pi-fw pi-key', routerLink: ['/account/password'] }]
+                items: [{ label: 'Cambiar contraseña', icon: 'fa-solid fa-key fa-fw', routerLink: ['/account/password'] }]
             }
         ];
     });

@@ -18,6 +18,7 @@
                     "builder": "@angular-devkit/build-angular:application",
                     "options": {
                         "outputPath": "dist/sakai-ng",
+                        "allowedCommonJsDependencies": ["sweetalert2"],
                         "index": "src/index.html",
                         "browser": "src/main.ts",
                         "polyfills": [
@@ -46,7 +47,7 @@
                                 },
                                 {
                                     "type": "anyComponentStyle",
-                                    "maximumWarning": "4kb",
+                                    "maximumWarning": "6kb",
                                     "maximumError": "8kb"
                                 }
                             ],
