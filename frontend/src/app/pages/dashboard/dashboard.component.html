@@ -1,0 +1,43 @@
+<div class="dashboard">
+    <header class="dashboard-bar">
+        <nav class="dashboard-breadcrumb" aria-label="Ruta">
+            <span>ErgoManager</span>
+            <span class="dashboard-breadcrumb__separator">/</span>
+            <span class="dashboard-breadcrumb__current" aria-current="page">Inicio</span>
+        </nav>
+        <span class="dashboard-profile">{{ profileLabel() }}</span>
+    </header>
+
+    <div class="dashboard-body">
+        <p class="dashboard-eyebrow">Inicio</p>
+        <h1 class="dashboard-title">{{ getGreeting() }}, {{ userName() }}.</h1>
+        <p class="dashboard-subtitle">{{ subtitle() }}</p>
+
+        <ul class="dashboard-options">
+            @for (card of functionCards(); track card.id) {
+                <li>
+                    <a class="dashboard-option" [attr.data-card]="card.title" [ngClass]="'dashboard-option--' + card.color" [routerLink]="card.route">
+                        <span class="dashboard-option__number">{{ card.id | number: '2.0-0' }}</span>
+                        <span class="dashboard-option__icon" aria-hidden="true"><i [ngClass]="card.icon"></i></span>
+                        <span class="dashboard-option__text">
+                            <span class="dashboard-option__title">{{ card.title }}</span>
+                            <span class="dashboard-option__description">{{ card.description }}</span>
+                        </span>
+                        <span class="dashboard-option__arrow" aria-hidden="true">→</span>
+                    </a>
+                </li>
+            }
+        </ul>
+
+        @if (stats().length > 0) {
+            <section class="dashboard-stats" aria-label="Estadísticas del sistema">
+                @for (stat of stats(); track stat.label) {
+                    <div class="dashboard-stat">
+                        <p class="dashboard-stat__label">{{ stat.label }}</p>
+                        <p class="dashboard-stat__value" [class.dashboard-stat__value--highlight]="stat.highlight">{{ stat.value }}</p>
+                    </div>
+                }
+            </section>
+        }
+    </div>
+</div>
