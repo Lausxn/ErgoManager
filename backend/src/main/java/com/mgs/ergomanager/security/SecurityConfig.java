@@ -34,9 +34,7 @@ public class SecurityConfig {
     };
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
     private final CustomUserDetailsService userDetailsService;
-
     private final RestSecurityErrorHandler securityErrorHandler;
 
     /**

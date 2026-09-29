@@ -11,7 +11,6 @@ import { PersonalizedEvaluationRequest, PersonalizedEvaluationResponse } from '.
 @Injectable({ providedIn: 'root' })
 export class PersonalizedEvaluationService {
     private readonly http = inject(HttpClient);
-
     private readonly baseUrl = `${environment.apiUrl}/personalized-evaluations`;
 
     /**

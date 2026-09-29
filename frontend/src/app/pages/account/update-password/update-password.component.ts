@@ -36,9 +36,7 @@ const STRENGTH_SEGMENTS = [1, 2, 3, 4] as const;
 })
 export class UpdatePasswordComponent implements HasUnsavedChanges {
     private readonly formBuilder = inject(FormBuilder);
-
     private readonly authService = inject(AuthService);
-
     private readonly destroyRef = inject(DestroyRef);
 
     protected readonly passwordForm = this.formBuilder.nonNullable.group(
@@ -54,31 +52,18 @@ export class UpdatePasswordComponent implements HasUnsavedChanges {
 
     /** Keeps the typed passwords from being lost by leaving the page, like the save bar of Discord. */
     protected readonly unsaved = trackUnsavedChanges(this.passwordForm);
-
     protected readonly homeUrl = this.authService.getHomeUrl();
-
     protected readonly currentErrors = { required: 'Escriba su contraseña actual o la temporal que recibió.' };
-
     protected readonly newErrors = { weakPassword: 'La contraseña todavía no cumple todos los requisitos.' };
-
     protected readonly confirmErrors = { required: 'Repita la nueva contraseña.' };
-
     protected readonly passwordRules = PASSWORD_RULES;
-
     protected readonly strengthSegments = STRENGTH_SEGMENTS;
-
     protected readonly isSubmitting = signal(false);
-
     protected readonly errorMessage = signal<string | null>(null);
-
     protected readonly isUpdated = signal(false);
-
     private readonly newPassword = toSignal(this.passwordForm.controls.newPassword.valueChanges, { initialValue: '' });
-
     protected readonly strength = computed(() => getPasswordStrength(this.newPassword()));
-
     protected readonly strengthLabel = computed(() => PASSWORD_STRENGTH_LABELS[this.strength()]);
-
     private readonly confirmPassword = toSignal(this.passwordForm.controls.confirmPassword.valueChanges, { initialValue: '' });
 
     /** Positive feedback under the confirmation, shown as soon as both values are equal. */

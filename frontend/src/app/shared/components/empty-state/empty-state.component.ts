@@ -20,8 +20,6 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 })
 export class EmptyStateComponent {
     readonly icon = input('fa-regular fa-folder-open');
-
     readonly title = input.required<string>();
-
     readonly message = input('');
 }

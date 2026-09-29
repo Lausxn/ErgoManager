@@ -39,24 +39,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class FormServiceImpl implements FormService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FormServiceImpl.class);
-
     private static final String FORM_NOT_FOUND_MESSAGE = "No se encontró el formulario.";
-
     private static final String COMPANY_NOT_FOUND_MESSAGE = "No se encontró la empresa.";
 
     private static final Comparator<Question> BY_ORDER =
             Comparator.comparing(Question::getQuestionOrder).thenComparing(Question::getId);
 
     private final FormRepository formRepository;
-
     private final QuestionRepository questionRepository;
-
     private final CompanyRepository companyRepository;
-
     private final SelfEvaluationRepository selfEvaluationRepository;
-
     private final EmailService emailService;
-
     private final String frontendUrl;
 
     /**
@@ -136,8 +129,7 @@ public class FormServiceImpl implements FormService {
             }
             Question question = existing.get(questionRequest.id());
             if (question == null) {
-                throw new BusinessException("La pregunta " + questionRequest.id()
-                        + " no pertenece a este formulario.");
+                throw new BusinessException("La pregunta " + questionRequest.id() + " no pertenece a este formulario.");
             }
             if (!kept.add(question.getId())) {
                 throw new BusinessException("La pregunta " + questionRequest.id() + " está repetida.");
@@ -229,8 +221,7 @@ public class FormServiceImpl implements FormService {
      * @return the stored form
      */
     private Form getForm(Long id) {
-        return formRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(FORM_NOT_FOUND_MESSAGE));
+        return formRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException(FORM_NOT_FOUND_MESSAGE));
     }
 
     /**

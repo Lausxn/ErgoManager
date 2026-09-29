@@ -56,7 +56,6 @@ class AuthErrorHandlingIntegrationTests {
 
     @Value("${ergomanager.security.jwt.secret}")
     private String jwtSecret;
-
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
     private MockMvc mockMvc;
     private User user;
@@ -85,8 +84,7 @@ class AuthErrorHandlingIntegrationTests {
 
     @Test
     void shortPasswordIsTreatedAsWrongCredentialsNotAsValidationError() throws Exception {
-        login(EMAIL, "abc").andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("message").value(BAD_CREDENTIALS));
+        login(EMAIL, "abc").andExpect(status().isUnauthorized()).andExpect(jsonPath("message").value(BAD_CREDENTIALS));
     }
 
     @Test

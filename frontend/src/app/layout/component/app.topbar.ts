@@ -45,13 +45,9 @@ import { ROLE_LABELS } from '../../shared/utils/labels';
 })
 export class AppTopbar {
     protected readonly layoutService = inject(LayoutService);
-
     private readonly authService = inject(AuthService);
-
     private readonly router = inject(Router);
-
     protected readonly session = this.authService.session;
-
     protected readonly isPreview = computed(() => this.authService.isPreviewMode && !this.session()?.token);
 
     protected readonly roleLabel = computed(() => {

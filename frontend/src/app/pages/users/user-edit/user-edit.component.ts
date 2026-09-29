@@ -44,13 +44,9 @@ const ALERT_DURATION_MS = 900;
 })
 export class UserEditComponent implements OnInit, HasUnsavedChanges {
     private readonly userService = inject(UserService);
-
     private readonly authService = inject(AuthService);
-
     private readonly toastService = inject(ToastService);
-
     private readonly router = inject(Router);
-
     private readonly destroyRef = inject(DestroyRef);
 
     /** Identifier of the user, taken from the route. */
@@ -59,16 +55,12 @@ export class UserEditComponent implements OnInit, HasUnsavedChanges {
     });
 
     protected readonly roleLabels = ROLE_LABELS;
-
     protected readonly roleTagClasses = ROLE_TAG_CLASSES;
-
     protected readonly activeTagClasses = ACTIVE_TAG_CLASSES;
-
     protected readonly userForm = new FormGroup(createIdentityControls());
 
     /** User as stored in the backend; the form is compared against it. */
     protected readonly user = signal<UserResponse | null>(null);
-
     protected readonly isSaving = signal(false);
 
     /** True while the save bar shakes to remind that there are unsaved changes. */

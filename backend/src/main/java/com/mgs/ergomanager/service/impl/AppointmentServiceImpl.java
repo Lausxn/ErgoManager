@@ -42,21 +42,13 @@ public class AppointmentServiceImpl implements AppointmentService {
             List.of(AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED);
 
     private static final DateTimeFormatter HISTORY_DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-
     private static final String APPOINTMENT_NOT_FOUND_MESSAGE = "No se encontró la cita.";
-
     private final AvailabilityRepository availabilityRepository;
-
     private final AppointmentRepository appointmentRepository;
-
     private final UserRepository userRepository;
-
     private final SelfEvaluationRepository selfEvaluationRepository;
-
     private final PersonalizedEvaluationRepository personalizedEvaluationRepository;
-
     private final HistoryRepository historyRepository;
-
     private final CurrentUserService currentUserService;
 
     /**

@@ -112,8 +112,7 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
     @Test
     void deactivatesAndActivates() throws Exception {
         Company company = persistCompany("Activa", "3-101-000006", true);
-        mvc.perform(delete("/api/companies/{id}", company.getId()).with(as(admin)))
-                .andExpect(status().isNoContent());
+        mvc.perform(delete("/api/companies/{id}", company.getId()).with(as(admin))).andExpect(status().isNoContent());
         mvc.perform(get("/api/companies/{id}", company.getId()).with(as(admin)))
                 .andExpect(jsonPath("active").value(false));
         mvc.perform(patch("/api/companies/{id}/activate", company.getId()).with(as(admin)))

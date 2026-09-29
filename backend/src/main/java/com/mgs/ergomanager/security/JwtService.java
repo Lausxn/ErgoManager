@@ -17,11 +17,8 @@ import org.springframework.stereotype.Service;
 public class JwtService {
 
     private static final String ROLE_CLAIM = "role";
-
     private static final String VERSION_CLAIM = "tokenVersion";
-
     private final SecretKey signingKey;
-
     private final long expirationMs;
 
     /**
@@ -114,10 +111,6 @@ public class JwtService {
      * @return claims contained in the token
      */
     private Claims extractClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(signingKey)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+        return Jwts.parser().verifyWith(signingKey).build().parseSignedClaims(token).getPayload();
     }
 }

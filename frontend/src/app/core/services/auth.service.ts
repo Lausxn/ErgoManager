@@ -32,7 +32,6 @@ export class AuthService {
 
     /** True while the temporary preview mode lets every page open without signing in. */
     readonly isPreviewMode = environment.previewMode;
-
     private readonly currentSession = signal<LoginResponse | null>(readStoredSession() ?? this.getPreviewSession());
 
     /** Session of the signed in user, or null when nobody is signed in. */

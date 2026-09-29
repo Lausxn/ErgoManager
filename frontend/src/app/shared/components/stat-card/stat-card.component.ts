@@ -31,13 +31,9 @@ import { SkeletonModule } from 'primeng/skeleton';
 })
 export class StatCardComponent {
     readonly label = input.required<string>();
-
     readonly value = input<number | string | null>(null);
-
     readonly note = input('');
-
     readonly icon = input('');
-
     readonly loading = input(false);
 
     /** Wine rule on top, for the figure that deserves attention. */

@@ -11,7 +11,6 @@ import { UserRequest, UserResponse, UserUpdateRequest } from '../../shared/model
 @Injectable({ providedIn: 'root' })
 export class UserService {
     private readonly http = inject(HttpClient);
-
     private readonly baseUrl = `${environment.apiUrl}/users`;
 
     /**

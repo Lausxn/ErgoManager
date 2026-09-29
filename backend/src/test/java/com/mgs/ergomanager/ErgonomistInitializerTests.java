@@ -185,12 +185,10 @@ class ErgonomistInitializerTests {
                 .andReturn().getResponse().getContentAsString();
         String token = JsonPath.read(body, "$.token");
         // User management stays restricted to administrators.
-        mockMvc.perform(get("/api/users").header("Authorization", "Bearer " + token))
-                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/users").header("Authorization", "Bearer " + token)).andExpect(status().isForbidden());
         // Ergonomists have full access to companies and forms.
         for (String path : new String[]{"/api/companies", "/api/forms"}) {
-            mockMvc.perform(get(path).header("Authorization", "Bearer " + token))
-                    .andExpect(status().isOk());
+            mockMvc.perform(get(path).header("Authorization", "Bearer " + token)).andExpect(status().isOk());
         }
         // An empty evaluation reaches DTO validation (400), not access denial (403).
         // Its business implementation belongs to another task and is not mocked here.

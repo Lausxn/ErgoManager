@@ -32,7 +32,6 @@ export class BrandLogoComponent {
 
     /** Width in pixels; the brand book minimums are always enforced. */
     readonly size = input<number | undefined>(undefined);
-
     protected readonly altText = 'Madrigal Group Solutions';
 
     protected readonly width = computed(() => {

@@ -85,22 +85,15 @@ function validateSlot(group: AbstractControl): ValidationErrors | null {
 })
 export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
     private readonly formBuilder = inject(FormBuilder);
-
     private readonly appointmentService = inject(AppointmentService);
-
     private readonly userService = inject(UserService);
-
     private readonly authService = inject(AuthService);
-
     private readonly toastService = inject(ToastService);
-
     private readonly router = inject(Router);
-
     private readonly destroyRef = inject(DestroyRef);
 
     /** Ergonomist to preselect, from the ?userId= query parameter (administrator only). */
     readonly userId = input<number | undefined, unknown>(undefined, { transform: numberAttribute });
-
     protected readonly isAdmin = computed(() => this.authService.session()?.role === 'ADMIN');
 
     /** Start of today: earlier days cannot be chosen. */
@@ -117,13 +110,9 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
     );
 
     protected readonly unsaved = trackUnsavedChanges(this.availabilityForm);
-
     protected readonly ergonomists = signal<ErgonomistOption[]>([]);
-
     protected readonly isLoadingErgonomists = signal(false);
-
     protected readonly errorMessage = signal<string | null>(null);
-
     protected readonly isSubmitting = signal(false);
 
     private readonly formValue = toSignal(merge(this.availabilityForm.valueChanges, this.availabilityForm.statusChanges).pipe(map(() => this.availabilityForm.getRawValue())), {

@@ -29,11 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class AdminInitializer implements ApplicationRunner {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AdminInitializer.class);
-
     private static final String PROPERTY_PREFIX = "ergomanager.bootstrap.admin.";
-
     private static final int BCRYPT_MAX_BYTES = 72;
-
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final Environment environment;

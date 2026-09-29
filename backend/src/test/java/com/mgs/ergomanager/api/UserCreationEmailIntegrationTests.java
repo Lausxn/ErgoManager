@@ -41,7 +41,6 @@ class UserCreationEmailIntegrationTests {
 
     @MockitoBean
     private EmailService emailService;
-
     private MockMvc mvc;
 
     @BeforeEach

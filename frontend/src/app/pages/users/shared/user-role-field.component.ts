@@ -35,8 +35,6 @@ import { ROLE_CHOICES } from './user-fields';
 export class UserRoleFieldComponent {
     /** Role currently picked in the form, used to highlight its card. */
     readonly selected = input.required<Role>();
-
     protected readonly choices = ROLE_CHOICES;
-
     protected readonly labels = ROLE_LABELS;
 }

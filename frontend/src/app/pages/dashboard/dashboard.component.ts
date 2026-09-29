@@ -55,13 +55,9 @@ const ERGONOMIST_FUNCTION_CARDS: readonly FunctionCard[] = [
 })
 export class DashboardComponent {
     private readonly authService = inject(AuthService);
-
     private readonly dashboardService = inject(DashboardService);
-
     private readonly toastService = inject(ToastService);
-
     private readonly destroyRef = inject(DestroyRef);
-
     protected readonly isAdmin = computed(() => this.authService.session()?.role === 'ADMIN');
 
     protected readonly functionCards = computed(() => (this.isAdmin() ? FUNCTION_CARDS : ERGONOMIST_FUNCTION_CARDS));
@@ -78,7 +74,6 @@ export class DashboardComponent {
     });
 
     private readonly summary = signal<DashboardSummary | null>(null);
-
     protected readonly isLoading = signal(true);
 
     /** Figures of the cards, with a dash while they could not be read. */

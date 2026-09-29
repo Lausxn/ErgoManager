@@ -83,22 +83,15 @@ interface AppointmentRow extends AppointmentResponse {
 })
 export class AppointmentListComponent implements OnInit {
     private readonly appointmentService = inject(AppointmentService);
-
     private readonly userService = inject(UserService);
-
     private readonly authService = inject(AuthService);
-
     private readonly dialogService = inject(DialogService);
-
     private readonly toastService = inject(ToastService);
-
     private readonly router = inject(Router);
-
     private readonly destroyRef = inject(DestroyRef);
 
     /** Ergonomist to show first, from the ?userId= query parameter (administrator only). */
     readonly userId = input<number | undefined, unknown>(undefined, { transform: numberAttribute });
-
     protected readonly isAdmin = computed(() => this.authService.session()?.role === 'ADMIN');
 
     protected readonly periodOptions: { label: string; value: Period }[] = [
@@ -108,36 +101,22 @@ export class AppointmentListComponent implements OnInit {
     ];
 
     protected readonly skeletonRows = SKELETON_ROWS;
-
     protected readonly period = signal<Period>('NEXT_7');
-
     protected readonly ergonomists = signal<ErgonomistOption[]>([]);
-
     protected readonly isLoadingErgonomists = signal(false);
-
     protected readonly ergonomistError = signal<string | null>(null);
-
     protected readonly selectedErgonomistId = signal<number | null>(null);
-
     private readonly appointments = signal<AppointmentResponse[]>([]);
-
     protected readonly isLoading = signal(true);
-
     protected readonly loadError = signal<string | null>(null);
-
     private readonly slots = signal<AvailabilityResponse[]>([]);
-
     protected readonly isLoadingSlots = signal(true);
-
     protected readonly slotError = signal<string | null>(null);
 
     /** False when the period is in the past, where there are no free slots to offer. */
     protected readonly periodHasFuture = computed(() => PERIOD_DAYS[this.period()] > 0);
-
     protected readonly deletingSlotId = signal<number | null>(null);
-
     protected readonly cancellingId = signal<number | null>(null);
-
     protected readonly isBookingOpen = signal(false);
 
     /** Range of the last load, used to decide whether a booked appointment belongs to it. */
@@ -185,7 +164,6 @@ export class AppointmentListComponent implements OnInit {
     });
 
     protected readonly slotCount = computed(() => this.slots().length);
-
     protected readonly slotDays = computed(() => groupSlotsByDay(this.slots()).map((day) => ({ ...day, slots: day.slots.map((slot) => ({ ...slot, duration: formatDuration(minutesBetween(slot.startDateTime, slot.endDateTime)) })) })));
 
     /** Self evaluations that already hold a pending appointment, so the dialog can warn about them. */

@@ -68,15 +68,10 @@ export class LayoutService {
     };
 
     layoutConfig = signal<layoutConfig>(this._config);
-
     layoutState = signal<LayoutState>(this._state);
-
     private configUpdate = new Subject<layoutConfig>();
-
     private overlayOpen = new Subject<any>();
-
     private menuSource = new Subject<MenuChangeEvent>();
-
     private resetSource = new Subject();
 
     menuSource$ = this.menuSource.asObservable();
@@ -88,9 +83,7 @@ export class LayoutService {
     overlayOpen$ = this.overlayOpen.asObservable();
 
     isSidebarActive = computed(() => this.layoutState().overlayMenuActive || this.layoutState().staticMenuMobileActive);
-
     isDarkTheme = computed(() => this.layoutConfig().darkTheme);
-
     pageSize = computed(() => this.layoutConfig().pageSize);
 
     /** Position of the current page size inside PAGE_SIZE_OPTIONS. */
@@ -102,11 +95,8 @@ export class LayoutService {
     );
 
     pageSizeLabel = computed(() => PAGE_SIZE_OPTIONS[this.pageSizeIndex()].label);
-
     canIncreasePageSize = computed(() => this.pageSizeIndex() < PAGE_SIZE_OPTIONS.length - 1);
-
     canDecreasePageSize = computed(() => this.pageSizeIndex() > 0);
-
     isOverlay = computed(() => this.layoutConfig().menuMode === 'overlay');
 
     constructor() {

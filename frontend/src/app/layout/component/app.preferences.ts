@@ -48,6 +48,5 @@ import { LayoutService, PAGE_SIZE_OPTIONS } from '../service/layout.service';
 })
 export class AppPreferences {
     protected readonly layoutService = inject(LayoutService);
-
     protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
 }

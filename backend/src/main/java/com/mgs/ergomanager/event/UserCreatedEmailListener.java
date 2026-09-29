@@ -13,8 +13,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 public class UserCreatedEmailListener {
 
-    private static final Logger LOGGER =
-            LoggerFactory.getLogger(UserCreatedEmailListener.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserCreatedEmailListener.class);
 
     private final EmailService emailService;
 
@@ -35,14 +34,9 @@ public class UserCreatedEmailListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleUserCreated(UserCreatedEvent event) {
         try {
-            emailService.sendTemporaryCredentials(
-                    event.email(),
-                    event.temporaryPassword());
+            emailService.sendTemporaryCredentials(event.email(), event.temporaryPassword());
         } catch (Exception exception) {
-            LOGGER.error(
-                    "No se pudo enviar el correo de credenciales al usuario {}",
-                    event.email(),
-                    exception);
+            LOGGER.error("No se pudo enviar el correo de credenciales al usuario {}", event.email(), exception);
         }
     }
 }

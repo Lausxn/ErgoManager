@@ -110,22 +110,15 @@ const REQUIRED_FIELDS = ['businessName', 'taxId', 'contactEmail'] as const;
 })
 export class CompanyFormComponent implements OnInit, HasUnsavedChanges {
     private readonly formBuilder = inject(FormBuilder);
-
     private readonly companyService = inject(CompanyService);
-
     private readonly toastService = inject(ToastService);
-
     private readonly router = inject(Router);
-
     private readonly destroyRef = inject(DestroyRef);
 
     /** Identifier of the company being edited, absent when creating a new one. */
     readonly id = input<number | undefined, unknown>(undefined, { transform: numberAttribute });
-
     protected readonly limits = LIMITS;
-
     protected readonly activeTagClasses = ACTIVE_TAG_CLASSES;
-
     protected readonly taxIdErrors = { duplicated: DUPLICATED_TAX_ID_MESSAGE };
 
     protected readonly companyForm = this.formBuilder.nonNullable.group({
@@ -137,16 +130,12 @@ export class CompanyFormComponent implements OnInit, HasUnsavedChanges {
     });
 
     protected readonly unsaved = trackUnsavedChanges(this.companyForm);
-
     protected readonly errorMessage = signal<string | null>(null);
-
     protected readonly isSubmitting = signal(false);
-
     protected readonly isLoading = signal(false);
 
     /** Stored company, only when editing: shows its state. */
     protected readonly storedCompany = signal<CompanyResponse | null>(null);
-
     protected readonly isEditing = computed(() => this.id() !== undefined && !Number.isNaN(this.id()));
 
     /** Public link the employees of the company open to answer the self evaluation. */

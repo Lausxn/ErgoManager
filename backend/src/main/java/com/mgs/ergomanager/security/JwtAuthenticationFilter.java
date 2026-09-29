@@ -26,9 +26,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
-
     private static final String AUTHORIZATION_HEADER = "Authorization";
-
     private static final String BEARER_PREFIX = "Bearer ";
 
     /**
@@ -42,7 +40,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     static final String INVALID_SESSION_MESSAGE = "La sesión no es válida. Inicie sesión nuevamente.";
 
     private final JwtService jwtService;
-
     private final CustomUserDetailsService userDetailsService;
 
     /**

@@ -64,29 +64,20 @@ interface CompanyRow extends CompanyResponse {
 })
 export class CompanyListComponent {
     private readonly companyService = inject(CompanyService);
-
     private readonly dialogService = inject(DialogService);
-
     private readonly toastService = inject(ToastService);
-
     private readonly destroyRef = inject(DestroyRef);
-
     private readonly companyList = signal<CompanyResponse[]>([]);
-
     protected readonly isLoading = signal(true);
 
     /** True when the last load failed, so the empty state can offer a retry. */
     protected readonly loadFailed = signal(false);
-
     protected readonly searchText = signal('');
-
     protected readonly statusFilter = signal<StatusFilter>('ALL');
 
     /** Ids of the companies with a request running, to avoid double clicks. */
     protected readonly busyIds = signal<ReadonlySet<number>>(new Set());
-
     protected readonly skeletonRows = SKELETON_ROWS;
-
     protected readonly activeTagClasses = ACTIVE_TAG_CLASSES;
 
     protected readonly statusOptions: { label: string; value: StatusFilter }[] = [

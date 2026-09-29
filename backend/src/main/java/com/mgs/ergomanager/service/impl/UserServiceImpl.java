@@ -27,19 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserServiceImpl implements UserService {
 
     private static final String USER_NOT_FOUND_MESSAGE = "No se encontró el usuario.";
-
     private static final String DUPLICATE_EMAIL_MESSAGE = "El correo ya está registrado";
-
     private static final String ONLY_ADMIN_ROLE_MESSAGE = "No se puede cambiar el rol del único administrador activo.";
-
     private static final String ONLY_ADMIN_DEACTIVATION_MESSAGE = "No se puede desactivar al único administrador activo.";
-
     private static final int BCRYPT_MAX_BYTES = 72;
-
     private final UserRepository userRepository;
-
     private final PasswordEncoder passwordEncoder;
-
     private final ApplicationEventPublisher eventPublisher;
 
     /**
@@ -53,7 +46,6 @@ public class UserServiceImpl implements UserService {
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             ApplicationEventPublisher eventPublisher) {
-
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.eventPublisher = eventPublisher;
@@ -62,9 +54,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public List<UserResponseDTO> findAll() {
-        return userRepository.findAllByOrderByCreatedAtDescIdDesc().stream()
-                .map(this::toResponse)
-                .toList();
+        return userRepository.findAllByOrderByCreatedAtDescIdDesc().stream().map(this::toResponse).toList();
     }
 
     @Override
@@ -86,10 +76,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponseDTO create(UserRequestDTO request) {
-
-        String normalizedEmail = request.email()
-                .trim()
-                .toLowerCase(Locale.ROOT);
+        String normalizedEmail = request.email().trim().toLowerCase(Locale.ROOT);
 
         if (userRepository.existsByEmail(normalizedEmail)) {
             throw new DuplicateResourceException(DUPLICATE_EMAIL_MESSAGE);
@@ -104,29 +91,21 @@ public class UserServiceImpl implements UserService {
         user.setFirstName(request.firstName().trim());
         user.setFirstLastName(request.firstLastName().trim());
 
-        if (request.secondLastName() != null
-                && !request.secondLastName().isBlank()) {
-            user.setSecondLastName(
-                    request.secondLastName().trim());
+        if (request.secondLastName() != null && !request.secondLastName().isBlank()) {
+            user.setSecondLastName(request.secondLastName().trim());
         } else {
             user.setSecondLastName(null);
         }
 
         user.setEmail(normalizedEmail);
-        user.setPassword(
-                passwordEncoder.encode(
-                        request.password()));
+        user.setPassword(passwordEncoder.encode(request.password()));
         user.setRole(request.role());
         user.setActive(true);
 
         try {
-            User createdUser =
-                    userRepository.saveAndFlush(user);
+            User createdUser = userRepository.saveAndFlush(user);
 
-            eventPublisher.publishEvent(
-                    new UserCreatedEvent(
-                            normalizedEmail,
-                            request.password()));
+            eventPublisher.publishEvent(new UserCreatedEvent(normalizedEmail, request.password()));
 
             return toResponse(createdUser);
 
@@ -147,13 +126,10 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponseDTO update(Long id, UserUpdateRequestDTO request) {
-
         User user = userRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE));
 
-        String normalizedEmail = request.email()
-                .trim()
-                .toLowerCase(Locale.ROOT);
+        String normalizedEmail = request.email().trim().toLowerCase(Locale.ROOT);
 
         userRepository.findByEmail(normalizedEmail)
                 .filter(existingUser -> !existingUser.getId().equals(id))
@@ -205,8 +181,7 @@ public class UserServiceImpl implements UserService {
         if (!user.isActive()) {
             return;
         }
-        if (user.getRole() == Role.ADMIN
-                && userRepository.countByRoleAndActiveTrue(Role.ADMIN) == 1) {
+        if (user.getRole() == Role.ADMIN && userRepository.countByRoleAndActiveTrue(Role.ADMIN) == 1) {
             throw new BusinessException(ONLY_ADMIN_DEACTIVATION_MESSAGE);
         }
 
@@ -238,8 +213,7 @@ public class UserServiceImpl implements UserService {
      * @return the stored user
      */
     private User getUser(Long id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE));
+        return userRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE));
     }
 
     /**

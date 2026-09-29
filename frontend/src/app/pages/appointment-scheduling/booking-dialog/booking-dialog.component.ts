@@ -59,13 +59,9 @@ interface EvaluationChoice extends SelfEvaluationResponse {
 })
 export class BookingDialogComponent {
     private readonly appointmentService = inject(AppointmentService);
-
     private readonly companyService = inject(CompanyService);
-
     private readonly selfEvaluationService = inject(SelfEvaluationService);
-
     private readonly toastService = inject(ToastService);
-
     private readonly destroyRef = inject(DestroyRef);
 
     /** Whether the dialog is open, two-way bound by the agenda. */
@@ -82,39 +78,22 @@ export class BookingDialogComponent {
 
     /** Emitted with the appointment just booked. */
     readonly booked = output<AppointmentResponse>();
-
     protected readonly maxNotesLength = MAX_NOTES_LENGTH;
-
     protected readonly companies = signal<CompanyResponse[]>([]);
-
     protected readonly isLoadingCompanies = signal(false);
-
     protected readonly companyId = signal<number | null>(null);
-
     private readonly evaluations = signal<SelfEvaluationResponse[]>([]);
-
     protected readonly isLoadingEvaluations = signal(false);
-
     protected readonly evaluationError = signal<string | null>(null);
-
     protected readonly evaluationSearch = signal('');
-
     protected readonly selfEvaluationId = signal<number | null>(null);
-
     private readonly slots = signal<AvailabilityResponse[]>([]);
-
     protected readonly isLoadingSlots = signal(false);
-
     protected readonly slotError = signal<string | null>(null);
-
     protected readonly availabilityId = signal<number | null>(null);
-
     protected readonly notes = signal('');
-
     protected readonly isSubmitting = signal(false);
-
     protected readonly errorMessage = signal<string | null>(null);
-
     private companiesLoaded = false;
 
     private evaluationRequest?: Subscription;
@@ -138,13 +117,9 @@ export class BookingDialogComponent {
     });
 
     protected readonly slotDays = computed(() => groupSlotsByDay(this.slots()).map((day) => ({ ...day, slots: day.slots.map((slot) => ({ ...slot, duration: formatDuration(minutesBetween(slot.startDateTime, slot.endDateTime)) })) })));
-
     protected readonly selectedCompany = computed(() => this.companies().find((company) => company.id === this.companyId()) ?? null);
-
     protected readonly selectedEvaluation = computed(() => this.evaluationChoices().find((choice) => choice.id === this.selfEvaluationId()) ?? null);
-
     protected readonly selectedSlot = computed(() => this.slots().find((slot) => slot.id === this.availabilityId()) ?? null);
-
     protected readonly canSubmit = computed(() => this.selfEvaluationId() !== null && this.availabilityId() !== null && this.notes().length <= MAX_NOTES_LENGTH && !this.isSubmitting());
 
     /** Called when the dialog opens: starts from scratch and reads what it needs. */

@@ -295,10 +295,8 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
                 .andExpect(status().isForbidden());
         mvc.perform(bookingRequest(selfEvaluationId, pastSlot.getId()).with(as(admin)))
                 .andExpect(status().isBadRequest());
-        mvc.perform(bookingRequest(selfEvaluationId, 999_999).with(as(admin)))
-                .andExpect(status().isBadRequest());
-        mvc.perform(bookingRequest(999_999, slot.getId()).with(as(admin)))
-                .andExpect(status().isNotFound());
+        mvc.perform(bookingRequest(selfEvaluationId, 999_999).with(as(admin))).andExpect(status().isBadRequest());
+        mvc.perform(bookingRequest(999_999, slot.getId()).with(as(admin))).andExpect(status().isNotFound());
 
         mvc.perform(bookingRequest(selfEvaluationId, slot.getId()).with(as(ergonomist)))
                 .andExpect(status().isCreated())
@@ -336,8 +334,7 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
                 .andExpect(jsonPath("status").value("CANCELLED"));
         mvc.perform(patch("/api/appointments/{id}/cancel", appointmentId).with(as(ergonomist)))
                 .andExpect(status().isBadRequest());
-        mvc.perform(patch("/api/appointments/{id}/cancel", 999_999).with(as(admin)))
-                .andExpect(status().isNotFound());
+        mvc.perform(patch("/api/appointments/{id}/cancel", 999_999).with(as(admin))).andExpect(status().isNotFound());
 
         mvc.perform(withRange(get("/api/appointments/availabilities"), ergonomist.getId()).with(as(ergonomist)))
                 .andExpect(jsonPath("$.length()").value(1))

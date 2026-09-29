@@ -147,30 +147,19 @@ interface CompanyOption {
 })
 export class FormListComponent {
     private readonly formService = inject(FormService);
-
     private readonly companyService = inject(CompanyService);
-
     private readonly dialogService = inject(DialogService);
-
     private readonly toastService = inject(ToastService);
-
     private readonly destroyRef = inject(DestroyRef);
-
     private readonly formList = signal<FormResponse[]>([]);
-
     protected readonly isLoading = signal(true);
-
     protected readonly loadFailed = signal(false);
-
     protected readonly searchText = signal('');
-
     protected readonly statusFilter = signal<StatusFilter>('ALL');
 
     /** Ids of the forms with a request running, to avoid double clicks. */
     protected readonly busyIds = signal<ReadonlySet<number>>(new Set());
-
     protected readonly skeletonRows = SKELETON_ROWS;
-
     protected readonly activeTagClasses = ACTIVE_TAG_CLASSES;
 
     protected readonly statusOptions: { label: string; value: StatusFilter }[] = [
@@ -182,18 +171,13 @@ export class FormListComponent {
     /* ----- Resend dialog ----- */
 
     protected readonly resendForm = signal<FormRow | null>(null);
-
     protected readonly resendVisible = signal(false);
-
     protected readonly selectedCompanyId = signal<number | null>(null);
-
     protected readonly isSending = signal(false);
 
     /** Active companies, read only the first time the dialog opens. */
     protected readonly companyOptions = signal<CompanyOption[] | null>(null);
-
     protected readonly isLoadingCompanies = signal(false);
-
     protected readonly companiesFailed = signal(false);
 
     protected readonly rows = computed<FormRow[]>(() =>

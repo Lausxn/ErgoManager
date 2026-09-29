@@ -165,13 +165,9 @@ type SearchResult = { ok: true; list: HistoryResponse[] } | { ok: false };
 })
 export class HistoryListComponent {
     private readonly historyService = inject(HistoryService);
-
     private readonly companyService = inject(CompanyService);
-
     private readonly personalizedEvaluationService = inject(PersonalizedEvaluationService);
-
     private readonly toastService = inject(ToastService);
-
     private readonly destroyRef = inject(DestroyRef);
 
     /** Searches to run; null cancels the one in progress. */
@@ -183,30 +179,19 @@ export class HistoryListComponent {
     ];
 
     protected readonly searchMode = signal<SearchMode>('company');
-
     protected readonly companyList = signal<CompanyResponse[]>([]);
-
     protected readonly isLoadingCompanies = signal(true);
-
     protected readonly companyId = signal<number | null>(null);
-
     protected readonly emailControl = new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email, Validators.maxLength(MAX_EMAIL_LENGTH)] });
-
     protected readonly maxEmailLength = MAX_EMAIL_LENGTH;
 
     /** Company or email of the last search, shown above the results. */
     protected readonly subject = signal('');
-
     private readonly historyList = signal<HistoryResponse[]>([]);
-
     protected readonly hasSearched = signal(false);
-
     protected readonly hasError = signal(false);
-
     protected readonly isLoading = signal(false);
-
     protected readonly filterText = signal('');
-
     protected readonly visibleCount = signal(PAGE_SIZE);
 
     /** Evaluations whose PDF is being downloaded. */

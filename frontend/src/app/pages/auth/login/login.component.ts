@@ -32,9 +32,7 @@ const LOGIN_FAILED_MESSAGE = 'No fue posible iniciar sesión. Intente de nuevo.'
 })
 export class LoginComponent {
     private readonly formBuilder = inject(FormBuilder);
-
     private readonly authService = inject(AuthService);
-
     private readonly router = inject(Router);
 
     /** Url requested before the sign in, bound from the query string. */
@@ -49,9 +47,7 @@ export class LoginComponent {
 
     /** Why the previous session ended, sent by the error interceptor. */
     protected readonly sessionMessage = signal<string | null>(this.readSessionMessage());
-
     protected readonly isSubmitting = signal(false);
-
     protected readonly currentYear = new Date().getFullYear();
 
     protected readonly highlightList = [
