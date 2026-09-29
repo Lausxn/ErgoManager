@@ -19,7 +19,7 @@ const DAYS_SHOWN_AHEAD = 30;
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
- * Agenda of the signed-in ergonomist.
+ * Agenda of the signed in ergonomist for the coming weeks.
  */
 @Component({
     selector: 'app-appointment-list',
@@ -55,10 +55,11 @@ export class AppointmentListComponent {
     }
 
     /**
-     * Reads the ergonomist agenda from the backend.
+     * Reads the appointments of the signed in ergonomist.
      */
     protected loadAgenda(): void {
         const userId = this.authService.session()?.userId;
+
         if (userId === undefined) {
             this.isLoading.set(false);
             this.toastService.warning('No se pudo identificar el usuario', 'Inicie sesión nuevamente.');
@@ -69,6 +70,7 @@ export class AppointmentListComponent {
         const to = new Date(from.getTime() + DAYS_SHOWN_AHEAD * MILLISECONDS_PER_DAY);
 
         this.isLoading.set(true);
+
         this.appointmentService.findAgenda(userId, from.toISOString(), to.toISOString()).subscribe({
             next: (appointmentList) => {
                 this.appointmentList.set(appointmentList);
@@ -82,7 +84,7 @@ export class AppointmentListComponent {
     }
 
     /**
-     * Confirms and cancels an appointment.
+     * Asks for confirmation, cancels an appointment and refreshes the agenda.
      *
      * @param appointment appointment to cancel
      */
@@ -93,7 +95,10 @@ export class AppointmentListComponent {
             icon: 'pi pi-exclamation-triangle',
             acceptLabel: 'Cancelar cita',
             rejectLabel: 'Volver',
-            rejectButtonProps: { severity: 'secondary', outlined: true },
+            rejectButtonProps: {
+                severity: 'secondary',
+                outlined: true
+            },
             accept: () =>
                 this.appointmentService.cancel(appointment.id).subscribe({
                     next: () => {

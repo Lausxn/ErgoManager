@@ -13,7 +13,8 @@ import { ACTIVE_TAG_CLASSES } from '../../../shared/utils/labels';
 import { FormService } from '../form.service';
 
 /**
- * Table of the self evaluation forms available to the authorized role.
+ * Table of the self evaluation forms, where the administrator can deactivate
+ * the ones that are no longer in use.
  */
 @Component({
     selector: 'app-form-list',
@@ -39,10 +40,11 @@ export class FormListComponent {
     }
 
     /**
-     * Reads the forms from the backend.
+     * Reads the forms shown by the table.
      */
     protected loadForms(): void {
         this.isLoading.set(true);
+
         this.formService.findAll().subscribe({
             next: (formList) => {
                 this.formList.set(formList);
@@ -56,7 +58,8 @@ export class FormListComponent {
     }
 
     /**
-     * Confirms and deactivates the selected form.
+     * Asks for confirmation and deactivates a form, so it is no longer offered
+     * to the employees.
      *
      * @param form form to deactivate
      */
@@ -67,7 +70,10 @@ export class FormListComponent {
             icon: 'pi pi-exclamation-triangle',
             acceptLabel: 'Desactivar',
             rejectLabel: 'Cancelar',
-            rejectButtonProps: { severity: 'secondary', outlined: true },
+            rejectButtonProps: {
+                severity: 'secondary',
+                outlined: true
+            },
             accept: () =>
                 this.formService.deactivate(form.id).subscribe({
                     next: () => {
