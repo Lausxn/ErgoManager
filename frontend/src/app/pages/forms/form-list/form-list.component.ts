@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signa
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { IconFieldModule } from 'primeng/iconfield';
@@ -20,7 +19,6 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 import { StatCardComponent } from '../../../shared/components/stat-card/stat-card.component';
 import { CompanyResponse } from '../../../shared/models/company.model';
 import { FormResponse } from '../../../shared/models/form.model';
-import { ToastService } from '../../../shared/services/toast.service';
 import { DialogService } from '../../../shared/services/dialog.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { getApiErrorMessage } from '../../../shared/utils/api-error';
@@ -234,16 +232,6 @@ export class FormListComponent {
      */
     protected loadForms(): void {
         this.isLoading.set(true);
-
-        this.formService.findAll().subscribe({
-            next: (formList) => {
-                this.formList.set(formList);
-                this.isLoading.set(false);
-            },
-            error: () => {
-                this.isLoading.set(false);
-                this.toastService.error('No se pudieron cargar los formularios', 'Verifique la conexión e intente nuevamente.');
-            }
         this.loadFailed.set(false);
         this.formService
             .findAll()
@@ -302,25 +290,6 @@ export class FormListComponent {
      *
      * @param row form to activate
      */
-    protected confirmDeactivate(form: FormResponse): void {
-        this.confirmationService.confirm({
-            header: 'Desactivar formulario',
-            message: `¿Desea desactivar "${form.title}"? Los colaboradores ya no podrán responderlo.`,
-            icon: 'pi pi-exclamation-triangle',
-            acceptLabel: 'Desactivar',
-            rejectLabel: 'Cancelar',
-            rejectButtonProps: {
-                severity: 'secondary',
-                outlined: true
-            },
-            accept: () =>
-                this.formService.deactivate(form.id).subscribe({
-                    next: () => {
-                        this.toastService.success('Formulario desactivado', form.title);
-                        this.loadForms();
-                    },
-                    error: () => this.toastService.error('No se pudo desactivar el formulario', 'Intente nuevamente en unos minutos.')
-                })
     protected activate(row: FormRow): void {
         if (row.active || this.isBusy(row.id)) {
             return;

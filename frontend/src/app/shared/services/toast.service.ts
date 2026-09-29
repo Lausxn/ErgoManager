@@ -3,9 +3,6 @@ import Swal, { SweetAlertIcon } from 'sweetalert2';
 
 const TOAST_DURATION_MS = 3500;
 
-/**
- * Shared SweetAlert2 notifications for ErgoManager.
- * The visual treatment follows the MGS palette through global CSS variables.
 /** Class that places the toasts below the top bar (see .mgs-swal-container). */
 const CONTAINER_CLASS = 'mgs-swal-container';
 
@@ -24,9 +21,6 @@ export class ToastService {
         closeButtonAriaLabel: 'Cerrar notificación',
         timer: TOAST_DURATION_MS,
         timerProgressBar: true,
-        customClass: {
-            container: 'mgs-swal-container'
-        },
         customClass: { container: CONTAINER_CLASS },
         didOpen: (popup) => {
             popup.addEventListener('mouseenter', Swal.stopTimer);
@@ -35,10 +29,6 @@ export class ToastService {
     });
 
     /**
-     * Confirms that an operation completed successfully.
-     *
-     * @param title short summary of the result
-     * @param detail optional contextual information
      * Confirms that an action finished well.
      *
      * @param title  short summary of what happened
@@ -49,10 +39,6 @@ export class ToastService {
     }
 
     /**
-     * Reports an operation that could not be completed.
-     *
-     * @param title short summary of the problem
-     * @param detail optional recovery hint
      * Tells that an action failed and what to do next.
      *
      * @param title  short summary of the failure
@@ -65,7 +51,6 @@ export class ToastService {
     /**
      * Displays a non-blocking warning.
      *
-     * @param title short warning title
      * @param title  short warning title
      * @param detail optional warning detail
      */
@@ -73,16 +58,6 @@ export class ToastService {
         this.show('warning', title, detail);
     }
 
-    private show(icon: SweetAlertIcon, title: string, detail?: string): void {
-        void this.toast.fire({
-            icon,
-            title,
-            text: detail,
-            customClass: {
-                container: 'mgs-swal-container',
-                popup: `mgs-swal-toast mgs-swal-toast--${icon}`
-            }
-        });
     /**
      * Gives neutral information, such as a process that keeps running.
      *
