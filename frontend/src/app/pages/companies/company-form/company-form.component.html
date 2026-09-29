@@ -1,44 +1,143 @@
-<app-page-header eyebrow="Empresas" [title]="isEditing() ? 'Editar empresa' : 'Nueva empresa'" subtitle="Datos de la empresa cliente y de su contacto." />
+<app-page-header eyebrow="Empresas cliente" [title]="isEditing() ? 'Editar empresa' : 'Registro de empresa'" subtitle="Datos legales y de contacto de la organización que recibe los formularios.">
+    <p-button label="Volver a empresas" icon="fa-solid fa-arrow-left" severity="secondary" [text]="true" routerLink="/companies" />
+</app-page-header>
 
-<form [formGroup]="companyForm" (ngSubmit)="submit()" class="mgs-card" novalidate>
-    <div class="mgs-form-grid">
-        <div class="mgs-field">
-            <label for="businessName">Razón social</label>
-            <input pInputText id="businessName" formControlName="businessName" maxlength="150" />
-            @if (isInvalid('businessName')) {
-                <small class="mgs-field__error">La razón social es obligatoria (máximo 150 caracteres).</small>
+<form [formGroup]="companyForm" (ngSubmit)="submit()" class="mgs-form-layout" novalidate>
+    <div class="mgs-stack">
+        <section class="mgs-card">
+            <div class="mgs-card-header">
+                <div>
+                    <h2 class="mgs-section-title">Identificación</h2>
+                    <p class="mgs-section-lead">Tal como aparece en los registros legales. La cédula jurídica no se puede repetir.</p>
+                </div>
+            </div>
+            @if (isLoading()) {
+                <div class="mgs-form-grid">
+                    <p-skeleton height="3.5rem" styleClass="col-span-12" />
+                    <p-skeleton height="3.5rem" styleClass="col-span-6" />
+                </div>
+            } @else {
+                <div class="mgs-form-grid">
+                    <app-form-field label="Razón social" inputId="businessName" [control]="companyForm.controls.businessName">
+                        <input pInputText id="businessName" formControlName="businessName" [maxlength]="limits.businessName" autocomplete="organization" placeholder="Ej. Servicios Industriales del Valle S.A." />
+                    </app-form-field>
+                    <app-form-field label="Cédula jurídica" inputId="taxId" [control]="companyForm.controls.taxId" [errors]="taxIdErrors" [half]="true" hint="Identificador único de la empresa.">
+                        <input pInputText id="taxId" formControlName="taxId" [maxlength]="limits.taxId" autocomplete="off" placeholder="Ej. 3-101-123456" />
+                    </app-form-field>
+                </div>
             }
-        </div>
+        </section>
 
-        <div class="mgs-field mgs-field--half">
-            <label for="taxId">Cédula jurídica</label>
-            <input pInputText id="taxId" formControlName="taxId" maxlength="20" />
-            @if (isInvalid('taxId')) {
-                <small class="mgs-field__error">La cédula jurídica es obligatoria (máximo 20 caracteres).</small>
+        <section class="mgs-card">
+            <div class="mgs-card-header">
+                <div>
+                    <h2 class="mgs-section-title">Contacto</h2>
+                    <p class="mgs-section-lead">A este correo llegan los avisos de los formularios reenviados.</p>
+                </div>
+            </div>
+            @if (isLoading()) {
+                <div class="mgs-form-grid">
+                    <p-skeleton height="3.5rem" styleClass="col-span-12" />
+                    <p-skeleton height="3.5rem" styleClass="col-span-6" />
+                    <p-skeleton height="3.5rem" styleClass="col-span-6" />
+                </div>
+            } @else {
+                <div class="mgs-form-grid">
+                    <app-form-field label="Correo de contacto" inputId="contactEmail" [control]="companyForm.controls.contactEmail">
+                        <input pInputText id="contactEmail" type="email" formControlName="contactEmail" [maxlength]="limits.contactEmail" autocomplete="email" placeholder="contacto@empresa.com" />
+                    </app-form-field>
+                    <app-form-field label="Teléfono" inputId="phoneNumber" [control]="companyForm.controls.phoneNumber" [half]="true" [optional]="true">
+                        <input pInputText id="phoneNumber" type="tel" formControlName="phoneNumber" [maxlength]="limits.phoneNumber" autocomplete="tel" placeholder="Ej. 2222-3333" />
+                    </app-form-field>
+                    <app-form-field label="Dirección" inputId="address" [control]="companyForm.controls.address" [half]="true" [optional]="true">
+                        <input pInputText id="address" formControlName="address" [maxlength]="limits.address" autocomplete="street-address" placeholder="Provincia, cantón y señas" />
+                    </app-form-field>
+                </div>
             }
-        </div>
-
-        <div class="mgs-field mgs-field--half">
-            <label for="contactEmail">Correo de contacto</label>
-            <input pInputText id="contactEmail" type="email" formControlName="contactEmail" />
-            @if (isInvalid('contactEmail')) {
-                <small class="mgs-field__error">Escriba un correo válido.</small>
-            }
-        </div>
-
-        <div class="mgs-field mgs-field--half">
-            <label for="phoneNumber">Teléfono <span class="text-muted-color font-normal">(opcional)</span></label>
-            <input pInputText id="phoneNumber" type="tel" formControlName="phoneNumber" />
-        </div>
-
-        <div class="mgs-field mgs-field--half">
-            <label for="address">Dirección <span class="text-muted-color font-normal">(opcional)</span></label>
-            <input pInputText id="address" formControlName="address" />
-        </div>
+        </section>
     </div>
 
-    <div class="mgs-form-actions">
-        <p-button label="Cancelar" severity="secondary" [outlined]="true" routerLink="/companies" />
-        <p-button type="submit" label="Guardar" icon="pi pi-check" [loading]="isSubmitting()" />
-    </div>
+    <aside class="mgs-card mgs-sticky flex flex-col gap-6">
+        @if (isLoading()) {
+            <div class="flex flex-col items-center gap-3" aria-hidden="true">
+                <p-skeleton shape="circle" size="4rem" />
+                <p-skeleton width="12rem" height="1.2rem" />
+                <p-skeleton width="9rem" height="0.8rem" />
+                <p-skeleton width="4.5rem" height="1.5rem" borderRadius="999px" />
+            </div>
+            <div class="flex flex-col gap-3" aria-hidden="true">
+                <p-skeleton width="80%" height="0.85rem" />
+                <p-skeleton width="50%" height="0.85rem" />
+                <p-skeleton width="65%" height="0.85rem" />
+            </div>
+        } @else {
+            <div class="flex flex-col items-center text-center gap-3">
+                <p-avatar [label]="preview().initials || undefined" [icon]="preview().initials ? undefined : 'fa-solid fa-building'" shape="circle" size="xlarge" styleClass="mgs-avatar" />
+                <div class="min-w-0">
+                    <div class="mgs-section-title !m-0 break-words">{{ preview().name || 'Nueva empresa' }}</div>
+                    <div class="text-sm text-muted-color">{{ preview().taxId ? 'Cédula jurídica ' + preview().taxId : 'Sin cédula jurídica' }}</div>
+                </div>
+                @if (storedCompany(); as company) {
+                    <p-tag [value]="company.active ? 'Activa' : 'Inactiva'" [styleClass]="company.active ? activeTagClasses.active : activeTagClasses.inactive" />
+                }
+            </div>
+
+            <ul class="company-contact" aria-label="Datos de contacto">
+                <li>
+                    <i class="fa-regular fa-envelope" aria-hidden="true"></i><span>{{ preview().email || 'Sin correo de contacto' }}</span>
+                </li>
+                <li>
+                    <i class="fa-solid fa-phone" aria-hidden="true"></i><span>{{ preview().phone || 'Sin teléfono' }}</span>
+                </li>
+                <li>
+                    <i class="fa-solid fa-location-dot" aria-hidden="true"></i><span>{{ preview().address || 'Sin dirección' }}</span>
+                </li>
+            </ul>
+        }
+
+        <div class="flex flex-col gap-2">
+            <div class="flex justify-between items-baseline">
+                <span class="mgs-eyebrow">Datos obligatorios</span>
+                <span class="font-semibold tabular-nums">{{ completedCount() }} de {{ requiredCount }}</span>
+            </div>
+            <p-progressbar [value]="progress()" [showValue]="false" styleClass="h-2" />
+        </div>
+
+        @if (isEditing()) {
+            <div class="company-link">
+                <span class="mgs-eyebrow">Enlace de autoevaluación</span>
+                <p class="company-link__lead">Los colaboradores de la empresa responden el formulario desde este enlace, sin iniciar sesión.</p>
+                <div class="company-link__box">
+                    <span class="company-link__url" [title]="selfEvaluationLink()">{{ selfEvaluationLink() }}</span>
+                    <p-button type="button" icon="fa-regular fa-copy" [rounded]="true" [text]="true" severity="secondary" (onClick)="copyLink()" pTooltip="Copiar enlace" tooltipPosition="top" ariaLabel="Copiar enlace de autoevaluación" />
+                </div>
+                @if (storedCompany()?.active === false) {
+                    <div class="mgs-details-note">
+                        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                        <span>La empresa está inactiva: el enlace no aceptará respuestas hasta reactivarla.</span>
+                    </div>
+                }
+            </div>
+        } @else {
+            <div class="mgs-details-note">
+                <i class="fa-solid fa-link" aria-hidden="true"></i>
+                <span>Al registrar la empresa obtendrá el enlace para que sus colaboradores respondan la autoevaluación.</span>
+            </div>
+        }
+    </aside>
+
+    @if (errorMessage(); as message) {
+        <div class="mgs-alert" role="alert">
+            <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ message }}</span>
+        </div>
+    }
+
+    <app-save-bar
+        [tracker]="unsaved"
+        [saving]="isSubmitting()"
+        [message]="isEditing() ? 'Cuidado, tiene cambios sin guardar.' : 'Cuidado, la empresa todavía no se ha registrado.'"
+        [discardLabel]="isEditing() ? 'Restablecer' : 'Vaciar campos'"
+        [submitLabel]="isEditing() ? 'Guardar cambios' : 'Registrar empresa'"
+        (discarded)="clearError()"
+    />
 </form>

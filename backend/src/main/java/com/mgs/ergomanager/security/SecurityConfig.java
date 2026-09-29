@@ -75,10 +75,23 @@ public class SecurityConfig {
                         // Employees answer the form without an account.
                         .requestMatchers(HttpMethod.GET, "/api/forms/active").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/self-evaluations").permitAll()
-                        .requestMatchers("/api/companies/**").hasRole("ADMIN")
+                        // Administrators and ergonomists have full access to companies and forms;
+                        // user management stays restricted to administrators.
+                        .requestMatchers("/api/companies/**").hasAnyRole("ADMIN", "ERGONOMIST")
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
-                        .requestMatchers("/api/forms/**").hasRole("ADMIN")
+                        .requestMatchers("/api/forms/**").hasAnyRole("ADMIN", "ERGONOMIST")
+                        .requestMatchers("/api/dashboard/**").hasRole("ADMIN")
+                        // Only ergonomists write evaluations and list their own; admins can read
+                        // a single evaluation and its report. Ownership is checked by the service.
+                        .requestMatchers(HttpMethod.POST, "/api/personalized-evaluations").hasRole("ERGONOMIST")
+                        .requestMatchers(HttpMethod.GET, "/api/personalized-evaluations").hasRole("ERGONOMIST")
+                        .requestMatchers(HttpMethod.GET, "/api/personalized-evaluations/*",
+                                "/api/personalized-evaluations/*/report").hasAnyRole("ADMIN", "ERGONOMIST")
                         .requestMatchers("/api/personalized-evaluations/**").hasRole("ERGONOMIST")
+                        // Both roles; ownership of the agenda is checked by the services.
+                        .requestMatchers("/api/appointments/**").authenticated()
+                        .requestMatchers("/api/histories/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/self-evaluations/**").authenticated()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

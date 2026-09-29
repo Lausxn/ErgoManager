@@ -1,5 +1,6 @@
 package com.mgs.ergomanager.dto.history;
 
+import com.mgs.ergomanager.model.enums.HistoryType;
 import java.time.LocalDateTime;
 
 /**
@@ -12,6 +13,8 @@ import java.time.LocalDateTime;
  * @param employeeEmail            email of the employee the entry belongs to
  * @param description              short text describing the milestone
  * @param registeredAt             moment the entry was recorded
+ * @param companyName              business name of the client company
+ * @param type                     milestone recorded, null for entries older than this field
  */
 public record HistoryResponseDTO(
         Long id,
@@ -20,5 +23,7 @@ public record HistoryResponseDTO(
         Long personalizedEvaluationId,
         String employeeEmail,
         String description,
-        LocalDateTime registeredAt) {
+        LocalDateTime registeredAt,
+        String companyName,
+        HistoryType type) {
 }

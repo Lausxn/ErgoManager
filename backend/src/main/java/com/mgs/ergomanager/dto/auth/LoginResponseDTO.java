@@ -5,12 +5,13 @@ import com.mgs.ergomanager.model.enums.Role;
 /**
  * Token and profile data returned after a successful sign in.
  *
- * @param token       signed JWT to send in the Authorization header
- * @param tokenType   scheme expected by the API, always Bearer
- * @param expiresAtMs expiration instant of the token, in epoch milliseconds
- * @param userId      identifier of the authenticated user
- * @param fullName    display name of the authenticated user
- * @param role        role granted to the authenticated user
+ * @param token              signed JWT to send in the Authorization header
+ * @param tokenType          scheme expected by the API, always Bearer
+ * @param expiresAtMs        expiration instant of the token, in epoch milliseconds
+ * @param userId             identifier of the authenticated user
+ * @param fullName           display name of the authenticated user
+ * @param role               role granted to the authenticated user
+ * @param mustChangePassword true when the user must replace the temporary password
  */
 public record LoginResponseDTO(
         String token,
@@ -18,5 +19,6 @@ public record LoginResponseDTO(
         long expiresAtMs,
         Long userId,
         String fullName,
-        Role role) {
+        Role role,
+        boolean mustChangePassword) {
 }

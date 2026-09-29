@@ -2,15 +2,18 @@ package com.mgs.ergomanager.service.impl;
 
 import com.mgs.ergomanager.dto.user.UserRequestDTO;
 import com.mgs.ergomanager.dto.user.UserResponseDTO;
+import com.mgs.ergomanager.dto.user.UserUpdateRequestDTO;
 import com.mgs.ergomanager.event.UserCreatedEvent;
+import com.mgs.ergomanager.exception.BusinessException;
 import com.mgs.ergomanager.exception.DuplicateResourceException;
+import com.mgs.ergomanager.exception.ResourceNotFoundException;
 import com.mgs.ergomanager.model.User;
+import com.mgs.ergomanager.model.enums.Role;
 import com.mgs.ergomanager.repository.UserRepository;
 import com.mgs.ergomanager.service.UserService;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
-import java.nio.charset.StandardCharsets;
-import com.mgs.ergomanager.exception.BusinessException;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,6 +25,16 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class UserServiceImpl implements UserService {
+
+    private static final String USER_NOT_FOUND_MESSAGE = "No se encontró el usuario.";
+
+    private static final String DUPLICATE_EMAIL_MESSAGE = "El correo ya está registrado";
+
+    private static final String ONLY_ADMIN_ROLE_MESSAGE = "No se puede cambiar el rol del único administrador activo.";
+
+    private static final String ONLY_ADMIN_DEACTIVATION_MESSAGE = "No se puede desactivar al único administrador activo.";
+
+    private static final int BCRYPT_MAX_BYTES = 72;
 
     private final UserRepository userRepository;
 
@@ -47,17 +60,17 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<UserResponseDTO> findAll() {
-        // TODO: read every user and map it to UserResponseDTO.
-        throw new UnsupportedOperationException(
-                "UserService.findAll is not implemented yet");
+        return userRepository.findAllByOrderByCreatedAtDescIdDesc().stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UserResponseDTO findById(Long id) {
-        // TODO: read the user or raise ResourceNotFoundException.
-        throw new UnsupportedOperationException(
-                "UserService.findById is not implemented yet");
+        return toResponse(getUser(id));
     }
 
     /**
@@ -79,11 +92,10 @@ public class UserServiceImpl implements UserService {
                 .toLowerCase(Locale.ROOT);
 
         if (userRepository.existsByEmail(normalizedEmail)) {
-            throw new DuplicateResourceException(
-                    "El correo ya está registrado");
+            throw new DuplicateResourceException(DUPLICATE_EMAIL_MESSAGE);
         }
 
-        if (request.password().getBytes(StandardCharsets.UTF_8).length > 72) {
+        if (request.password().getBytes(StandardCharsets.UTF_8).length > BCRYPT_MAX_BYTES) {
             throw new BusinessException("La contraseña no puede superar 72 bytes UTF-8.");
         }
 
@@ -119,26 +131,115 @@ public class UserServiceImpl implements UserService {
             return toResponse(createdUser);
 
         } catch (DataIntegrityViolationException exception) {
-            throw new DuplicateResourceException(
-                    "El correo ya está registrado");
+            throw new DuplicateResourceException(DUPLICATE_EMAIL_MESSAGE);
         }
     }
 
+    /**
+     * Updates the data and the role of an administrator or ergonomist. Changing
+     * the role revokes the sessions of the user, and the only active
+     * administrator cannot lose that role.
+     *
+     * @param id      identifier of the user
+     * @param request new data of the user
+     * @return updated user without exposing the password
+     */
     @Override
-    public UserResponseDTO update(
-            Long id,
-            UserRequestDTO request) {
+    @Transactional
+    public UserResponseDTO update(Long id, UserUpdateRequestDTO request) {
 
-        // TODO: copy the request over the stored user, rehashing the password.
-        throw new UnsupportedOperationException(
-                "UserService.update is not implemented yet");
+        User user = userRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE));
+
+        String normalizedEmail = request.email()
+                .trim()
+                .toLowerCase(Locale.ROOT);
+
+        userRepository.findByEmail(normalizedEmail)
+                .filter(existingUser -> !existingUser.getId().equals(id))
+                .ifPresent(existingUser -> {
+                    throw new DuplicateResourceException(DUPLICATE_EMAIL_MESSAGE);
+                });
+
+        boolean changingOnlyActiveAdminRole =
+                user.getRole() == Role.ADMIN
+                        && request.role() == Role.ERGONOMIST
+                        && user.isActive()
+                        && userRepository.countByRoleAndActiveTrue(Role.ADMIN) == 1;
+
+        if (changingOnlyActiveAdminRole) {
+            throw new BusinessException(ONLY_ADMIN_ROLE_MESSAGE);
+        }
+
+        user.setFirstName(request.firstName());
+        user.setFirstLastName(request.firstLastName());
+        user.setSecondLastName(request.secondLastName());
+        user.setEmail(normalizedEmail);
+        if (user.getRole() != request.role()) {
+            user.setTokenVersion(user.getTokenVersion() + 1);
+            user.setRole(request.role());
+        }
+
+        try {
+            User updatedUser = userRepository.saveAndFlush(user);
+            return toResponse(updatedUser);
+        } catch (DataIntegrityViolationException exception) {
+            throw new DuplicateResourceException(DUPLICATE_EMAIL_MESSAGE);
+        }
     }
 
+    /**
+     * Soft deletes the user: the row is kept so its records stay linked, the
+     * account can no longer sign in and its open sessions are revoked.
+     * Deactivating an inactive user changes nothing.
+     */
     @Override
-    public void deactivate(Long id) {
-        // TODO: set the active flag to false, never delete the row.
-        throw new UnsupportedOperationException(
-                "UserService.deactivate is not implemented yet");
+    @Transactional
+    public void deactivate(Long id, String currentUserEmail) {
+        User user = userRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE));
+
+        if (user.getEmail().equalsIgnoreCase(currentUserEmail)) {
+            throw new BusinessException("No puede desactivar su propia cuenta.");
+        }
+        if (!user.isActive()) {
+            return;
+        }
+        if (user.getRole() == Role.ADMIN
+                && userRepository.countByRoleAndActiveTrue(Role.ADMIN) == 1) {
+            throw new BusinessException(ONLY_ADMIN_DEACTIVATION_MESSAGE);
+        }
+
+        user.setActive(false);
+        // A new version rejects the tokens issued before, even after a reactivation.
+        user.setTokenVersion(user.getTokenVersion() + 1);
+        userRepository.saveAndFlush(user);
+    }
+
+    /**
+     * Gives back the access to a deactivated user. The sessions revoked by the
+     * deactivation stay revoked, so the user has to sign in again.
+     *
+     * @param id identifier of the user
+     * @return the activated user
+     */
+    @Override
+    @Transactional
+    public UserResponseDTO activate(Long id) {
+        User user = getUser(id);
+        user.setActive(true);
+        return toResponse(userRepository.save(user));
+    }
+
+    /**
+     * Reads a user or fails with HTTP 404.
+     *
+     * @param id identifier of the user
+     * @return the stored user
+     */
+    private User getUser(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE));
     }
 
     /**

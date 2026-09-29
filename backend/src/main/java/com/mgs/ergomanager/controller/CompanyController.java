@@ -10,6 +10,7 @@ import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -92,5 +93,16 @@ public class CompanyController {
     public ResponseEntity<Void> deactivate(@PathVariable Long id) {
         companyService.deactivate(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Activates a company that had been deactivated.
+     *
+     * @param id identifier of the company
+     * @return the activated company
+     */
+    @PatchMapping("/{id}/activate")
+    public ResponseEntity<CompanyResponseDTO> activate(@PathVariable Long id) {
+        return ResponseEntity.ok(companyService.activate(id));
     }
 }

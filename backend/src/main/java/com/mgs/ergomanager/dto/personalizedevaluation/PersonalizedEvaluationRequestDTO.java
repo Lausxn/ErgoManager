@@ -15,17 +15,23 @@ import jakarta.validation.constraints.Size;
  */
 public record PersonalizedEvaluationRequestDTO(
 
-        @NotNull
+        @NotNull(message = "Este campo es obligatorio.")
         Long appointmentId,
 
-        @NotBlank
-        @Size(max = 1000)
+        @NotBlank(message = "Este campo es obligatorio.")
+        @Size(max = 1000, message = "Use un máximo de 1000 caracteres.")
         String diagnosis,
 
-        @NotBlank
-        @Size(max = 1000)
+        @NotBlank(message = "Este campo es obligatorio.")
+        @Size(max = 1000, message = "Use un máximo de 1000 caracteres.")
         String recommendations,
 
-        @NotNull
+        @NotNull(message = "Seleccione un nivel de riesgo.")
         RiskLevel riskLevel) {
+
+    /** Trims the texts before validation. */
+    public PersonalizedEvaluationRequestDTO {
+        diagnosis = diagnosis == null ? null : diagnosis.trim();
+        recommendations = recommendations == null ? null : recommendations.trim();
+    }
 }

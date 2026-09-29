@@ -40,8 +40,17 @@ public class User {
     @Column(name = "password", nullable = false, length = 100)
     private String password;
 
-    @Column(name = "token_version", nullable = false, columnDefinition = "bigint default 0")
+    @Column(
+            name = "token_version",
+            nullable = false,
+            columnDefinition = "bigint default 0")
     private long tokenVersion;
+
+    @Column(
+            name = "must_change_password",
+            nullable = false,
+            columnDefinition = "boolean default false")
+    private boolean mustChangePassword = true;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 20)
@@ -86,6 +95,20 @@ public class User {
         this.secondLastName = secondLastName;
     }
 
+    /**
+     * Joins the name parts into a single display name. It is not persisted:
+     * the entity uses field access, so JPA ignores this getter.
+     *
+     * @return full name without extra blank spaces
+     */
+    public String getFullName() {
+        StringBuilder fullName = new StringBuilder(firstName).append(' ').append(firstLastName);
+        if (secondLastName != null && !secondLastName.isBlank()) {
+            fullName.append(' ').append(secondLastName);
+        }
+        return fullName.toString();
+    }
+
     public String getEmail() {
         return email;
     }
@@ -102,14 +125,32 @@ public class User {
         this.password = password;
     }
 
-    /** @return current session version used to revoke older tokens */
+    /**
+     * @return current session version used to revoke older tokens
+     */
     public long getTokenVersion() {
         return tokenVersion;
     }
 
-    /** @param tokenVersion session version after a password change */
+    /**
+     * @param tokenVersion session version after a password change
+     */
     public void setTokenVersion(long tokenVersion) {
         this.tokenVersion = tokenVersion;
+    }
+
+    /**
+     * @return true when the user must replace the temporary password
+     */
+    public boolean isMustChangePassword() {
+        return mustChangePassword;
+    }
+
+    /**
+     * @param mustChangePassword whether the temporary password must be replaced
+     */
+    public void setMustChangePassword(boolean mustChangePassword) {
+        this.mustChangePassword = mustChangePassword;
     }
 
     public Role getRole() {

@@ -15,6 +15,8 @@ import java.time.LocalDateTime;
  * @param riskLevel       risk level confirmed by the ergonomist
  * @param reportPath      location of the generated PDF report
  * @param evaluatedAt     moment the evaluation was written
+ * @param employeeEmail   email of the evaluated employee
+ * @param companyName     business name of the company the employee works for
  */
 public record PersonalizedEvaluationResponseDTO(
         Long id,
@@ -25,5 +27,7 @@ public record PersonalizedEvaluationResponseDTO(
         String recommendations,
         RiskLevel riskLevel,
         String reportPath,
-        LocalDateTime evaluatedAt) {
+        LocalDateTime evaluatedAt,
+        String employeeEmail,
+        String companyName) {
 }

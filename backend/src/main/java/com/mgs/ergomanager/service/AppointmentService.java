@@ -31,6 +31,13 @@ public interface AppointmentService {
     List<AvailabilityResponseDTO> findFreeAvailabilities(Long userId, LocalDateTime from, LocalDateTime to);
 
     /**
+     * Deletes a slot that has not been booked.
+     *
+     * @param id identifier of the slot
+     */
+    void deleteAvailability(Long id);
+
+    /**
      * Books an appointment on a free slot.
      *
      * @param request slot chosen by the employee

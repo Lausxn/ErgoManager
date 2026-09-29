@@ -1,98 +1,84 @@
-<app-page-header eyebrow="Gestión de usuarios" [title]="isEditing() ? 'Editar usuario' : 'Creación de usuario'" subtitle="Datos para identificar a la persona, su acceso y su rol dentro de ErgoManager.">
+<app-page-header eyebrow="Gestión de usuarios" title="Creación de usuario" subtitle="Datos para identificar a la persona, su acceso y su rol dentro de ErgoManager.">
     <p-button label="Volver a usuarios" icon="pi pi-arrow-left" severity="secondary" [text]="true" routerLink="/users" />
 </app-page-header>
 
-<form [formGroup]="userForm" (ngSubmit)="submit()" class="grid grid-cols-12 gap-6 items-start" novalidate>
-    <div class="col-span-12 xl:col-span-8 mgs-card">
-        <h2 class="mgs-section-title">Datos personales</h2>
-        <div class="mgs-form-grid">
-            <div class="mgs-field">
-                <label for="firstName">Nombre</label>
-                <input pInputText id="firstName" formControlName="firstName" [maxlength]="limits.name" autocomplete="given-name" placeholder="Ej. María Fernanda" />
-                @if (isInvalid('firstName')) {
-                    <small class="mgs-field__error" role="alert">{{ fieldError('firstName') }}</small>
-                }
+<form [formGroup]="userForm" (ngSubmit)="submit()" class="mgs-form-layout" novalidate>
+    <div class="mgs-stack">
+        <section class="mgs-card">
+            <div class="mgs-card-header">
+                <div>
+                    <h2 class="mgs-section-title">Datos personales</h2>
+                    <p class="mgs-section-lead">Tal como aparecerán en la agenda y en los reportes.</p>
+                </div>
             </div>
-
-            <div class="mgs-field mgs-field--half">
-                <label for="firstLastName">Primer apellido</label>
-                <input pInputText id="firstLastName" formControlName="firstLastName" [maxlength]="limits.name" autocomplete="family-name" placeholder="Ej. Madrigal" />
-                @if (isInvalid('firstLastName')) {
-                    <small class="mgs-field__error" role="alert">{{ fieldError('firstLastName') }}</small>
-                }
+            <div class="mgs-form-grid">
+                <app-form-field label="Nombre" inputId="firstName" [control]="userForm.controls.firstName">
+                    <input pInputText id="firstName" formControlName="firstName" [maxlength]="limits.name" autocomplete="given-name" placeholder="Ej. María Fernanda" />
+                </app-form-field>
+                <app-form-field label="Primer apellido" inputId="firstLastName" [control]="userForm.controls.firstLastName" [half]="true">
+                    <input pInputText id="firstLastName" formControlName="firstLastName" [maxlength]="limits.name" autocomplete="family-name" placeholder="Ej. Madrigal" />
+                </app-form-field>
+                <app-form-field label="Segundo apellido" inputId="secondLastName" [control]="userForm.controls.secondLastName" [half]="true" [optional]="true">
+                    <input pInputText id="secondLastName" formControlName="secondLastName" [maxlength]="limits.name" placeholder="Ej. Solano" />
+                </app-form-field>
             </div>
+        </section>
 
-            <div class="mgs-field mgs-field--half">
-                <label for="secondLastName">Segundo apellido <span class="text-muted-color font-normal">(opcional)</span></label>
-                <input pInputText id="secondLastName" formControlName="secondLastName" [maxlength]="limits.name" placeholder="Ej. Solano" />
-                @if (isInvalid('secondLastName')) {
-                    <small class="mgs-field__error" role="alert">{{ fieldError('secondLastName') }}</small>
-                }
+        <section class="mgs-card">
+            <div class="mgs-card-header">
+                <div>
+                    <h2 class="mgs-section-title">Acceso</h2>
+                    <p class="mgs-section-lead">Al crear la cuenta enviaremos al correo el usuario y la contraseña temporal.</p>
+                </div>
             </div>
-        </div>
-
-        <h2 class="mgs-section-title mgs-section-title--spaced">Acceso</h2>
-        <div class="mgs-form-grid">
-            <div class="mgs-field">
-                <label for="email">Correo electrónico</label>
-                <input pInputText id="email" type="email" aria-describedby="email-hint email-error" formControlName="email" [attr.aria-invalid]="isInvalid('email')" [maxlength]="limits.email" autocomplete="off" placeholder="nombre@empresa.com" />
-                <small id="email-hint" class="text-muted-color">
-                    Es el usuario con el que inicia sesión.
-                    @if (!isEditing()) {
-                        Al crear la cuenta se le enviará a este correo una contraseña temporal.
+            <div class="mgs-form-grid">
+                <app-form-field label="Correo electrónico" inputId="email" [control]="userForm.controls.email" [errors]="emailErrors" hint="Es el usuario con el que inicia sesión.">
+                    <input pInputText id="email" type="email" formControlName="email" [maxlength]="limits.email" autocomplete="off" placeholder="nombre@empresa.com" />
+                </app-form-field>
+                <app-form-field label="Contraseña temporal" inputId="password" [control]="userForm.controls.password" [errors]="passwordErrors" [half]="true">
+                    <p-password inputId="password" formControlName="password" [feedback]="false" [toggleMask]="true" [fluid]="true" autocomplete="new-password" />
+                </app-form-field>
+                <app-form-field label="Confirmar contraseña" inputId="confirmPassword" [control]="userForm.controls.confirmPassword" [half]="true">
+                    <p-password inputId="confirmPassword" formControlName="confirmPassword" [feedback]="false" [toggleMask]="true" [fluid]="true" autocomplete="new-password" />
+                    @if (userForm.hasError('passwordMismatch') && userForm.controls.confirmPassword.dirty) {
+                        <small class="mgs-field__error" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>Las contraseñas no coinciden.</small>
                     }
-                </small>
-                @if (userForm.controls.email.hasError('duplicated')) {
-                    <small id="email-error" class="mgs-field__error" role="alert">Ya existe un usuario con este correo.</small>
-                } @else if (isInvalid('email')) {
-                    <small id="email-error" class="mgs-field__error" role="alert">{{ fieldError('email') }}</small>
-                }
+                </app-form-field>
             </div>
-        </div>
+        </section>
 
-        <h2 class="mgs-section-title mgs-section-title--spaced">Contraseña temporal</h2>
-        <p class="text-muted-color mb-4">La contraseña se enviará al correo de la persona al crear su cuenta.</p>
-        <div class="mgs-form-grid">
-            <div class="mgs-field mgs-field--half">
-                <label for="password">Contraseña</label>
-                <input pInputText id="password" type="password" formControlName="password" autocomplete="new-password" aria-describedby="password-error" [attr.aria-invalid]="isInvalid('password')" />
-                @if (isInvalid('password')) {
-                    <small id="password-error" class="mgs-field__error" role="alert">{{ fieldError('password') }}</small>
+        <section class="mgs-card">
+            <div class="mgs-card-header">
+                <div>
+                    <h2 class="mgs-section-title">Rol</h2>
+                    <p class="mgs-section-lead">Define qué puede hacer la persona dentro de ErgoManager.</p>
+                </div>
+            </div>
+            <div class="mgs-form-grid" role="radiogroup" aria-label="Rol del usuario">
+                @for (choice of roleChoices; track choice.value) {
+                    <label class="mgs-field mgs-field--half mgs-choice" [class.mgs-choice--selected]="preview().role === choice.value" [for]="'role-' + choice.value">
+                        <p-radiobutton [inputId]="'role-' + choice.value" formControlName="role" [value]="choice.value" />
+                        <i [class]="choice.icon + ' mgs-choice__icon'" aria-hidden="true"></i>
+                        <span class="flex flex-col gap-1">
+                            <span class="font-semibold">{{ roleLabels[choice.value] }}</span>
+                            <span class="text-sm text-muted-color">{{ choice.description }}</span>
+                        </span>
+                    </label>
                 }
             </div>
-            <div class="mgs-field mgs-field--half">
-                <label for="confirmPassword">Confirmar contraseña</label>
-                <input pInputText id="confirmPassword" type="password" formControlName="confirmPassword" autocomplete="new-password" aria-describedby="confirmation-error" />
-                @if (isInvalid('confirmPassword')) {
-                    <small id="confirmation-error" class="mgs-field__error" role="alert">{{ fieldError('confirmPassword') }}</small>
-                } @else if (userForm.hasError('passwordMismatch') && userForm.controls.confirmPassword.dirty) {
-                    <small id="confirmation-error" class="mgs-field__error" role="alert">Las contraseñas no coinciden.</small>
-                }
-            </div>
-        </div>
-        <h2 class="mgs-section-title mgs-section-title--spaced">Rol</h2>
-        <div class="mgs-form-grid" role="radiogroup" aria-label="Rol del usuario">
-            @for (choice of roleChoices; track choice.value) {
-                <label class="mgs-field mgs-field--half mgs-choice" [class.mgs-choice--selected]="preview().role === choice.value" [for]="'role-' + choice.value">
-                    <p-radiobutton [inputId]="'role-' + choice.value" formControlName="role" [value]="choice.value" />
-                    <i [class]="choice.icon + ' mgs-choice__icon'"></i>
-                    <span class="flex flex-col gap-1">
-                        <span class="font-semibold">{{ roleLabels[choice.value] }}</span>
-                        <span class="text-sm text-muted-color">{{ choice.description }}</span>
-                    </span>
-                </label>
-            }
-        </div>
+        </section>
     </div>
 
-    <aside class="col-span-12 xl:col-span-4 mgs-card mgs-sticky flex flex-col gap-6">
+    <aside class="mgs-card mgs-sticky flex flex-col gap-6">
         <div class="flex flex-col items-center text-center gap-3">
             <p-avatar [label]="preview().initials || undefined" [icon]="preview().initials ? undefined : 'pi pi-user'" shape="circle" size="xlarge" styleClass="mgs-avatar" />
-            <div>
+            <div class="min-w-0">
                 <div class="mgs-section-title !m-0">{{ preview().name || 'Nuevo usuario' }}</div>
                 <div class="text-sm text-muted-color break-all">{{ preview().email || 'Sin correo' }}</div>
             </div>
-            <p-tag [value]="roleLabels[preview().role]" [styleClass]="roleTagClasses[preview().role]" />
+            <div class="flex flex-wrap justify-center gap-2">
+                <p-tag [value]="roleLabels[preview().role]" [styleClass]="roleTagClasses[preview().role]" />
+            </div>
         </div>
 
         <div class="flex flex-col gap-2">
@@ -102,21 +88,18 @@
             </div>
             <p-progressbar [value]="progress()" [showValue]="false" styleClass="h-2" />
         </div>
+
+        <div class="mgs-details-note">
+            <i class="fa-regular fa-envelope" aria-hidden="true"></i>
+            <span>La persona recibirá un correo con sus credenciales y deberá cambiar la contraseña al iniciar sesión.</span>
+        </div>
     </aside>
 
-    @if (errorMessage()) {
-        <div class="col-span-12 mgs-alert" role="alert">{{ errorMessage() }}</div>
-    }
-    @if (hasChanges()) {
-        <div class="col-span-12 mgs-save-bar" [class.mgs-save-bar--alert]="isAlerting()" role="region" aria-label="Cambios sin guardar" aria-live="polite">
-            <span class="mgs-save-bar__text">
-                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-                {{ isEditing() ? 'Cuidado, tiene cambios sin guardar.' : 'Cuidado, el usuario todavía no se ha creado.' }}
-            </span>
-            <div class="mgs-save-bar__actions">
-                <p-button [label]="isEditing() ? 'Restablecer' : 'Vaciar campos'" [text]="true" [disabled]="isSubmitting()" (onClick)="resetForm()" />
-                <p-button type="submit" [label]="isEditing() ? 'Guardar cambios' : 'Crear usuario'" icon="pi pi-check" [loading]="isSubmitting()" />
-            </div>
+    @if (errorMessage(); as message) {
+        <div class="mgs-alert" role="alert">
+            <i class="pi pi-exclamation-circle" aria-hidden="true"></i><span>{{ message }}</span>
         </div>
     }
+
+    <app-save-bar [tracker]="unsaved" [saving]="isSubmitting()" message="Cuidado, el usuario todavía no se ha creado." discardLabel="Vaciar campos" submitLabel="Crear usuario" (discarded)="clearError()" />
 </form>

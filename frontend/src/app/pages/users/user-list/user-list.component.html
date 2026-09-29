@@ -1,38 +1,32 @@
 <app-page-header eyebrow="Administración" title="Gestión de usuarios" subtitle="Administradores y ergonomistas con acceso a ErgoManager.">
-    <p-button label="Creación de usuario" icon="pi pi-user-plus" routerLink="/users/new" />
+    <p-button label="Crear usuario" icon="fa-solid fa-user-plus" routerLink="/users/new" />
 </app-page-header>
 
-<div class="grid grid-cols-12 gap-6 mb-6">
-    <div class="col-span-12 sm:col-span-6 xl:col-span-3 mgs-card">
-        <span class="mgs-eyebrow">Usuarios registrados</span>
-        <div class="mgs-kpi mt-2">{{ summary().total }}</div>
-    </div>
-    <div class="col-span-12 sm:col-span-6 xl:col-span-3 mgs-card">
-        <span class="mgs-eyebrow">Activos</span>
-        <div class="mgs-kpi mt-2">{{ summary().active }}</div>
-        <div class="text-sm text-muted-color mt-1">{{ summary().total - summary().active }} inactivos</div>
-    </div>
-    <div class="col-span-12 sm:col-span-6 xl:col-span-3 mgs-card">
-        <span class="mgs-eyebrow">Administradores</span>
-        <div class="mgs-kpi mt-2">{{ summary().admins }}</div>
-    </div>
-    <div class="col-span-12 sm:col-span-6 xl:col-span-3 mgs-card">
-        <span class="mgs-eyebrow">Ergonomistas</span>
-        <div class="mgs-kpi mt-2">{{ summary().ergonomists }}</div>
-    </div>
-</div>
+<section class="mgs-stats" aria-label="Resumen de usuarios">
+    <app-stat-card label="Usuarios registrados" icon="fa-solid fa-users" [value]="summary().total" [loading]="isLoading()" [dark]="true" />
+    <app-stat-card label="Activos" icon="fa-solid fa-user-check" [value]="summary().active" [loading]="isLoading()" [note]="summary().total - summary().active + ' inactivos'" [accent]="true" />
+    <app-stat-card label="Administradores" icon="fa-solid fa-user-shield" [value]="summary().admins" [loading]="isLoading()" />
+    <app-stat-card label="Ergonomistas" icon="fa-solid fa-user-doctor" [value]="summary().ergonomists" [loading]="isLoading()" />
+</section>
 
-<div class="mgs-card !p-0 overflow-hidden">
-    <p-table [value]="filteredRows()" [loading]="isLoading()" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [rowHover]="true" dataKey="id" sortField="createdAt" [sortOrder]="-1">
+<div class="mgs-table-card">
+    <p-table [value]="isLoading() ? skeletonRows : filteredRows()" [paginator]="!isLoading() && filteredRows().length > 10" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [rowHover]="true" dataKey="id" sortField="createdAt" [sortOrder]="-1">
         <ng-template #caption>
-            <div class="flex flex-wrap items-center gap-4 p-2">
-                <span class="mgs-section-title !m-0 mr-auto">Usuarios actuales</span>
+            <div class="mgs-toolbar">
+                <div class="mgs-toolbar__title">
+                    <strong>Usuarios actuales</strong>
+                    @if (isLoading()) {
+                        <p-skeleton width="7rem" height="0.75rem" />
+                    } @else {
+                        <span>{{ filteredRows().length }} de {{ summary().total }} usuarios</span>
+                    }
+                </div>
                 <p-iconfield>
                     <p-inputicon class="pi pi-search" />
-                    <input pInputText type="text" [ngModel]="searchText()" (ngModelChange)="searchText.set($event)" placeholder="Buscar por nombre o correo" aria-label="Buscar usuario" />
+                    <input pInputText type="search" [ngModel]="searchText()" (ngModelChange)="searchText.set($event)" placeholder="Buscar por nombre o correo" aria-label="Buscar usuario" />
                 </p-iconfield>
                 <p-select [options]="roleOptions" [ngModel]="roleFilter()" (ngModelChange)="roleFilter.set($event)" optionLabel="label" optionValue="value" placeholder="Todos los roles" [showClear]="true" ariaLabel="Filtrar por rol" />
-                <p-selectbutton [options]="statusOptions" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event ?? 'ALL')" optionLabel="label" optionValue="value" [allowEmpty]="false" />
+                <p-selectbutton [options]="statusOptions" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event ?? 'ALL')" optionLabel="label" optionValue="value" [allowEmpty]="false" ariaLabel="Filtrar por estado" />
             </div>
         </ng-template>
         <ng-template #header>
@@ -41,40 +35,71 @@
                 <th pSortableColumn="role">Rol <p-sortIcon field="role" /></th>
                 <th pSortableColumn="active">Estado <p-sortIcon field="active" /></th>
                 <th pSortableColumn="createdAt">Registrado <p-sortIcon field="createdAt" /></th>
-                <th class="w-32"></th>
+                <th class="w-36"><span class="sr-only">Acciones</span></th>
             </tr>
         </ng-template>
         <ng-template #body let-row>
-            <tr>
-                <td>
-                    <div class="flex items-center gap-3">
-                        <p-avatar [label]="row.initials" shape="circle" styleClass="mgs-avatar" />
-                        <div class="min-w-0">
-                            <div class="font-semibold">{{ row.fullName }}</div>
-                            <div class="text-sm text-muted-color truncate">{{ row.email }}</div>
+            @if (isLoading()) {
+                <tr aria-hidden="true">
+                    <td>
+                        <div class="mgs-identity">
+                            <p-skeleton shape="circle" size="2.5rem" />
+                            <div class="mgs-identity__text gap-2">
+                                <p-skeleton width="10rem" height="0.9rem" />
+                                <p-skeleton width="13rem" height="0.75rem" />
+                            </div>
                         </div>
-                    </div>
-                </td>
-                <td><p-tag [value]="row.roleLabel" [styleClass]="row.roleTagClass" /></td>
-                <td>
-                    <p-tag [value]="row.active ? 'Activo' : 'Inactivo'" [styleClass]="row.active ? activeTagClasses.active : activeTagClasses.inactive" />
-                </td>
-                <td class="whitespace-nowrap">{{ row.createdAt | date: 'd MMM y' }}</td>
-                <td class="text-right whitespace-nowrap">
-                    <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="secondary" [routerLink]="['/users', row.id]" pTooltip="Editar" ariaLabel="Editar" />
-                    @if (row.canDeactivate) {
-                        <p-button icon="pi pi-ban" [rounded]="true" [text]="true" (onClick)="confirmDeactivate(row)" pTooltip="Desactivar" ariaLabel="Desactivar" />
-                    }
-                </td>
-            </tr>
+                    </td>
+                    <td><p-skeleton width="6rem" height="1.5rem" borderRadius="999px" /></td>
+                    <td><p-skeleton width="4.5rem" height="1.5rem" borderRadius="999px" /></td>
+                    <td><p-skeleton width="5.5rem" height="0.9rem" /></td>
+                    <td>
+                        <div class="flex justify-end gap-2"><p-skeleton shape="circle" size="2rem" /><p-skeleton shape="circle" size="2rem" /></div>
+                    </td>
+                </tr>
+            } @else {
+                <tr [class.opacity-70]="!row.active">
+                    <td>
+                        <div class="mgs-identity">
+                            <p-avatar [label]="row.initials" shape="circle" styleClass="mgs-avatar" />
+                            <div class="mgs-identity__text">
+                                <span class="mgs-identity__name">
+                                    {{ row.fullName }}
+                                    @if (row.isCurrentUser) {
+                                        <span class="text-xs text-muted-color font-normal">(usted)</span>
+                                    }
+                                </span>
+                                <span class="mgs-identity__meta">{{ row.email }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td><p-tag [value]="row.roleLabel" [styleClass]="row.roleTagClass" /></td>
+                    <td>
+                        <p-tag [value]="row.active ? 'Activo' : 'Inactivo'" [styleClass]="row.active ? activeTagClasses.active : activeTagClasses.inactive" />
+                    </td>
+                    <td class="whitespace-nowrap">{{ row.createdAt | date: 'd MMM y' }}</td>
+                    <td class="text-right">
+                        <div class="mgs-row-actions">
+                            <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="secondary" [routerLink]="['/users', row.id]" pTooltip="Editar" tooltipPosition="top" ariaLabel="Editar usuario" />
+                            @if (row.canDeactivate) {
+                                <p-button icon="pi pi-ban" [rounded]="true" [text]="true" (onClick)="goToDeactivateConfirmation(row)" pTooltip="Desactivar" tooltipPosition="top" ariaLabel="Desactivar usuario" />
+                            } @else if (!row.active) {
+                                <p-button icon="pi pi-replay" [rounded]="true" [text]="true" severity="secondary" (onClick)="activate(row)" pTooltip="Reactivar" tooltipPosition="top" ariaLabel="Reactivar usuario" />
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
         </ng-template>
         <ng-template #emptymessage>
             <tr>
-                <td colspan="5" class="text-center py-10 text-muted-color">
+                <td colspan="5">
                     @if (summary().total === 0) {
-                        Todavía no hay usuarios registrados.
+                        <app-empty-state icon="fa-solid fa-users" title="Todavía no hay usuarios" message="Cree la primera cuenta de administrador o ergonomista.">
+                            <p-button label="Crear usuario" icon="pi pi-user-plus" routerLink="/users/new" />
+                        </app-empty-state>
                     } @else {
-                        Ningún usuario coincide con la búsqueda o los filtros.
+                        <app-empty-state icon="fa-solid fa-filter-circle-xmark" title="Sin coincidencias" message="Ningún usuario coincide con la búsqueda o los filtros." />
                     }
                 </td>
             </tr>
