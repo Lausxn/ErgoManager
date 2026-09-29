@@ -19,6 +19,11 @@ export const appRoutes: Routes = [
         children: [
             { path: '', pathMatch: 'full', redirectTo: homeRedirect },
             {
+                path: 'dashboard',
+                canActivate: [roleGuard(['ADMIN'])],
+                loadChildren: () => import('./app/pages/dashboard/dashboard.routes').then((m) => m.dashboardRoutes)
+            },
+            {
                 path: 'companies',
                 canActivate: [roleGuard(['ADMIN'])],
                 loadChildren: () => import('./app/pages/companies/companies.routes').then((m) => m.companiesRoutes)
