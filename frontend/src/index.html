@@ -10,13 +10,13 @@
         <script>
             // Applies the stored theme and page size before Angular starts, so the page does not flash.
             (function () {
-                var fontSizes = { small: 12, normal: 14, large: 16, extraLarge: 18 };
+                var fontSizes = { small: 13, normal: 15, large: 17, extraLarge: 19 };
                 var preferences = {};
                 try {
                     preferences = JSON.parse(localStorage.getItem('ergomanager.preferences') || '{}');
                 } catch (error) {}
-                if (preferences.darkTheme !== false) document.documentElement.classList.add('app-dark');
-                document.documentElement.style.fontSize = (fontSizes[preferences.pageSize] || 14) + 'px';
+                if (preferences.darkTheme === true) document.documentElement.classList.add('app-dark');
+                document.documentElement.style.fontSize = (fontSizes[preferences.pageSize] || 15) + 'px';
             })();
         </script>
     </head>

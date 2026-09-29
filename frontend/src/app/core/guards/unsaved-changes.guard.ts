@@ -5,6 +5,12 @@ import { AuthService } from '../services/auth.service';
 
 /** Page that can hold changes the user has not saved yet. */
 export interface HasUnsavedChanges {
+    /**
+     * Decides whether the user can leave the page. A page with pending changes
+     * returns false and warns the user in its own way.
+     *
+     * @returns true when there is nothing to lose
+     */
     canLeave(): boolean;
 }
 

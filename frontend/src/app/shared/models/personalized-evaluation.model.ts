@@ -19,4 +19,6 @@ export interface PersonalizedEvaluationResponse {
     riskLevel: RiskLevel;
     reportPath?: string;
     evaluatedAt: string;
+    employeeEmail: string;
+    companyName: string;
 }

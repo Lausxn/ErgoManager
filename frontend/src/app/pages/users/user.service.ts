@@ -63,4 +63,14 @@ export class UserService {
     deactivate(id: number): Observable<void> {
         return this.http.delete<void>(`${this.baseUrl}/${id}`);
     }
+
+    /**
+     * Activates a user that was deactivated before.
+     *
+     * @param id identifier of the user
+     * @returns the activated user
+     */
+    activate(id: number): Observable<UserResponse> {
+        return this.http.patch<UserResponse>(`${this.baseUrl}/${id}/activate`, {});
+    }
 }

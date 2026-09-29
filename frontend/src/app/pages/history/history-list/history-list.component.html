@@ -1,62 +1,149 @@
-<app-page-header eyebrow="Evaluación" title="Historial" subtitle="Registro de las autoevaluaciones y evaluaciones personalizadas." />
+<app-page-header eyebrow="Evaluación" title="Reportes" subtitle="Historial de autoevaluaciones, citas y evaluaciones personalizadas, con sus reportes en PDF." />
 
-<form [formGroup]="searchForm" (ngSubmit)="search()" class="mgs-card mb-6" novalidate>
-    <div class="flex flex-col gap-5">
-        <p-selectbutton [options]="searchModeOptions" [ngModel]="searchMode()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="changeMode($event)" optionLabel="label" optionValue="value" [allowEmpty]="false" />
+<section class="mgs-card mb-6" aria-label="Buscar historial">
+    <div class="mgs-card-header">
+        <div>
+            <h2 class="mgs-section-title">Buscar historial</h2>
+            <p class="mgs-section-lead">Consulte todos los registros de una empresa cliente o de un colaborador.</p>
+        </div>
+        <p-selectbutton [options]="searchModeOptions" [ngModel]="searchMode()" (ngModelChange)="changeMode($event)" optionLabel="label" optionValue="value" [allowEmpty]="false" ariaLabel="Tipo de búsqueda">
+            <ng-template #item let-option>
+                <span class="inline-flex items-center gap-2"><i [class]="option.icon" aria-hidden="true"></i>{{ option.label }}</span>
+            </ng-template>
+        </p-selectbutton>
+    </div>
 
-        <div class="flex flex-wrap items-end gap-4">
-            @if (searchMode() === 'company') {
-                <div class="mgs-field grow max-w-xl">
-                    <label for="companyId">Empresa</label>
-                    @if (isAdmin()) {
-                        <p-select
-                            inputId="companyId"
-                            formControlName="companyId"
-                            [options]="companyList()"
-                            optionLabel="businessName"
-                            optionValue="id"
-                            [filter]="true"
-                            filterBy="businessName,taxId"
-                            placeholder="Seleccione una empresa"
-                            [fluid]="true"
-                        />
-                    } @else {
-                        <p-inputnumber inputId="companyId" formControlName="companyId" [useGrouping]="false" [min]="1" placeholder="Número de empresa" [fluid]="true" />
-                    }
-                </div>
-            } @else {
-                <div class="mgs-field grow max-w-xl">
-                    <label for="employeeEmail">Correo del colaborador</label>
-                    <input pInputText id="employeeEmail" type="email" formControlName="employeeEmail" placeholder="nombre@empresa.com" />
+    @if (searchMode() === 'company') {
+        <div class="history-search">
+            <app-form-field label="Empresa" inputId="companyId" hint="Busque por nombre o cédula jurídica; el historial se carga al elegirla.">
+                <p-select
+                    inputId="companyId"
+                    [options]="companyList()"
+                    [ngModel]="companyId()"
+                    (ngModelChange)="selectCompany($event ?? null)"
+                    optionLabel="businessName"
+                    optionValue="id"
+                    [filter]="true"
+                    filterBy="businessName,taxId"
+                    [showClear]="true"
+                    [loading]="isLoadingCompanies()"
+                    placeholder="Seleccione una empresa"
+                    emptyMessage="No hay empresas registradas"
+                    emptyFilterMessage="Ninguna empresa coincide"
+                    [fluid]="true"
+                >
+                    <ng-template #item let-company>
+                        <div class="flex flex-col">
+                            <span class="font-semibold">{{ company.businessName }}</span>
+                            <span class="history-company__tax">{{ company.taxId }}{{ company.active ? '' : ' · Inactiva' }}</span>
+                        </div>
+                    </ng-template>
+                </p-select>
+            </app-form-field>
+        </div>
+    } @else {
+        <form class="history-search" (ngSubmit)="searchEmployee()" novalidate>
+            <app-form-field label="Correo del colaborador" inputId="employeeEmail" [control]="emailControl" hint="El mismo correo con el que respondió la autoevaluación.">
+                <p-iconfield>
+                    <p-inputicon class="pi pi-envelope" />
+                    <input pInputText id="employeeEmail" type="email" [formControl]="emailControl" [maxlength]="maxEmailLength" autocomplete="off" placeholder="nombre@empresa.com" class="w-full" />
+                </p-iconfield>
+            </app-form-field>
+            <p-button type="submit" label="Buscar" icon="pi pi-search" [loading]="isLoading()" styleClass="history-search__submit" />
+        </form>
+    }
+</section>
+
+@if (isLoading() || hasSearched()) {
+    <section class="mgs-stats" aria-label="Resumen del historial">
+        <app-stat-card label="Total de registros" icon="fa-solid fa-list-ul" [value]="summary().total" [loading]="isLoading()" [dark]="true" />
+        <app-stat-card label="Autoevaluaciones" icon="fa-solid fa-square-check" [value]="summary().self" [loading]="isLoading()" />
+        <app-stat-card label="Evaluaciones personalizadas" icon="fa-solid fa-clipboard-check" [value]="summary().personalized" [loading]="isLoading()" [accent]="true" />
+        <app-stat-card label="Colaboradores distintos" icon="fa-solid fa-users" [value]="summary().employees" [loading]="isLoading()" />
+    </section>
+}
+
+<section class="mgs-table-card history-results" aria-label="Registros del historial">
+    @if (isLoading()) {
+        <ol class="mgs-timeline" aria-busy="true">
+            @for (placeholder of [1, 2, 3]; track placeholder) {
+                <li class="mgs-timeline__item">
+                    <p-skeleton shape="circle" size="2.5rem" />
+                    <div class="mgs-timeline__body">
+                        <p-skeleton width="9rem" height="1.4rem" />
+                        <p-skeleton width="70%" height="1.1rem" styleClass="mt-2" />
+                        <p-skeleton width="50%" height="0.9rem" styleClass="mt-2" />
+                    </div>
+                </li>
+            }
+        </ol>
+    } @else if (hasError()) {
+        <app-empty-state icon="fa-solid fa-triangle-exclamation" title="No se pudo consultar el historial" message="Revise su conexión e intente de nuevo.">
+            <p-button label="Reintentar" icon="pi pi-refresh" (onClick)="retry()" />
+        </app-empty-state>
+    } @else if (!hasSearched()) {
+        <!-- One element per mode: Font Awesome swaps the icon for an svg, so its class must not change later. -->
+        @if (searchMode() === 'company') {
+            <app-empty-state icon="fa-solid fa-building" title="Elija qué historial consultar" message="Seleccione una empresa cliente para ver sus registros." />
+        } @else {
+            <app-empty-state icon="fa-solid fa-user" title="Elija qué historial consultar" message="Escriba el correo de un colaborador para ver sus registros." />
+        }
+    } @else if (summary().total === 0) {
+        <app-empty-state icon="fa-solid fa-inbox" title="Sin registros" [message]="'Todavía no hay registros para ' + subject() + '.'" />
+    } @else {
+        <div class="mgs-toolbar">
+            <div class="mgs-toolbar__title">
+                <strong>{{ subject() }}</strong>
+                <span>{{ filteredRows().length }} de {{ summary().total }} registros</span>
+            </div>
+            <p-iconfield>
+                <p-inputicon class="pi pi-search" />
+                <input pInputText type="search" [ngModel]="filterText()" (ngModelChange)="filterText.set($event)" placeholder="Filtrar por descripción, correo o empresa" aria-label="Filtrar registros" />
+            </p-iconfield>
+        </div>
+
+        @if (filteredRows().length === 0) {
+            <app-empty-state icon="fa-solid fa-filter-circle-xmark" title="Sin coincidencias" message="Ningún registro coincide con el filtro." />
+        } @else {
+            <ol class="mgs-timeline">
+                @for (row of visibleRows(); track row.id) {
+                    <li class="mgs-timeline__item">
+                        <span class="mgs-timeline__dot" [class.mgs-timeline__dot--accent]="row.kind === 'PERSONALIZED'" [title]="row.typeLabel">
+                            <i [class]="row.icon" aria-hidden="true"></i>
+                        </span>
+                        <article class="mgs-timeline__body history-entry">
+                            <div class="history-entry__head">
+                                <p-tag [value]="row.typeLabel" [styleClass]="row.tagClass" />
+                                @if (row.personalizedEvaluationId) {
+                                    <p-button
+                                        label="Descargar reporte"
+                                        icon="pi pi-download"
+                                        size="small"
+                                        [outlined]="true"
+                                        severity="secondary"
+                                        [loading]="downloading().has(row.personalizedEvaluationId)"
+                                        (onClick)="downloadReport(row)"
+                                        [ariaLabel]="'Descargar reporte de ' + row.employeeEmail"
+                                    />
+                                }
+                            </div>
+                            <p class="history-entry__description">{{ row.description }}</p>
+                            <div class="mgs-timeline__meta">
+                                <span
+                                    ><i class="fa-regular fa-clock" aria-hidden="true"></i><time [attr.datetime]="row.registeredAt">{{ row.registeredAt | date: 'd MMM y, h:mm a' }}</time></span
+                                >
+                                <span><i class="fa-regular fa-envelope" aria-hidden="true"></i>{{ row.employeeEmail }}</span>
+                                <span><i class="fa-solid fa-building" aria-hidden="true"></i>{{ row.companyName }}</span>
+                            </div>
+                        </article>
+                    </li>
+                }
+            </ol>
+            @if (filteredRows().length > visibleRows().length) {
+                <div class="flex justify-center mt-6">
+                    <p-button [label]="'Mostrar más (' + (filteredRows().length - visibleRows().length) + ' restantes)'" icon="pi pi-angle-down" severity="secondary" [text]="true" (onClick)="showMore()" />
                 </div>
             }
-            <p-button type="submit" label="Buscar" icon="pi pi-search" [loading]="isLoading()" />
-        </div>
-    </div>
-</form>
-
-<div class="mgs-card !p-0 overflow-hidden">
-    <p-table [value]="historyList()" [loading]="isLoading()" [paginator]="historyList().length > 10" [rows]="10" [rowHover]="true" dataKey="id" sortField="registeredAt" [sortOrder]="-1">
-        <ng-template #header>
-            <tr>
-                <th pSortableColumn="registeredAt" class="w-56">Fecha <p-sortIcon field="registeredAt" /></th>
-                <th pSortableColumn="employeeEmail">Colaborador <p-sortIcon field="employeeEmail" /></th>
-                <th>Descripción</th>
-            </tr>
-        </ng-template>
-        <ng-template #body let-history>
-            <tr>
-                <td>{{ history.registeredAt | date: 'd MMM y, h:mm a' }}</td>
-                <td class="font-semibold">{{ history.employeeEmail }}</td>
-                <td>{{ history.description }}</td>
-            </tr>
-        </ng-template>
-        <ng-template #emptymessage>
-            <tr>
-                <td colspan="3" class="text-center py-10 text-muted-color">
-                    {{ hasSearched() ? 'No se encontraron registros para esta búsqueda.' : 'Elija una empresa o un colaborador para ver su historial.' }}
-                </td>
-            </tr>
-        </ng-template>
-    </p-table>
-</div>
+        }
+    }
+</section>

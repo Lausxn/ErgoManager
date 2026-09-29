@@ -11,7 +11,7 @@ import java.util.List;
 public interface UserService {
 
     /**
-     * Returns every registered user.
+     * Returns every registered user, newest first.
      *
      * @return list of users
      */
@@ -34,7 +34,8 @@ public interface UserService {
     UserResponseDTO create(UserRequestDTO request);
 
     /**
-     * Updates the data of an existing user.
+     * Updates the data and the role of an existing user. The password is not
+     * edited here. Changing the role revokes the sessions of the user.
      *
      * @param id      identifier of the user
      * @param request new data of the user
@@ -49,4 +50,13 @@ public interface UserService {
      * @param currentUserEmail email of the administrator making the request
      */
     void deactivate(Long id, String currentUserEmail);
+
+    /**
+     * Activates a user that had been deactivated. The sessions revoked by the
+     * deactivation stay revoked: the user has to sign in again.
+     *
+     * @param id identifier of the user
+     * @return the activated user
+     */
+    UserResponseDTO activate(Long id);
 }

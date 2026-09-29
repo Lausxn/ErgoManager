@@ -1,43 +1,200 @@
-<app-page-header eyebrow="Administración" title="Formularios" subtitle="Formularios de autoevaluación que responden los colaboradores.">
-    <p-button label="Nuevo formulario" icon="pi pi-plus" routerLink="/forms/new" />
+<app-page-header eyebrow="Administración" title="Formularios de autoevaluación" subtitle="Cuestionarios que responden los colaboradores de las empresas cliente.">
+    <p-button label="Crear formulario" icon="fa-solid fa-plus" routerLink="/forms/new" />
 </app-page-header>
 
-<div class="mgs-card !p-0 overflow-hidden">
-    <p-table [value]="formList()" [loading]="isLoading()" [paginator]="true" [rows]="10" [rowHover]="true" dataKey="id" sortField="publicationYear" [sortOrder]="-1">
+<section class="mgs-stats" aria-label="Resumen de formularios">
+    <app-stat-card label="Formularios" icon="fa-solid fa-file-pen" [value]="summary().total" [loading]="isLoading()" [dark]="true" />
+    <app-stat-card label="Activos" icon="fa-solid fa-circle-check" [value]="summary().active" [loading]="isLoading()" [note]="summary().total - summary().active + ' inactivos'" [accent]="true" />
+    <app-stat-card label="Preguntas en uso" icon="fa-solid fa-list-check" [value]="summary().activeQuestions" [loading]="isLoading()" note="En formularios activos" />
+</section>
+
+<div class="mgs-table-card">
+    <p-table [value]="isLoading() ? skeletonRows : filteredRows()" [paginator]="!isLoading() && filteredRows().length > 10" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [rowHover]="true" dataKey="id" sortField="publicationYear" [sortOrder]="-1">
+        <ng-template #caption>
+            <div class="mgs-toolbar">
+                <div class="mgs-toolbar__title">
+                    <strong>Formularios registrados</strong>
+                    @if (isLoading()) {
+                        <p-skeleton width="7rem" height="0.75rem" />
+                    } @else {
+                        <span>{{ filteredRows().length }} de {{ summary().total }} formularios</span>
+                    }
+                </div>
+                <p-iconfield>
+                    <p-inputicon class="fa-solid fa-magnifying-glass" />
+                    <input pInputText type="search" [ngModel]="searchText()" (ngModelChange)="searchText.set($event)" placeholder="Buscar por título, descripción o año" aria-label="Buscar formulario" />
+                </p-iconfield>
+                <p-selectbutton [options]="statusOptions" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event ?? 'ALL')" optionLabel="label" optionValue="value" [allowEmpty]="false" ariaLabel="Filtrar por estado" />
+            </div>
+        </ng-template>
         <ng-template #header>
             <tr>
-                <th pSortableColumn="title">Título <p-sortIcon field="title" /></th>
-                <th pSortableColumn="publicationYear">Año <p-sortIcon field="publicationYear" /></th>
-                <th>Preguntas</th>
-                <th pSortableColumn="active">Estado <p-sortIcon field="active" /></th>
-                <th class="w-32"></th>
+                <th pSortableColumn="title">Formulario <p-sortIcon field="title" /></th>
+                <th pSortableColumn="publicationYear" class="w-28">Año <p-sortIcon field="publicationYear" /></th>
+                <th pSortableColumn="questionCount" class="w-36">Preguntas <p-sortIcon field="questionCount" /></th>
+                <th pSortableColumn="active" class="w-32">Estado <p-sortIcon field="active" /></th>
+                <th class="w-40"><span class="sr-only">Acciones</span></th>
             </tr>
         </ng-template>
-        <ng-template #body let-form>
-            <tr>
-                <td>
-                    <div class="font-semibold">{{ form.title }}</div>
-                    @if (form.description) {
-                        <div class="text-sm text-muted-color line-clamp-1">{{ form.description }}</div>
-                    }
-                </td>
-                <td>{{ form.publicationYear }}</td>
-                <td>{{ form.questionList.length }}</td>
-                <td>
-                    <p-tag [value]="form.active ? 'Activo' : 'Inactivo'" [styleClass]="form.active ? activeTagClasses.active : activeTagClasses.inactive" />
-                </td>
-                <td class="text-right whitespace-nowrap">
-                    <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="secondary" [routerLink]="['/forms', form.id]" pTooltip="Editar" ariaLabel="Editar" />
-                    @if (form.active) {
-                        <p-button icon="pi pi-ban" [rounded]="true" [text]="true" (onClick)="confirmDeactivate(form)" pTooltip="Desactivar" ariaLabel="Desactivar" />
-                    }
-                </td>
-            </tr>
+        <ng-template #body let-row>
+            @if (isLoading()) {
+                <tr aria-hidden="true">
+                    <td>
+                        <div class="mgs-identity__text gap-2">
+                            <p-skeleton width="14rem" height="0.9rem" />
+                            <p-skeleton width="18rem" height="0.75rem" />
+                        </div>
+                    </td>
+                    <td><p-skeleton width="2.75rem" height="0.9rem" /></td>
+                    <td><p-skeleton width="1.75rem" height="0.9rem" /></td>
+                    <td><p-skeleton width="4.5rem" height="1.5rem" borderRadius="999px" /></td>
+                    <td>
+                        <div class="flex justify-end gap-2"><p-skeleton shape="circle" size="2rem" /><p-skeleton shape="circle" size="2rem" /><p-skeleton shape="circle" size="2rem" /></div>
+                    </td>
+                </tr>
+            } @else {
+                <tr [class.opacity-70]="!row.active">
+                    <td>
+                        <div class="mgs-identity__text">
+                            <span class="mgs-identity__name">{{ row.title }}</span>
+                            <span class="mgs-identity__meta line-clamp-1">{{ row.description || 'Sin descripción' }}</span>
+                        </div>
+                    </td>
+                    <td class="tabular-nums">{{ row.publicationYear }}</td>
+                    <td class="tabular-nums">{{ row.questionCount }}</td>
+                    <td>
+                        <p-tag [value]="row.active ? 'Activo' : 'Inactivo'" [styleClass]="row.active ? activeTagClasses.active : activeTagClasses.inactive" />
+                    </td>
+                    <td class="text-right">
+                        <div class="mgs-row-actions">
+                            @if (row.active) {
+                                <p-button
+                                    icon="fa-solid fa-paper-plane"
+                                    [rounded]="true"
+                                    [text]="true"
+                                    severity="secondary"
+                                    (onClick)="openResend(row)"
+                                    pTooltip="Reenviar a empresa"
+                                    tooltipPosition="top"
+                                    ariaLabel="Reenviar formulario a una empresa"
+                                />
+                            }
+                            <p-button icon="fa-solid fa-pen" [rounded]="true" [text]="true" severity="secondary" [routerLink]="['/forms', row.id]" pTooltip="Editar" tooltipPosition="top" ariaLabel="Editar formulario" />
+                            @if (row.active) {
+                                <p-button icon="fa-solid fa-ban" [rounded]="true" [text]="true" [loading]="isBusy(row.id)" (onClick)="confirmDeactivate(row)" pTooltip="Desactivar" tooltipPosition="top" ariaLabel="Desactivar formulario" />
+                            } @else {
+                                <p-button
+                                    icon="fa-solid fa-rotate-left"
+                                    [rounded]="true"
+                                    [text]="true"
+                                    severity="secondary"
+                                    [loading]="isBusy(row.id)"
+                                    (onClick)="activate(row)"
+                                    pTooltip="Reactivar"
+                                    tooltipPosition="top"
+                                    ariaLabel="Reactivar formulario"
+                                />
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
         </ng-template>
         <ng-template #emptymessage>
             <tr>
-                <td colspan="5" class="text-center py-10 text-muted-color">Todavía no hay formularios creados.</td>
+                <td colspan="5">
+                    @if (loadFailed()) {
+                        <app-empty-state icon="fa-solid fa-circle-exclamation" title="No se pudieron cargar los formularios" message="Revise su conexión e intente de nuevo.">
+                            <p-button label="Reintentar" icon="fa-solid fa-rotate-right" severity="secondary" [outlined]="true" (onClick)="loadForms()" />
+                        </app-empty-state>
+                    } @else if (summary().total === 0) {
+                        <app-empty-state icon="fa-solid fa-file-pen" title="Todavía no hay formularios" message="Cree el primer formulario de autoevaluación con sus preguntas y pesos.">
+                            <p-button label="Crear formulario" icon="fa-solid fa-plus" routerLink="/forms/new" />
+                        </app-empty-state>
+                    } @else {
+                        <app-empty-state icon="fa-solid fa-filter-circle-xmark" title="Sin coincidencias" message="Ningún formulario coincide con la búsqueda o el filtro de estado." />
+                    }
+                </td>
             </tr>
         </ng-template>
     </p-table>
 </div>
+
+<p-dialog
+    [visible]="resendVisible()"
+    (visibleChange)="resendVisible.set($event)"
+    header="Reenviar a empresa"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [dismissableMask]="!isSending()"
+    [closable]="!isSending()"
+    styleClass="mgs-resend-dialog"
+    [style]="{ width: '34rem' }"
+    [breakpoints]="{ '640px': '94vw' }"
+>
+    @if (resendForm(); as form) {
+        <div class="resend">
+            <div class="resend__form">
+                <i class="fa-solid fa-file-pen" aria-hidden="true"></i>
+                <div class="min-w-0">
+                    <span class="resend__form-title">{{ form.title }}</span>
+                    <span class="resend__form-meta">Publicación {{ form.publicationYear }} · {{ form.questionCount }} pregunta(s)</span>
+                </div>
+            </div>
+
+            <div class="mgs-field">
+                <label for="resend-company">Empresa destinataria</label>
+                @if (isLoadingCompanies()) {
+                    <p-skeleton height="2.6rem" />
+                    <p-skeleton width="12rem" height="0.75rem" />
+                } @else if (companiesFailed()) {
+                    <div class="mgs-alert" role="alert">
+                        <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                        <span>No se pudieron cargar las empresas.</span>
+                        <p-button label="Reintentar" [text]="true" size="small" (onClick)="loadCompanies()" />
+                    </div>
+                } @else {
+                    <p-select
+                        inputId="resend-company"
+                        [options]="companyOptions() ?? []"
+                        [ngModel]="selectedCompanyId()"
+                        (ngModelChange)="selectedCompanyId.set($event)"
+                        optionLabel="label"
+                        optionValue="id"
+                        [filter]="true"
+                        filterBy="label,taxId"
+                        filterPlaceholder="Buscar por nombre o cédula"
+                        [loading]="isLoadingCompanies()"
+                        [placeholder]="isLoadingCompanies() ? 'Cargando empresas…' : 'Seleccione una empresa activa'"
+                        emptyMessage="No hay empresas activas"
+                        emptyFilterMessage="Ninguna empresa coincide"
+                        [disabled]="isSending()"
+                        appendTo="body"
+                        [fluid]="true"
+                    >
+                        <ng-template #item let-option>
+                            <div class="resend__option">
+                                <span>{{ option.label }}</span>
+                                <span class="resend__option-meta">Cédula {{ option.taxId }} · {{ option.contactEmail }}</span>
+                            </div>
+                        </ng-template>
+                    </p-select>
+                    <small class="mgs-field__hint">Solo se muestran empresas activas.</small>
+                }
+            </div>
+
+            <div class="mgs-details-note">
+                <i class="fa-regular fa-envelope" aria-hidden="true"></i>
+                <span>Enviaremos la invitación al correo de contacto de la empresa y a los colaboradores que ya respondieron una autoevaluación.</span>
+            </div>
+        </div>
+    }
+
+    <ng-template #footer>
+        <div class="resend__actions">
+            <p-button label="Cancelar" [text]="true" severity="secondary" [disabled]="isSending()" (onClick)="resendVisible.set(false)" />
+            <p-button label="Reenviar formulario" icon="fa-solid fa-paper-plane" [loading]="isSending()" [disabled]="selectedCompanyId() === null" (onClick)="sendResend()" />
+        </div>
+    </ng-template>
+</p-dialog>

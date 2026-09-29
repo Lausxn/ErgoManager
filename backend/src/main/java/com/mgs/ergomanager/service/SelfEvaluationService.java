@@ -35,10 +35,13 @@ public interface SelfEvaluationService {
     List<SelfEvaluationResponseDTO> findByCompany(Long companyId);
 
     /**
-     * Calculates the risk level that matches a total score.
+     * Calculates the risk level that matches a total score, as a percentage of
+     * the highest score the form allows: below 25 % is low, below 50 % medium,
+     * below 75 % high and from 75 % on critical.
      *
      * @param totalScore sum of the weighted answer scores
+     * @param maxScore   highest weighted score the form allows
      * @return risk level of the self evaluation
      */
-    RiskLevel calculateRiskLevel(Integer totalScore);
+    RiskLevel calculateRiskLevel(int totalScore, int maxScore);
 }

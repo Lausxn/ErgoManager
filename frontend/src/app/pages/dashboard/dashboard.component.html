@@ -1,31 +1,41 @@
-<app-page-header eyebrow="Inicio" [title]="getGreeting() + ', ' + userName() + '.'" subtitle="Estas son las cinco funciones habilitadas para su perfil." />
+<section class="mgs-impact dashboard-hero" aria-labelledby="dashboard-title">
+    <span class="mgs-impact__rule" aria-hidden="true"></span>
+    <span class="mgs-impact__eyebrow">Panel de administración</span>
+    <h1 id="dashboard-title" class="mgs-impact__title">{{ greeting() }}</h1>
+    <p class="mgs-impact__lead">Estas son las cinco funciones habilitadas para su perfil y el estado actual de ErgoManager.</p>
+    <p class="dashboard-hero__date">
+        <i class="fa-regular fa-calendar" aria-hidden="true"></i>
+        <time [attr.datetime]="today | date: 'yyyy-MM-dd'">{{ today | date: "EEEE, d 'de' MMMM 'de' y" }}</time>
+    </p>
+</section>
 
-<nav class="mgs-card dashboard-options" aria-label="Funciones del administrador">
-  <ul>
-    <li *ngFor="let card of functionCards">
-      <a class="dashboard-option"
-         [attr.data-card]="card.title"
-         [ngClass]="['dashboard-option--' + card.color, card.route === null ? 'dashboard-option--disabled' : '']"
-         [routerLink]="card.route"
-         [attr.aria-disabled]="card.route === null ? 'true' : null">
-        <span class="dashboard-option__number">{{ card.id | number: '2.0-0' }}</span>
-        <span class="dashboard-option__icon" aria-hidden="true"><i [ngClass]="card.icon"></i></span>
-        <span class="dashboard-option__text">
-          <span class="dashboard-option__title">{{ card.title }}</span>
-          <span class="dashboard-option__description">{{ card.description }}</span>
-        </span>
-        <p-tag *ngIf="card.route === null; else arrow" styleClass="mgs-tag mgs-tag--muted" value="Próximamente" />
-        <ng-template #arrow><i class="pi pi-arrow-right dashboard-option__arrow" aria-hidden="true"></i></ng-template>
-      </a>
-    </li>
-  </ul>
-</nav>
+<section class="mgs-stats" aria-label="Indicadores del sistema">
+    <app-stat-card label="Citas programadas" icon="fa-regular fa-calendar-check" [value]="figures().scheduledAppointments" [loading]="isLoading()" />
+    <app-stat-card label="Empresas activas" icon="fa-solid fa-building" [value]="figures().activeCompanies" [loading]="isLoading()" />
+    <app-stat-card label="Usuarios activos" icon="fa-solid fa-user-check" [value]="figures().activeUsers" [loading]="isLoading()" [accent]="true" />
+    <app-stat-card label="Formularios activos" icon="fa-solid fa-file-lines" [value]="figures().activeForms" [loading]="isLoading()" />
+</section>
 
-<section class="dashboard-stats" aria-label="Estadísticas del sistema">
-  <div *ngFor="let stat of stats()" class="mgs-card dashboard-stat" [attr.data-stat]="stat.label" [attr.aria-busy]="stat.isLoading">
-    <p class="mgs-eyebrow dashboard-stat__label">{{ stat.label }}</p>
-    <p-skeleton *ngIf="stat.isLoading" width="3rem" height="2.25rem" />
-    <p *ngIf="!stat.isLoading && stat.value !== null" class="mgs-kpi dashboard-stat__value" [class.dashboard-stat__value--highlight]="stat.highlight">{{ stat.value }}</p>
-    <p *ngIf="!stat.isLoading && stat.value === null" class="dashboard-stat__unavailable">No disponible</p>
-  </div>
+<section aria-labelledby="dashboard-functions">
+    <div class="mgs-card-header">
+        <div>
+            <h2 id="dashboard-functions" class="mgs-section-title">Funciones</h2>
+            <p class="mgs-section-lead">Elija por dónde continuar.</p>
+        </div>
+    </div>
+    <ul class="mgs-option-grid">
+        @for (card of functionCards; track card.route) {
+            <li>
+                <a class="mgs-option" [routerLink]="card.route">
+                    <span class="mgs-option__top">
+                        <span class="mgs-option__number">{{ card.number }}</span>
+                        <span class="mgs-option__icon" aria-hidden="true"><i [class]="card.icon"></i></span>
+                    </span>
+                    <span class="mgs-option__title">{{ card.title }}</span>
+                    <span class="mgs-option__description">{{ card.description }}</span>
+                    <span class="mgs-option__arrow" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></span>
+                </a>
+            </li>
+        }
+    </ul>
 </section>

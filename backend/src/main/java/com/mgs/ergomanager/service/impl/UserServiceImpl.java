@@ -3,6 +3,7 @@ package com.mgs.ergomanager.service.impl;
 import com.mgs.ergomanager.dto.user.UserRequestDTO;
 import com.mgs.ergomanager.dto.user.UserResponseDTO;
 import com.mgs.ergomanager.dto.user.UserUpdateRequestDTO;
+import com.mgs.ergomanager.event.UserCreatedEvent;
 import com.mgs.ergomanager.exception.BusinessException;
 import com.mgs.ergomanager.exception.DuplicateResourceException;
 import com.mgs.ergomanager.exception.ResourceNotFoundException;
@@ -10,7 +11,10 @@ import com.mgs.ergomanager.model.User;
 import com.mgs.ergomanager.model.enums.Role;
 import com.mgs.ergomanager.repository.UserRepository;
 import com.mgs.ergomanager.service.UserService;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Locale;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -22,63 +26,139 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class UserServiceImpl implements UserService {
 
+    private static final String USER_NOT_FOUND_MESSAGE = "No se encontró el usuario.";
+
+    private static final String DUPLICATE_EMAIL_MESSAGE = "El correo ya está registrado";
+
+    private static final String ONLY_ADMIN_ROLE_MESSAGE = "No se puede cambiar el rol del único administrador activo.";
+
+    private static final String ONLY_ADMIN_DEACTIVATION_MESSAGE = "No se puede desactivar al único administrador activo.";
+
+    private static final int BCRYPT_MAX_BYTES = 72;
+
     private final UserRepository userRepository;
 
     private final PasswordEncoder passwordEncoder;
+
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * Builds the service with its collaborators.
      *
      * @param userRepository  repository of application users
      * @param passwordEncoder encoder used to hash the passwords
+     * @param eventPublisher  publisher used to notify that a user was created
      */
-    public UserServiceImpl(UserRepository userRepository,
-                           PasswordEncoder passwordEncoder) {
+    public UserServiceImpl(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            ApplicationEventPublisher eventPublisher) {
+
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
-@Transactional(readOnly = true)
-public List<UserResponseDTO> findAll() {
-    return userRepository.findAll()
-            .stream()
-            .map(this::toResponse)
-            .toList();
-}
-
-   @Override
-@Transactional(readOnly = true)
-public UserResponseDTO findById(Long id) {
-    User user = userRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("User", id));
-
-    return toResponse(user);
-}
+    @Transactional(readOnly = true)
+    public List<UserResponseDTO> findAll() {
+        return userRepository.findAllByOrderByCreatedAtDescIdDesc().stream()
+                .map(this::toResponse)
+                .toList();
+    }
 
     @Override
+    @Transactional(readOnly = true)
+    public UserResponseDTO findById(Long id) {
+        return toResponse(getUser(id));
+    }
+
+    /**
+     * Creates a new administrator or ergonomist.
+     *
+     * <p>The supplied password is treated as the temporary password. It is
+     * hashed before being persisted and the original value is delivered by
+     * email after the database transaction commits successfully.</p>
+     *
+     * @param request data required to create the user
+     * @return created user without exposing the password
+     */
+    @Override
+    @Transactional
     public UserResponseDTO create(UserRequestDTO request) {
-        // TODO: reject a duplicated email and hash the password before saving.
-        throw new UnsupportedOperationException(
-                "UserService.create is not implemented yet");
+
+        String normalizedEmail = request.email()
+                .trim()
+                .toLowerCase(Locale.ROOT);
+
+        if (userRepository.existsByEmail(normalizedEmail)) {
+            throw new DuplicateResourceException(DUPLICATE_EMAIL_MESSAGE);
+        }
+
+        if (request.password().getBytes(StandardCharsets.UTF_8).length > BCRYPT_MAX_BYTES) {
+            throw new BusinessException("La contraseña no puede superar 72 bytes UTF-8.");
+        }
+
+        User user = new User();
+
+        user.setFirstName(request.firstName().trim());
+        user.setFirstLastName(request.firstLastName().trim());
+
+        if (request.secondLastName() != null
+                && !request.secondLastName().isBlank()) {
+            user.setSecondLastName(
+                    request.secondLastName().trim());
+        } else {
+            user.setSecondLastName(null);
+        }
+
+        user.setEmail(normalizedEmail);
+        user.setPassword(
+                passwordEncoder.encode(
+                        request.password()));
+        user.setRole(request.role());
+        user.setActive(true);
+
+        try {
+            User createdUser =
+                    userRepository.saveAndFlush(user);
+
+            eventPublisher.publishEvent(
+                    new UserCreatedEvent(
+                            normalizedEmail,
+                            request.password()));
+
+            return toResponse(createdUser);
+
+        } catch (DataIntegrityViolationException exception) {
+            throw new DuplicateResourceException(DUPLICATE_EMAIL_MESSAGE);
+        }
     }
 
+    /**
+     * Updates the data and the role of an administrator or ergonomist. Changing
+     * the role revokes the sessions of the user, and the only active
+     * administrator cannot lose that role.
+     *
+     * @param id      identifier of the user
+     * @param request new data of the user
+     * @return updated user without exposing the password
+     */
     @Override
     @Transactional
     public UserResponseDTO update(Long id, UserUpdateRequestDTO request) {
 
         User user = userRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User", id));
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE));
 
         String normalizedEmail = request.email()
                 .trim()
-                .toLowerCase();
+                .toLowerCase(Locale.ROOT);
 
         userRepository.findByEmail(normalizedEmail)
                 .filter(existingUser -> !existingUser.getId().equals(id))
                 .ifPresent(existingUser -> {
-                    throw new DuplicateResourceException(
-                            "Email is already registered: " + normalizedEmail);
+                    throw new DuplicateResourceException(DUPLICATE_EMAIL_MESSAGE);
                 });
 
         boolean changingOnlyActiveAdminRole =
@@ -88,8 +168,7 @@ public UserResponseDTO findById(Long id) {
                         && userRepository.countByRoleAndActiveTrue(Role.ADMIN) == 1;
 
         if (changingOnlyActiveAdminRole) {
-            throw new BusinessException(
-                    "Cannot change the role of the only active administrator");
+            throw new BusinessException(ONLY_ADMIN_ROLE_MESSAGE);
         }
 
         user.setFirstName(request.firstName());
@@ -105,8 +184,7 @@ public UserResponseDTO findById(Long id) {
             User updatedUser = userRepository.saveAndFlush(user);
             return toResponse(updatedUser);
         } catch (DataIntegrityViolationException exception) {
-            throw new DuplicateResourceException(
-                    "Email is already registered: " + normalizedEmail);
+            throw new DuplicateResourceException(DUPLICATE_EMAIL_MESSAGE);
         }
     }
 
@@ -119,7 +197,7 @@ public UserResponseDTO findById(Long id) {
     @Transactional
     public void deactivate(Long id, String currentUserEmail) {
         User user = userRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User", id));
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE));
 
         if (user.getEmail().equalsIgnoreCase(currentUserEmail)) {
             throw new BusinessException("No puede desactivar su propia cuenta.");
@@ -129,7 +207,7 @@ public UserResponseDTO findById(Long id) {
         }
         if (user.getRole() == Role.ADMIN
                 && userRepository.countByRoleAndActiveTrue(Role.ADMIN) == 1) {
-            throw new BusinessException("No se puede desactivar al único administrador activo.");
+            throw new BusinessException(ONLY_ADMIN_DEACTIVATION_MESSAGE);
         }
 
         user.setActive(false);
@@ -139,10 +217,36 @@ public UserResponseDTO findById(Long id) {
     }
 
     /**
-     * Maps a user entity to its response DTO.
+     * Gives back the access to a deactivated user. The sessions revoked by the
+     * deactivation stay revoked, so the user has to sign in again.
      *
-     * @param user user entity to map
-     * @return response DTO
+     * @param id identifier of the user
+     * @return the activated user
+     */
+    @Override
+    @Transactional
+    public UserResponseDTO activate(Long id) {
+        User user = getUser(id);
+        user.setActive(true);
+        return toResponse(userRepository.save(user));
+    }
+
+    /**
+     * Reads a user or fails with HTTP 404.
+     *
+     * @param id identifier of the user
+     * @return the stored user
+     */
+    private User getUser(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE));
+    }
+
+    /**
+     * Maps a user entity to the representation exposed by the API.
+     *
+     * @param user stored user
+     * @return user response without the password
      */
     private UserResponseDTO toResponse(User user) {
         return new UserResponseDTO(

@@ -1,109 +1,98 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
-import { SkeletonModule } from 'primeng/skeleton';
-import { TagModule } from 'primeng/tag';
-import { Observable } from 'rxjs';
+import { DatePipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
+
 import { AuthService } from '../../core/services/auth.service';
-import { CompanyService } from '../companies/company.service';
-import { FormService } from '../forms/form.service';
-import { UserService } from '../users/user.service';
-import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { StatCardComponent } from '../../shared/components/stat-card/stat-card.component';
+import { DashboardSummary } from '../../shared/models/dashboard.model';
+import { ToastService } from '../../shared/services/toast.service';
+import { DashboardService } from './dashboard.service';
+
+/** Function of the administrator, shown as a numbered option card. */
+interface FunctionCard {
+    number: string;
+    title: string;
+    description: string;
+    /** Font Awesome class shown in the graphite square. */
+    icon: string;
+    route: string;
+}
+
+/** Value shown by a key figure while it is unknown, after a failed load. */
+const UNKNOWN_VALUE = '—';
+
+/** The five functions enabled for the administrator profile (HU-001). */
+const FUNCTION_CARDS: readonly FunctionCard[] = [
+    { number: '01', title: 'Formularios', description: 'Cree, edite y desactive los formularios del sistema.', icon: 'fa-solid fa-file-lines', route: '/forms' },
+    { number: '02', title: 'Agenda de citas', description: 'Programe visitas y evaluaciones presenciales con los clientes.', icon: 'fa-solid fa-calendar-plus', route: '/appointments' },
+    { number: '03', title: 'Perfiles de clientes', description: 'Cree y gestione los perfiles de todas las empresas cliente.', icon: 'fa-solid fa-building', route: '/companies' },
+    { number: '04', title: 'Reportes e historial', description: 'Genere y descargue los informes de resultados ergonómicos.', icon: 'fa-solid fa-chart-column', route: '/history' },
+    { number: '05', title: 'Gestión de usuarios', description: 'Cree, edite y desactive cuentas de Administrador y Ergonomista.', icon: 'fa-solid fa-users-gear', route: '/users' }
+];
 
 /**
- * Option of the dashboard. A null route marks an option whose function does
- * not exist in the backend yet, so it is shown disabled.
+ * Home page of the administrator: dark impact band with the greeting, the key
+ * figures of the system and the five functions of the profile.
  */
-export interface FunctionCard {
-  id: number;
-  title: string;
-  description: string;
-  /** PrimeIcons class shown next to the title. */
-  icon: string;
-  color: 'red' | 'gray';
-  route: string | null;
-}
-
-/**
- * Figure of the dashboard. A null value means that it could not be read: the
- * backend has no function for it yet, or the request failed.
- */
-export interface StatCard {
-  label: string;
-  value: number | null;
-  isLoading: boolean;
-  /** Shows the value in the brand color. */
-  highlight?: boolean;
-}
-
-/** Figure that is read from the backend. */
-interface ConnectedStat {
-  label: string;
-  highlight?: boolean;
-  load: () => Observable<{ active: boolean }[]>;
-}
-
 @Component({
-  selector: 'app-dashboard',
-  standalone: true,
-  imports: [CommonModule, RouterModule, TagModule, SkeletonModule, PageHeaderComponent],
-  templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.scss']
+    selector: 'app-dashboard',
+    standalone: true,
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [DatePipe, RouterLink, StatCardComponent],
+    templateUrl: './dashboard.component.html',
+    styleUrl: './dashboard.component.scss'
 })
 export class DashboardComponent {
-  private readonly authService = inject(AuthService);
-  private readonly userService = inject(UserService);
-  private readonly companyService = inject(CompanyService);
-  private readonly formService = inject(FormService);
+    private readonly authService = inject(AuthService);
 
-  /** First name of the signed in user, shown in the greeting. */
-  userName = computed(() => this.authService.session()?.fullName.split(' ')[0] ?? '');
-  currentHour = new Date().getHours();
+    private readonly dashboardService = inject(DashboardService);
 
-  functionCards: FunctionCard[] = [
-    { id: 1, title: 'Formularios', description: 'Cree, edite y desactive los formularios del sistema.', icon: 'pi pi-file', color: 'red', route: '/forms' },
-    { id: 2, title: 'Citas', description: 'Programe visitas y evaluaciones presenciales con los clientes.', icon: 'pi pi-calendar-plus', color: 'gray', route: '/appointments' },
-    { id: 3, title: 'Perfiles de clientes', description: 'Cree y gestione los perfiles de todas las empresas cliente.', icon: 'pi pi-building', color: 'red', route: '/companies' },
-    // The backend has no report function for the administrator yet.
-    { id: 4, title: 'Reportes', description: 'Genere y descargue los informes de resultados ergonómicos.', icon: 'pi pi-chart-bar', color: 'gray', route: null },
-    { id: 5, title: 'Gestión de usuarios', description: 'Cree, edite y desactive cuentas de Administrador y Ergonomista.', icon: 'pi pi-users', color: 'red', route: '/users' }
-  ];
+    private readonly toastService = inject(ToastService);
 
-  /** Figures read from the backend, counting only the active records. */
-  private readonly connectedStats: ConnectedStat[] = [
-    { label: 'Clientes activos', load: () => this.companyService.findAll() },
-    { label: 'Usuarios activos', highlight: true, load: () => this.userService.findAll() },
-    { label: 'Formularios activos', load: () => this.formService.findActive() }
-  ];
+    private readonly destroyRef = inject(DestroyRef);
 
-  readonly stats = signal<StatCard[]>([
-    // The backend only reads the agenda of one ergonomist, not every appointment.
-    { label: 'Citas programadas', value: null, isLoading: false },
-    ...this.connectedStats.map((stat) => ({ label: stat.label, value: null, isLoading: true, highlight: stat.highlight }))
-  ]);
+    protected readonly functionCards = FUNCTION_CARDS;
 
-  getGreeting(): string {
-    if (this.currentHour < 12) return 'Buenos días';
-    if (this.currentHour < 18) return 'Buenas tardes';
-    return 'Buenas noches';
-  }
+    protected readonly today = new Date();
 
-  ngOnInit(): void {
-    for (const stat of this.connectedStats) {
-      stat.load().subscribe({
-        next: (records) => this.setStat(stat.label, records.filter((record) => record.active).length),
-        error: () => this.setStat(stat.label, null)
-      });
+    /** First name of the signed in user, shown in the greeting. */
+    protected readonly firstName = computed(() => this.authService.session()?.fullName.trim().split(/\s+/)[0] ?? '');
+
+    protected readonly greeting = computed(() => {
+        const hour = this.today.getHours();
+        const greeting = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
+        return this.firstName() ? `${greeting}, ${this.firstName()}.` : `${greeting}.`;
+    });
+
+    private readonly summary = signal<DashboardSummary | null>(null);
+
+    protected readonly isLoading = signal(true);
+
+    /** Figures of the cards, with a dash while they could not be read. */
+    protected readonly figures = computed(() => {
+        const summary = this.summary();
+        return {
+            scheduledAppointments: summary?.scheduledAppointments ?? UNKNOWN_VALUE,
+            activeCompanies: summary?.activeCompanies ?? UNKNOWN_VALUE,
+            activeUsers: summary?.activeUsers ?? UNKNOWN_VALUE,
+            activeForms: summary?.activeForms ?? UNKNOWN_VALUE
+        };
+    });
+
+    constructor() {
+        this.dashboardService
+            .getSummary()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: (summary) => {
+                    this.summary.set(summary);
+                    this.isLoading.set(false);
+                },
+                error: () => {
+                    this.isLoading.set(false);
+                    this.toastService.error('No se pudieron cargar los indicadores', 'Intente de nuevo en unos minutos.');
+                }
+            });
     }
-  }
-
-  /**
-   * Stores the value of a figure once its request finished.
-   *
-   * @param label label of the figure
-   * @param value number of active records, or null when it could not be read
-   */
-  private setStat(label: string, value: number | null): void {
-    this.stats.update((stats) => stats.map((stat) => (stat.label === label ? { ...stat, value, isLoading: false } : stat)));
-  }
 }

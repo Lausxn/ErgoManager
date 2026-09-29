@@ -5,9 +5,11 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.util.Locale;
 
 /**
- * Data needed to update an existing administrator or ergonomist.
+ * Data needed to update an existing administrator or ergonomist. The password
+ * is not edited here: each user replaces their own one (HU-019).
  *
  * @param firstName      given name of the user
  * @param firstLastName  first surname of the user
@@ -17,22 +19,30 @@ import jakarta.validation.constraints.Size;
  */
 public record UserUpdateRequestDTO(
 
-        @NotBlank
-        @Size(max = 60)
+        @NotBlank(message = "Este campo es obligatorio.")
+        @Size(max = 60, message = "Use un máximo de 60 caracteres.")
         String firstName,
 
-        @NotBlank
-        @Size(max = 60)
+        @NotBlank(message = "Este campo es obligatorio.")
+        @Size(max = 60, message = "Use un máximo de 60 caracteres.")
         String firstLastName,
 
-        @Size(max = 60)
+        @Size(max = 60, message = "Use un máximo de 60 caracteres.")
         String secondLastName,
 
-        @NotBlank
-        @Email
-        @Size(max = 120)
+        @NotBlank(message = "Este campo es obligatorio.")
+        @Email(message = "Escriba un correo válido.")
+        @Size(max = 120, message = "Use un máximo de 120 caracteres.")
         String email,
 
-        @NotNull
+        @NotNull(message = "Seleccione un rol.")
         Role role) {
+
+    /** Normalizes identity fields before validation. */
+    public UserUpdateRequestDTO {
+        firstName = firstName == null ? null : firstName.trim();
+        firstLastName = firstLastName == null ? null : firstLastName.trim();
+        secondLastName = secondLastName == null || secondLastName.isBlank() ? null : secondLastName.trim();
+        email = email == null ? null : email.trim().toLowerCase(Locale.ROOT);
+    }
 }

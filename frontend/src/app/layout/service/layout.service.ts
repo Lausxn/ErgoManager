@@ -15,10 +15,10 @@ export interface PageSizeOption {
  * changing the root font size scales text, spacing and components together.
  */
 export const PAGE_SIZE_OPTIONS: readonly PageSizeOption[] = [
-    { label: 'Compacto', value: 'small', fontSize: 12 },
-    { label: 'Normal', value: 'normal', fontSize: 14 },
-    { label: 'Grande', value: 'large', fontSize: 16 },
-    { label: 'Muy grande', value: 'extraLarge', fontSize: 18 }
+    { label: 'Compacto', value: 'small', fontSize: 13 },
+    { label: 'Normal', value: 'normal', fontSize: 15 },
+    { label: 'Grande', value: 'large', fontSize: 17 },
+    { label: 'Muy grande', value: 'extraLarge', fontSize: 19 }
 ];
 
 /** Key of the browser storage entry that keeps the site preferences. */
@@ -43,9 +43,12 @@ interface MenuChangeEvent {
     routeEvent?: boolean;
 }
 
-/** Preferences used on the first visit: the dark theme is the default one. */
+/**
+ * Preferences used on the first visit: the light theme, because the brand book
+ * asks for "Papel" backgrounds on working pages (page 3, "Claridad").
+ */
 const DEFAULT_CONFIG: layoutConfig = {
-    darkTheme: true,
+    darkTheme: false,
     menuMode: 'static',
     pageSize: 'normal'
 };

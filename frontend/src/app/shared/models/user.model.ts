@@ -9,7 +9,10 @@ export interface UserUpdateRequest {
     role: Role;
 }
 
-/** Body sent to POST /api/users, mirrors UserRequestDTO. */
+/**
+ * Body sent to POST /api/users, mirrors UserRequestDTO. The supplied temporary
+ * password is hashed by the backend and sent to the email of the new user.
+ */
 export interface UserRequest extends UserUpdateRequest {
     password: string;
 }

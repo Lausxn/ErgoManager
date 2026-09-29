@@ -12,6 +12,7 @@ import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -39,7 +40,7 @@ public class UserController {
     }
 
     /**
-     * Returns every registered user.
+     * Returns every registered user, newest first.
      *
      * @return list of users
      */
@@ -72,7 +73,8 @@ public class UserController {
     }
 
     /**
-     * Updates the data of an existing user.
+     * Updates the data and the role of an existing user. The password is not
+     * edited here; each user replaces their own one.
      *
      * @param id      identifier of the user
      * @param request new data of the user
@@ -94,5 +96,16 @@ public class UserController {
     public ResponseEntity<Void> deactivate(@PathVariable Long id, Principal principal) {
         userService.deactivate(id, principal.getName());
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Activates a user that had been deactivated.
+     *
+     * @param id identifier of the user
+     * @return the activated user
+     */
+    @PatchMapping("/{id}/activate")
+    public ResponseEntity<UserResponseDTO> activate(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.activate(id));
     }
 }

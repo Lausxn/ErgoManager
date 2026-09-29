@@ -31,7 +31,7 @@ export const appRoutes: Routes = [
             },
             {
                 path: 'companies',
-                canActivate: [roleGuard(['ADMIN'])],
+                canActivate: [roleGuard(['ADMIN', 'ERGONOMIST'])],
                 loadChildren: () => import('./app/pages/companies/companies.routes').then((m) => m.companiesRoutes)
             },
             {
@@ -41,7 +41,7 @@ export const appRoutes: Routes = [
             },
             {
                 path: 'forms',
-                canActivate: [roleGuard(['ADMIN'])],
+                canActivate: [roleGuard(['ADMIN', 'ERGONOMIST'])],
                 loadChildren: () => import('./app/pages/forms/forms.routes').then((m) => m.formsRoutes)
             },
             {
@@ -56,14 +56,13 @@ export const appRoutes: Routes = [
             {
                 path: 'history',
                 loadChildren: () => import('./app/pages/history/history.routes').then((m) => m.historyRoutes)
+            },
+            {
+                // Account of the signed in user, available to every role.
+                path: 'account',
+                loadChildren: () => import('./app/pages/account/account.routes').then((m) => m.accountRoutes)
             }
         ]
-    },
-    {
-        // Full screen pages of the signed in user, outside the main layout.
-        path: 'account',
-        canActivate: [authGuard],
-        loadChildren: () => import('./app/pages/account/account.routes').then((m) => m.accountRoutes)
     },
     {
         path: 'self-evaluation',

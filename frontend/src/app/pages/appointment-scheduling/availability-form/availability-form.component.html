@@ -1,43 +1,123 @@
-<app-page-header eyebrow="Agenda" title="Nueva disponibilidad" subtitle="Publique un espacio de tiempo que los colaboradores podrán reservar." />
+<app-page-header eyebrow="Citas" title="Publicar disponibilidad" subtitle="Abra un espacio en la agenda para agendar visitas y evaluaciones presenciales.">
+    <p-button label="Volver a la agenda" icon="fa-solid fa-arrow-left" severity="secondary" [text]="true" routerLink="/appointments" />
+</app-page-header>
 
-<form [formGroup]="availabilityForm" (ngSubmit)="submit()" class="mgs-card max-w-3xl" novalidate>
-    <div class="mgs-form-grid">
-        <div class="mgs-field mgs-field--half">
-            <label for="startDateTime">Inicio</label>
-            <p-datepicker inputId="startDateTime" formControlName="startDateTime" [showTime]="true" hourFormat="12" [minDate]="today" [showIcon]="true" [fluid]="true" dateFormat="dd/mm/yy" [stepMinute]="15" />
-            @if (isInvalid('startDateTime')) {
-                <small class="mgs-field__error">Elija la fecha y hora de inicio.</small>
-            }
-        </div>
+<form [formGroup]="availabilityForm" (ngSubmit)="submit()" class="mgs-form-layout" novalidate>
+    <div class="mgs-stack">
+        @if (isAdmin()) {
+            <section class="mgs-card">
+                <div class="mgs-card-header">
+                    <div>
+                        <h2 class="mgs-section-title">Ergonomista</h2>
+                        <p class="mgs-section-lead">Persona que atenderá las citas de este espacio.</p>
+                    </div>
+                </div>
+                <div class="mgs-form-grid">
+                    <app-form-field label="Ergonomista" inputId="userId" [control]="availabilityForm.controls.userId">
+                        @if (isLoadingErgonomists()) {
+                            <p-skeleton height="2.6rem" />
+                        } @else {
+                            <p-select
+                                inputId="userId"
+                                formControlName="userId"
+                                [options]="ergonomists()"
+                                optionLabel="fullName"
+                                optionValue="id"
+                                placeholder="Elija un ergonomista"
+                                [filter]="ergonomists().length > 6"
+                                filterBy="fullName,email"
+                                emptyMessage="No hay ergonomistas activos"
+                                [fluid]="true"
+                            >
+                                <ng-template #item let-ergonomist>
+                                    <div class="flex flex-col">
+                                        <span class="font-semibold">{{ ergonomist.fullName }}</span>
+                                        <span class="text-xs text-muted-color">{{ ergonomist.email }}</span>
+                                    </div>
+                                </ng-template>
+                            </p-select>
+                        }
+                    </app-form-field>
+                </div>
+            </section>
+        }
 
-        <div class="mgs-field mgs-field--half">
-            <label for="endDateTime">Fin</label>
-            <p-datepicker
-                inputId="endDateTime"
-                formControlName="endDateTime"
-                [showTime]="true"
-                hourFormat="12"
-                [minDate]="availabilityForm.controls.startDateTime.value ?? today"
-                [showIcon]="true"
-                [fluid]="true"
-                dateFormat="dd/mm/yy"
-                [stepMinute]="15"
-            />
-            @if (isInvalid('endDateTime')) {
-                <small class="mgs-field__error">Elija la fecha y hora de fin.</small>
+        <section class="mgs-card">
+            <div class="mgs-card-header">
+                <div>
+                    <h2 class="mgs-section-title">Horario</h2>
+                    <p class="mgs-section-lead">Día y rango de horas en que el ergonomista está disponible.</p>
+                </div>
+            </div>
+            <div class="mgs-form-grid">
+                <app-form-field label="Fecha" inputId="date" [control]="availabilityForm.controls.date">
+                    <p-datepicker inputId="date" formControlName="date" [minDate]="today" [showIcon]="true" iconDisplay="input" [fluid]="true" dateFormat="dd/mm/yy" placeholder="dd/mm/aaaa" [readonlyInput]="true" />
+                </app-form-field>
+                <app-form-field label="Hora de inicio" inputId="startTime" [control]="availabilityForm.controls.startTime" [half]="true">
+                    <p-datepicker inputId="startTime" formControlName="startTime" [timeOnly]="true" hourFormat="12" [stepMinute]="15" [showIcon]="true" iconDisplay="input" [fluid]="true" placeholder="Ej. 09:00 AM" [readonlyInput]="true" />
+                </app-form-field>
+                <app-form-field label="Hora de fin" inputId="endTime" [control]="availabilityForm.controls.endTime" [half]="true">
+                    <p-datepicker inputId="endTime" formControlName="endTime" [timeOnly]="true" hourFormat="12" [stepMinute]="15" [showIcon]="true" iconDisplay="input" [fluid]="true" placeholder="Ej. 11:00 AM" [readonlyInput]="true" />
+                </app-form-field>
+            </div>
+            @if (rangeError(); as message) {
+                <small class="mgs-field__error mt-4 !flex" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>{{ message }}</small>
             }
-        </div>
+        </section>
     </div>
 
-    @if (availabilityForm.hasError('invalidRange') && availabilityForm.dirty) {
-        <div class="mgs-alert mt-5" role="alert">
-            <i class="pi pi-exclamation-circle"></i>
-            <span>La hora de fin debe ser posterior a la de inicio.</span>
+    <aside class="mgs-card mgs-sticky flex flex-col gap-5">
+        <div>
+            <span class="mgs-eyebrow">Resumen</span>
+            <div class="mgs-section-title !mt-2 !mb-0">
+                @if (preview().date; as date) {
+                    {{ date | date: 'EEEE d MMMM' }}
+                } @else {
+                    Sin fecha
+                }
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <span class="inline-flex items-center justify-center w-12 h-12 rounded-lg text-white text-lg" style="background: var(--mgs-graphite)" aria-hidden="true"><i class="fa-regular fa-clock"></i></span>
+            <div class="flex flex-col">
+                <span class="mgs-kpi !text-3xl">{{ preview().duration ?? '—' }}</span>
+                <span class="text-sm text-muted-color">
+                    @if (preview().start && preview().end) {
+                        {{ preview().start | date: 'shortTime' }} – {{ preview().end | date: 'shortTime' }}
+                    } @else {
+                        Duración del espacio
+                    }
+                </span>
+            </div>
+        </div>
+
+        <dl class="mgs-details">
+            <div>
+                <dt>Ergonomista</dt>
+                <dd>{{ preview().ergonomistName || '—' }}</dd>
+            </div>
+            <div>
+                <dt>Inicio</dt>
+                <dd>{{ preview().start ? (preview().start | date: 'd MMM, h:mm a') : '—' }}</dd>
+            </div>
+            <div>
+                <dt>Fin</dt>
+                <dd>{{ preview().end ? (preview().end | date: 'd MMM, h:mm a') : '—' }}</dd>
+            </div>
+        </dl>
+
+        <div class="mgs-details-note">
+            <i class="fa-regular fa-lightbulb" aria-hidden="true"></i>
+            <span>Cada espacio admite una cita. No puede cruzarse con otro espacio del mismo ergonomista.</span>
+        </div>
+    </aside>
+
+    @if (errorMessage(); as message) {
+        <div class="mgs-alert" role="alert">
+            <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ message }}</span>
         </div>
     }
 
-    <div class="mgs-form-actions">
-        <p-button label="Cancelar" severity="secondary" [outlined]="true" routerLink="/appointments" />
-        <p-button type="submit" label="Publicar" icon="pi pi-check" [loading]="isSubmitting()" />
-    </div>
+    <app-save-bar [tracker]="unsaved" [saving]="isSubmitting()" message="Cuidado, el espacio todavía no se ha publicado." discardLabel="Vaciar campos" submitLabel="Publicar disponibilidad" (discarded)="clearError()" />
 </form>

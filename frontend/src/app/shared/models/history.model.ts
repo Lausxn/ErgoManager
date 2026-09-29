@@ -1,3 +1,6 @@
+/** Milestone recorded by a history entry. */
+export type HistoryType = 'SELF_EVALUATION' | 'APPOINTMENT_BOOKED' | 'APPOINTMENT_CANCELLED' | 'PERSONALIZED_EVALUATION';
+
 /** History entry returned by /api/histories. */
 export interface HistoryResponse {
     id: number;
@@ -7,4 +10,7 @@ export interface HistoryResponse {
     employeeEmail: string;
     description: string;
     registeredAt: string;
+    companyName: string;
+    /** Absent only on entries recorded before the field existed. */
+    type?: HistoryType;
 }

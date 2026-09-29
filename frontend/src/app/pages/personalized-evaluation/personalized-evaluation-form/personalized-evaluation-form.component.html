@@ -1,63 +1,289 @@
-<app-page-header eyebrow="Evaluación" title="Evaluación personalizada" subtitle="Registre el diagnóstico de una cita atendida y genere el reporte en PDF." />
+<app-page-header eyebrow="Evaluación" title="Evaluación personalizada" subtitle="Registre el diagnóstico de una cita atendida y genere el reporte en PDF.">
+    <p-button label="Ir a la agenda" icon="fa-regular fa-calendar" severity="secondary" [text]="true" routerLink="/appointments" />
+</app-page-header>
 
 @if (savedEvaluation(); as evaluation) {
-    <section class="mgs-card flex flex-col gap-5 max-w-4xl">
-        <div class="flex flex-wrap items-start justify-between gap-4">
-            <div>
-                <span class="mgs-eyebrow">Evaluación guardada</span>
-                <h2 class="mgs-section-title !mt-2 !mb-1">{{ evaluation.employeeName }}</h2>
-                <p class="text-muted-color m-0">Cita n.º {{ evaluation.appointmentId }}</p>
+    <section class="evaluation-success mgs-card" aria-live="polite">
+        <div class="evaluation-success__band">
+            <span class="evaluation-success__icon" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
+            <div class="flex flex-col gap-1 min-w-0">
+                <span class="evaluation-success__eyebrow">Evaluación guardada</span>
+                <h2 class="evaluation-success__title">{{ evaluation.employeeName }}</h2>
+                <span class="evaluation-success__meta">{{ evaluation.employeeEmail }} · {{ evaluation.companyName }} · {{ evaluation.evaluatedAt | date: 'd MMM y, h:mm a' }}</span>
             </div>
             <p-tag [value]="'Riesgo ' + riskLevelLabels[evaluation.riskLevel]" [styleClass]="riskLevelTagClasses[evaluation.riskLevel]" />
         </div>
-        <div>
-            <h3 class="text-base font-semibold m-0 mb-1">Diagnóstico</h3>
-            <p class="whitespace-pre-line">{{ evaluation.diagnosis }}</p>
-        </div>
-        <div>
-            <h3 class="text-base font-semibold m-0 mb-1">Recomendaciones</h3>
-            <p class="whitespace-pre-line">{{ evaluation.recommendations }}</p>
+        <div class="evaluation-success__body">
+            <div>
+                <span class="mgs-eyebrow">Diagnóstico</span>
+                <p class="evaluation-success__text">{{ evaluation.diagnosis }}</p>
+            </div>
+            <div>
+                <span class="mgs-eyebrow">Recomendaciones</span>
+                <p class="evaluation-success__text">{{ evaluation.recommendations }}</p>
+            </div>
         </div>
         <div class="mgs-form-actions !mt-0">
-            <p-button label="Nueva evaluación" severity="secondary" [outlined]="true" icon="pi pi-plus" (onClick)="startNew()" />
-            <p-button label="Descargar reporte PDF" icon="pi pi-file-pdf" [loading]="isDownloading()" (onClick)="downloadReport(evaluation.id)" />
+            <p-button label="Nueva evaluación" severity="secondary" [outlined]="true" icon="fa-solid fa-plus" (onClick)="startNew()" />
+            <p-button label="Descargar reporte PDF" icon="fa-regular fa-file-pdf" [loading]="downloadingIds().has(evaluation.id)" (onClick)="downloadReport(evaluation)" />
         </div>
     </section>
 } @else {
-    <form [formGroup]="evaluationForm" (ngSubmit)="submit()" class="mgs-card max-w-4xl" novalidate>
-        <div class="mgs-form-grid">
-            <div class="mgs-field mgs-field--half">
-                <label for="appointmentId">Número de cita</label>
-                <p-inputnumber inputId="appointmentId" formControlName="appointmentId" [useGrouping]="false" [min]="1" [fluid]="true" placeholder="Ej. 125" />
-                @if (isInvalid('appointmentId')) {
-                    <small class="mgs-field__error">Indique el número de la cita atendida.</small>
+    <form [formGroup]="evaluationForm" (ngSubmit)="submit()" class="mgs-form-layout" novalidate>
+        <div class="mgs-stack">
+            <section class="mgs-card">
+                <div class="mgs-card-header">
+                    <div>
+                        <h2 class="mgs-section-title">Cita atendida</h2>
+                        <p class="mgs-section-lead">Citas pendientes de evaluación de los últimos 60 días y los próximos 30.</p>
+                    </div>
+                </div>
+                @if (isLoadingAppointments()) {
+                    <p-skeleton height="2.6rem" />
+                } @else if (appointmentsError()) {
+                    <div class="mgs-alert" role="alert">
+                        <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                        <span class="flex-1">{{ appointmentsError() }}</span>
+                        <p-button label="Reintentar" size="small" [text]="true" (onClick)="loadPendingAppointments()" />
+                    </div>
+                } @else if (appointmentOptions().length === 0) {
+                    <app-empty-state icon="fa-regular fa-calendar-check" title="No hay citas por evaluar" message="Todas sus citas recientes ya tienen evaluación. Las nuevas aparecerán aquí.">
+                        <p-button label="Ver agenda" icon="fa-regular fa-calendar" severity="secondary" [outlined]="true" routerLink="/appointments" />
+                    </app-empty-state>
+                } @else {
+                    <div class="mgs-form-grid">
+                        <app-form-field label="Cita" inputId="appointmentId" [control]="evaluationForm.controls.appointmentId" [errors]="appointmentErrors">
+                            <p-select
+                                inputId="appointmentId"
+                                formControlName="appointmentId"
+                                [options]="appointmentOptions()"
+                                optionLabel="label"
+                                optionValue="id"
+                                placeholder="Elija la cita que atendió"
+                                [filter]="true"
+                                filterBy="label,employeeEmail"
+                                emptyFilterMessage="Ninguna cita coincide"
+                                [fluid]="true"
+                            >
+                                <ng-template #item let-appointment>
+                                    <div class="flex flex-col">
+                                        <span class="font-semibold">{{ appointment.employeeName }}</span>
+                                        <span class="text-xs text-muted-color">{{ appointment.companyName }} · {{ appointment.startDateTime | date: 'EEE d MMM, h:mm a' }}</span>
+                                    </div>
+                                </ng-template>
+                            </p-select>
+                        </app-form-field>
+                    </div>
                 }
-            </div>
+            </section>
 
-            <div class="mgs-field">
-                <label for="riskLevel">Nivel de riesgo</label>
-                <p-selectbutton inputId="riskLevel" formControlName="riskLevel" [options]="riskLevelOptions" optionLabel="label" optionValue="value" [allowEmpty]="false" />
-            </div>
-
-            <div class="mgs-field">
-                <label for="diagnosis">Diagnóstico</label>
-                <textarea pTextarea id="diagnosis" formControlName="diagnosis" rows="5" [autoResize]="true"></textarea>
-                @if (isInvalid('diagnosis')) {
-                    <small class="mgs-field__error">El diagnóstico es obligatorio.</small>
+            <section class="mgs-card">
+                <div class="mgs-card-header">
+                    <div>
+                        <h2 class="mgs-section-title">Nivel de riesgo</h2>
+                        <p class="mgs-section-lead">Resultado de la valoración presencial del puesto y la persona.</p>
+                    </div>
+                </div>
+                <div class="risk-grid" role="radiogroup" aria-label="Nivel de riesgo">
+                    @for (choice of riskChoices; track choice.value) {
+                        <label class="risk-card" [class.risk-card--selected]="selectedRisk()?.value === choice.value" [for]="'risk-' + choice.value">
+                            <p-radiobutton [inputId]="'risk-' + choice.value" formControlName="riskLevel" [value]="choice.value" styleClass="sr-only" />
+                            <span class="risk-card__top">
+                                <span class="risk-card__icon" aria-hidden="true"><i [class]="choice.icon"></i></span>
+                                <span class="risk-card__meter" aria-hidden="true">
+                                    @for (level of riskLevels; track level) {
+                                        <span class="risk-card__bar" [class.risk-card__bar--on]="level <= choice.level"></span>
+                                    }
+                                </span>
+                            </span>
+                            <p-tag [value]="choice.label" [styleClass]="choice.tagClass" />
+                            <span class="risk-card__description">{{ choice.description }}</span>
+                        </label>
+                    }
+                </div>
+                @if (evaluationForm.controls.riskLevel.invalid && evaluationForm.controls.riskLevel.dirty) {
+                    <small class="mgs-field__error risk-error" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>{{ riskErrors.required }}</small>
                 }
-            </div>
+            </section>
 
-            <div class="mgs-field">
-                <label for="recommendations">Recomendaciones</label>
-                <textarea pTextarea id="recommendations" formControlName="recommendations" rows="5" [autoResize]="true"></textarea>
-                @if (isInvalid('recommendations')) {
-                    <small class="mgs-field__error">Las recomendaciones son obligatorias.</small>
-                }
-            </div>
+            <section class="mgs-card">
+                <div class="mgs-card-header">
+                    <div>
+                        <h2 class="mgs-section-title">Diagnóstico y recomendaciones</h2>
+                        <p class="mgs-section-lead">Aparecerán tal cual en el reporte PDF que recibe la empresa.</p>
+                    </div>
+                </div>
+                <div class="mgs-form-grid">
+                    <app-form-field label="Diagnóstico" inputId="diagnosis" [control]="evaluationForm.controls.diagnosis">
+                        <textarea pTextarea id="diagnosis" formControlName="diagnosis" rows="5" [autoResize]="true" [maxlength]="maxTextLength" placeholder="Hallazgos de la evaluación: postura, puesto de trabajo, molestias reportadas…"></textarea>
+                        <span class="text-counter" [class.text-counter--near]="diagnosisLength() > maxTextLength * 0.9">{{ diagnosisLength() }} / {{ maxTextLength }}</span>
+                    </app-form-field>
+                    <app-form-field label="Recomendaciones" inputId="recommendations" [control]="evaluationForm.controls.recommendations">
+                        <textarea pTextarea id="recommendations" formControlName="recommendations" rows="5" [autoResize]="true" [maxlength]="maxTextLength" placeholder="Ajustes del puesto, pausas activas, ejercicios, seguimiento…"></textarea>
+                        <span class="text-counter" [class.text-counter--near]="recommendationsLength() > maxTextLength * 0.9">{{ recommendationsLength() }} / {{ maxTextLength }}</span>
+                    </app-form-field>
+                </div>
+            </section>
         </div>
 
-        <div class="mgs-form-actions">
-            <p-button type="submit" label="Guardar evaluación" icon="pi pi-check" [loading]="isSubmitting()" />
-        </div>
+        <aside class="mgs-card mgs-sticky flex flex-col gap-5">
+            @if (selectedAppointment(); as appointment) {
+                <div class="flex items-center gap-3">
+                    <p-avatar icon="fa-regular fa-user" shape="circle" size="large" styleClass="mgs-avatar" />
+                    <div class="min-w-0">
+                        <div class="mgs-section-title !m-0">{{ appointment.employeeName }}</div>
+                        <div class="text-sm text-muted-color break-all">{{ appointment.employeeEmail }}</div>
+                    </div>
+                </div>
+                <dl class="mgs-details">
+                    <div>
+                        <dt>Empresa</dt>
+                        <dd>{{ appointment.companyName }}</dd>
+                    </div>
+                    <div>
+                        <dt>Fecha</dt>
+                        <dd>{{ appointment.startDateTime | date: 'EEE d MMM y' }}</dd>
+                    </div>
+                    <div>
+                        <dt>Horario</dt>
+                        <dd>{{ appointment.startDateTime | date: 'h:mm a' }} – {{ appointment.endDateTime | date: 'h:mm a' }}</dd>
+                    </div>
+                </dl>
+                @if (appointment.notes) {
+                    <div class="mgs-details-note">
+                        <i class="fa-regular fa-note-sticky" aria-hidden="true"></i>
+                        <span>{{ appointment.notes }}</span>
+                    </div>
+                }
+            } @else if (isLoadingAppointments()) {
+                <div class="flex items-center gap-3" aria-hidden="true">
+                    <p-skeleton shape="circle" size="3rem" />
+                    <div class="flex flex-col gap-2 flex-1">
+                        <p-skeleton width="70%" height="1.1rem" />
+                        <p-skeleton width="85%" height="0.8rem" />
+                    </div>
+                </div>
+                <div class="flex flex-col gap-3" aria-hidden="true">
+                    <p-skeleton height="1.1rem" />
+                    <p-skeleton height="1.1rem" />
+                    <p-skeleton height="1.1rem" />
+                </div>
+            } @else {
+                <div class="flex flex-col items-center text-center gap-2 py-4">
+                    <span class="aside-placeholder" aria-hidden="true"><i class="fa-regular fa-clipboard"></i></span>
+                    <span class="font-semibold">Ninguna cita elegida</span>
+                    <span class="text-sm text-muted-color">Elija la cita para ver los datos del colaborador.</span>
+                </div>
+            }
+
+            @if (selectedRisk(); as risk) {
+                <div class="flex items-center justify-between gap-2">
+                    <span class="mgs-eyebrow">Riesgo</span>
+                    <p-tag [value]="risk.label" [styleClass]="risk.tagClass" />
+                </div>
+            }
+
+            <div class="flex flex-col gap-2">
+                <div class="flex justify-between items-baseline">
+                    <span class="mgs-eyebrow">Datos obligatorios</span>
+                    <span class="font-semibold tabular-nums">{{ completedCount() }} de 4</span>
+                </div>
+                <p-progressbar [value]="progress()" [showValue]="false" styleClass="h-2" />
+            </div>
+        </aside>
+
+        @if (errorMessage(); as message) {
+            <div class="mgs-alert" role="alert">
+                <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ message }}</span>
+            </div>
+        }
+
+        <app-save-bar [tracker]="unsaved" [saving]="isSubmitting()" message="Cuidado, la evaluación todavía no se ha guardado." discardLabel="Vaciar campos" submitLabel="Guardar evaluación" (discarded)="clearError()" />
     </form>
 }
+
+<section class="evaluations mgs-table-card" aria-labelledby="evaluations-title">
+    <p-table [value]="isLoadingEvaluations() ? skeletonRows : evaluationRows()" [paginator]="!isLoadingEvaluations() && evaluationRows().length > 10" [rows]="10" [rowHover]="true" dataKey="id" sortField="evaluatedAt" [sortOrder]="-1">
+        <ng-template #caption>
+            <div class="mgs-toolbar">
+                <div class="mgs-toolbar__title">
+                    <strong id="evaluations-title">Mis evaluaciones</strong>
+                    <span>{{ evaluationRows().length }} {{ evaluationRows().length === 1 ? 'evaluación registrada' : 'evaluaciones registradas' }}</span>
+                </div>
+            </div>
+        </ng-template>
+        <ng-template #header>
+            <tr>
+                <th pSortableColumn="employeeName">Colaborador <p-sortIcon field="employeeName" /></th>
+                <th pSortableColumn="companyName">Empresa <p-sortIcon field="companyName" /></th>
+                <th pSortableColumn="riskLevel">Riesgo <p-sortIcon field="riskLevel" /></th>
+                <th pSortableColumn="evaluatedAt">Fecha <p-sortIcon field="evaluatedAt" /></th>
+                <th class="w-20"><span class="sr-only">Acciones</span></th>
+            </tr>
+        </ng-template>
+        <ng-template #body let-row>
+            @if (isLoadingEvaluations()) {
+                <tr aria-hidden="true">
+                    <td>
+                        <div class="mgs-identity">
+                            <p-skeleton shape="circle" size="2rem" />
+                            <div class="flex flex-col gap-2">
+                                <p-skeleton width="9rem" height="0.9rem" />
+                                <p-skeleton width="12rem" height="0.75rem" />
+                            </div>
+                        </div>
+                    </td>
+                    <td><p-skeleton width="8rem" height="0.9rem" /></td>
+                    <td><p-skeleton width="4rem" height="1.5rem" borderRadius="999px" /></td>
+                    <td><p-skeleton width="5.5rem" height="0.9rem" /></td>
+                    <td>
+                        <div class="flex justify-end"><p-skeleton shape="circle" size="2rem" /></div>
+                    </td>
+                </tr>
+            } @else {
+                <tr>
+                    <td>
+                        <div class="mgs-identity">
+                            <p-avatar [label]="row.initials" shape="circle" styleClass="mgs-avatar" />
+                            <div class="mgs-identity__text">
+                                <span class="mgs-identity__name">{{ row.employeeName }}</span>
+                                <span class="mgs-identity__meta">{{ row.employeeEmail }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>{{ row.companyName }}</td>
+                    <td><p-tag [value]="row.riskLabel" [styleClass]="row.riskTagClass" /></td>
+                    <td class="whitespace-nowrap">{{ row.evaluatedAt | date: 'd MMM y' }}</td>
+                    <td class="text-right">
+                        <div class="mgs-row-actions">
+                            <p-button
+                                icon="fa-regular fa-file-pdf"
+                                [rounded]="true"
+                                [text]="true"
+                                severity="secondary"
+                                [loading]="downloadingIds().has(row.id)"
+                                (onClick)="downloadReport(row)"
+                                pTooltip="Descargar reporte PDF"
+                                tooltipPosition="top"
+                                ariaLabel="Descargar reporte PDF"
+                            />
+                        </div>
+                    </td>
+                </tr>
+            }
+        </ng-template>
+        <ng-template #emptymessage>
+            <tr>
+                <td colspan="5">
+                    @if (evaluationsError(); as message) {
+                        <app-empty-state icon="fa-solid fa-plug-circle-exclamation" title="No se pudieron cargar sus evaluaciones" [message]="message">
+                            <p-button label="Reintentar" icon="fa-solid fa-rotate-right" severity="secondary" [outlined]="true" (onClick)="loadEvaluations()" />
+                        </app-empty-state>
+                    } @else {
+                        <app-empty-state icon="fa-regular fa-folder-open" title="Todavía no hay evaluaciones" message="Las evaluaciones que registre aparecerán aquí con su reporte en PDF." />
+                    }
+                </td>
+            </tr>
+        </ng-template>
+    </p-table>
+</section>

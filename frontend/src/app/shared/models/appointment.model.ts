@@ -34,4 +34,10 @@ export interface AppointmentResponse {
     endDateTime: string;
     status: AppointmentStatus;
     notes?: string;
+    employeeEmail: string;
+    companyId: number;
+    companyName: string;
+    ergonomistName: string;
+    /** True once the ergonomist registered the personalized evaluation. */
+    evaluated: boolean;
 }

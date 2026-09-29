@@ -70,4 +70,14 @@ export class AppointmentService {
     cancel(id: number): Observable<AppointmentResponse> {
         return this.http.patch<AppointmentResponse>(`${this.baseUrl}/${id}/cancel`, {});
     }
+
+    /**
+     * Removes a published slot that nobody booked yet.
+     *
+     * @param id identifier of the slot
+     * @returns an empty response
+     */
+    deleteAvailability(id: number): Observable<void> {
+        return this.http.delete<void>(`${this.baseUrl}/availabilities/${id}`);
+    }
 }
