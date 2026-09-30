@@ -655,39 +655,36 @@
     }
 }
 
-/* Independent theme and page size controls (app-preferences). */
+/* Display preferences menu (app-preferences): a trigger and a panel with the text size and the dark mode. */
 .mgs-prefs {
+    position: relative;
     display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
+    --mgs-prefs-accent: var(--mgs-wine);
+    --mgs-prefs-accent-soft: color-mix(in srgb, var(--mgs-wine), transparent 55%);
 
-    &__size {
+    &__trigger {
         display: inline-flex;
         align-items: center;
+        gap: 0.55rem;
         height: 2.5rem;
-        padding: 0 0.25rem;
+        padding: 0 0.9rem;
         border: 1px solid var(--surface-border);
         border-radius: 999px;
-        background: var(--surface-card);
-    }
-
-    &__step,
-    &__theme {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.1rem;
-        border: 0;
         cursor: pointer;
         color: var(--text-color);
-        background: transparent;
+        background: var(--surface-card);
         transition:
-            background-color var(--element-transition-duration),
-            color var(--element-transition-duration);
+            border-color var(--element-transition-duration),
+            background-color var(--element-transition-duration);
 
-        &:hover:not(:disabled) {
+        i {
+            font-size: 1.05rem;
+        }
+
+        &:hover,
+        &--open {
+            border-color: var(--mgs-prefs-accent-soft);
             background: var(--surface-hover);
-            color: var(--heading-color);
         }
 
         &:focus-visible {
@@ -696,43 +693,135 @@
         }
     }
 
-    &__step {
-        height: 2rem;
-        min-width: 2.4rem;
-        padding: 0 0.5rem;
-        border-radius: 999px;
-        font-family: var(--mgs-font-display);
+    &__chevron {
+        font-size: 0.7rem !important;
+        color: var(--text-color-secondary);
+        transition: transform 0.2s var(--mgs-ease);
+    }
 
-        i {
-            font-size: 0.6rem;
+    &__trigger--open &__chevron {
+        transform: rotate(180deg);
+    }
+
+    &__panel {
+        position: absolute;
+        top: calc(100% + 0.6rem);
+        right: 0;
+        z-index: 1100;
+        width: min(19rem, calc(100vw - 2rem));
+        overflow: hidden;
+        border: 1px solid var(--surface-border);
+        border-radius: var(--mgs-radius);
+        background: var(--surface-overlay);
+        box-shadow: 0 16px 40px rgba(11, 11, 13, 0.18);
+        animation: mgs-prefs-in 0.18s var(--mgs-ease);
+    }
+
+    &__header {
+        padding: 1.1rem 1.25rem 1rem;
+        background: linear-gradient(110deg, transparent 35%, color-mix(in srgb, var(--mgs-wine), transparent 88%));
+    }
+
+    &__rule {
+        display: block;
+        width: 2rem;
+        height: 3px;
+        margin-bottom: 0.9rem;
+        border-radius: 2px;
+        background: var(--mgs-accent-text);
+    }
+
+    &__title {
+        margin: 0;
+        font-family: var(--mgs-font-display);
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--heading-color);
+    }
+
+    &__subtitle {
+        margin: 0.2rem 0 0;
+        font-size: 0.85rem;
+        color: var(--text-color-secondary);
+    }
+
+    &__section {
+        padding: 1rem 1.25rem;
+        border-top: 1px solid var(--surface-border);
+    }
+
+    &__section-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+    }
+
+    &__label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--text-color-secondary);
+    }
+
+    &__percent {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--mgs-accent-text);
+    }
+
+    &__size {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 2.9rem;
+        padding: 0 0.35rem;
+        border: 1px solid var(--surface-border);
+        border-radius: 999px;
+        background: var(--surface-ground);
+    }
+
+    &__step {
+        min-width: 2.6rem;
+        height: 2.2rem;
+        padding: 0 0.6rem;
+        border: 0;
+        border-radius: 999px;
+        cursor: pointer;
+        font-family: var(--mgs-font-display);
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--heading-color);
+        background: transparent;
+        transition: background-color var(--element-transition-duration);
+
+        &:hover:not(:disabled) {
+            background: var(--surface-hover);
         }
 
         &:disabled {
             cursor: default;
             opacity: 0.35;
         }
-    }
 
-    &__letter {
-        font-size: 1.05rem;
-        font-weight: 700;
-        line-height: 1;
-
-        &--small {
-            font-size: 0.8rem;
+        &:focus-visible {
+            outline: 2px solid var(--mgs-accent-text);
+            outline-offset: 2px;
         }
     }
 
     &__levels {
         display: inline-flex;
         align-items: flex-end;
-        gap: 0.2rem;
-        padding: 0 0.35rem;
+        gap: 0.3rem;
     }
 
     /* Bars that grow with each level, like a volume meter. */
     &__level {
-        width: 0.3rem;
+        width: 0.4rem;
         padding: 0;
         border: 0;
         border-radius: 2px;
@@ -741,54 +830,182 @@
         transition: background-color var(--element-transition-duration);
 
         &:nth-child(1) {
-            height: 0.45rem;
+            height: 0.55rem;
         }
         &:nth-child(2) {
-            height: 0.7rem;
+            height: 0.85rem;
         }
         &:nth-child(3) {
-            height: 0.95rem;
+            height: 1.15rem;
         }
         &:nth-child(4) {
-            height: 1.2rem;
+            height: 1.45rem;
         }
 
         &--active {
-            background: var(--mgs-wine);
+            background: var(--mgs-accent-text);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--mgs-accent-text);
+            outline-offset: 2px;
         }
     }
 
-    &__theme {
-        width: 2.5rem;
-        height: 2.5rem;
+    &__reset {
+        margin-top: 0.75rem;
+        padding: 0;
+        border: 0;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-color-secondary);
+        background: transparent;
+
+        &:hover:not(:disabled) {
+            color: var(--mgs-accent-text);
+            text-decoration: underline;
+        }
+
+        &:disabled {
+            cursor: default;
+            opacity: 0.5;
+        }
+    }
+
+    &__mode {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+    }
+
+    &__mode-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        width: 2.4rem;
+        height: 2.4rem;
         border: 1px solid var(--surface-border);
-        border-radius: 50%;
-        background: var(--surface-card);
+        border-radius: 10px;
+        color: var(--heading-color);
+        background: var(--surface-ground);
+    }
 
-        i {
-            font-size: 1.1rem;
+    &__mode-text {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        line-height: 1.25;
+    }
+
+    &__mode-title {
+        font-weight: 700;
+        color: var(--heading-color);
+    }
+
+    &__mode-state {
+        font-size: 0.8rem;
+        color: var(--text-color-secondary);
+    }
+
+    &__switch {
+        position: relative;
+        flex: none;
+        width: 2.75rem;
+        height: 1.5rem;
+        padding: 0;
+        border: 0;
+        border-radius: 999px;
+        cursor: pointer;
+        background: var(--surface-border);
+        transition: background-color 0.2s var(--mgs-ease);
+
+        &[aria-checked='true'] {
+            background: var(--mgs-prefs-accent);
         }
+
+        &:focus-visible {
+            outline: 2px solid var(--mgs-accent-text);
+            outline-offset: 2px;
+        }
+    }
+
+    &__knob {
+        position: absolute;
+        top: 0.2rem;
+        left: 0.2rem;
+        width: 1.1rem;
+        height: 1.1rem;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(11, 11, 13, 0.3);
+        transition: transform 0.2s var(--mgs-ease);
+    }
+
+    &__switch[aria-checked='true'] &__knob {
+        transform: translateX(1.25rem);
     }
 }
 
-.app-dark .mgs-prefs__level--active {
-    background: var(--p-primary-400);
+.app-dark .mgs-prefs__panel {
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
 }
 
-/* On pages without the top bar the controls float on a card. */
-.mgs-prefs-floating {
-    padding: 0.35rem;
+.app-dark .mgs-prefs__header {
+    background: linear-gradient(110deg, transparent 30%, color-mix(in srgb, var(--mgs-wine), transparent 55%));
+}
+
+@keyframes mgs-prefs-in {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mgs-prefs__panel {
+        animation: none;
+    }
+}
+
+/* Round icon button kept from the former controls; the account pages reuse it in their own header. */
+.mgs-prefs__theme {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.1rem;
+    width: 2.5rem;
+    height: 2.5rem;
     border: 1px solid var(--surface-border);
-    border-radius: 999px;
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--text-color);
+    background: var(--surface-card);
+    transition:
+        background-color var(--element-transition-duration),
+        color var(--element-transition-duration);
+
+    &:hover:not(:disabled) {
+        background: var(--surface-hover);
+        color: var(--heading-color);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--mgs-accent-text);
+        outline-offset: 2px;
+    }
+
+    i {
+        font-size: 1.1rem;
+    }
+}
+
+/* On pages without the top bar the trigger floats on a card. */
+.mgs-prefs-floating .mgs-prefs__trigger {
     background: color-mix(in srgb, var(--surface-card), transparent 10%);
     backdrop-filter: blur(6px);
     box-shadow: 0 4px 14px rgba(11, 11, 13, 0.12);
-
-    .mgs-prefs__size,
-    .mgs-prefs__theme {
-        border-color: transparent;
-        background: transparent;
-    }
 }
 
 /*
