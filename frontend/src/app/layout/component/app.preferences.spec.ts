@@ -45,15 +45,21 @@ describe('AppPreferences', () => {
         expect(find('.mgs-prefs__trigger')!.getAttribute('aria-expanded')).toBe('true');
     });
 
-    it('cambia el tamaño de texto y lo muestra como porcentaje', () => {
+    it('cambia el tamaño de texto con el deslizante y lo muestra como porcentaje', () => {
         click('.mgs-prefs__trigger');
+        const range = find<HTMLInputElement>('#mgs-prefs-size')!;
+        expect(range.value).toBe('1');
         expect(find('.mgs-prefs__percent')!.textContent).toContain('100 %');
         expect(find<HTMLButtonElement>('.mgs-prefs__reset')!.disabled).toBeTrue();
-        click('[aria-label="Aumentar tamaño de texto"]');
+        range.value = '2';
+        range.dispatchEvent(new Event('input'));
+        fixture.detectChanges();
         expect(layoutService.pageSize()).toBe('large');
         expect(find('.mgs-prefs__percent')!.textContent).toContain('113 %');
+        expect(find('.mgs-prefs__tick--active')!.textContent).toContain('113 %');
         click('.mgs-prefs__reset');
         expect(layoutService.pageSize()).toBe('normal');
+        expect(range.value).toBe('1');
     });
 
     it('activa el modo oscuro desde el interruptor sin cerrar el panel', () => {

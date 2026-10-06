@@ -6,7 +6,7 @@ const NORMAL_FONT_SIZE = PAGE_SIZE_OPTIONS.find((option) => option.value === 'no
 
 /**
  * Display preferences menu: a button that opens a panel with the text size
- * stepper and the dark mode switch. Both choices are kept in the browser
+ * slider and the dark mode switch. Both choices are kept in the browser
  * storage by the LayoutService, and the same component is used on every page.
  */
 @Component({
@@ -31,21 +31,27 @@ const NORMAL_FONT_SIZE = PAGE_SIZE_OPTIONS.find((option) => option.value === 'no
                         <span id="mgs-prefs-size-label" class="mgs-prefs__label">Tamaño de texto</span>
                         <span class="mgs-prefs__percent" aria-live="polite">{{ percent() }} %</span>
                     </div>
-                    <div class="mgs-prefs__size" role="group" aria-labelledby="mgs-prefs-size-label">
-                        <button type="button" class="mgs-prefs__step" (click)="layoutService.stepPageSize(-1)" [disabled]="!layoutService.canDecreasePageSize()" aria-label="Reducir tamaño de texto">A–</button>
-                        <span class="mgs-prefs__levels">
+                    <div class="mgs-prefs__slider">
+                        <span class="mgs-prefs__letter mgs-prefs__letter--small" aria-hidden="true">A</span>
+                        <input
+                            id="mgs-prefs-size"
+                            type="range"
+                            class="mgs-prefs__range"
+                            min="0"
+                            [max]="pageSizeOptions.length - 1"
+                            step="1"
+                            [value]="layoutService.pageSizeIndex()"
+                            [style.--mgs-prefs-fill]="fill()"
+                            (input)="selectSize($event)"
+                            aria-labelledby="mgs-prefs-size-label"
+                            [attr.aria-valuetext]="layoutService.pageSizeLabel() + ', ' + percent() + ' %'"
+                        />
+                        <span class="mgs-prefs__letter mgs-prefs__letter--large" aria-hidden="true">A</span>
+                        <div class="mgs-prefs__ticks" aria-hidden="true">
                             @for (option of pageSizeOptions; track option.value; let index = $index) {
-                                <button
-                                    type="button"
-                                    class="mgs-prefs__level"
-                                    [class.mgs-prefs__level--active]="index <= layoutService.pageSizeIndex()"
-                                    (click)="layoutService.setPageSize(option.value)"
-                                    [attr.aria-label]="option.label"
-                                    [attr.aria-pressed]="option.value === layoutService.pageSize()"
-                                ></button>
+                                <span [class.mgs-prefs__tick--active]="index === layoutService.pageSizeIndex()">{{ percentOf(option.fontSize) }} %</span>
                             }
-                        </span>
-                        <button type="button" class="mgs-prefs__step" (click)="layoutService.stepPageSize(1)" [disabled]="!layoutService.canIncreasePageSize()" aria-label="Aumentar tamaño de texto">A+</button>
+                        </div>
                     </div>
                     <button type="button" class="mgs-prefs__reset" (click)="layoutService.setPageSize('normal')" [disabled]="layoutService.pageSize() === 'normal'">Restablecer tamaño</button>
                 </section>
@@ -76,7 +82,30 @@ export class AppPreferences {
     protected readonly open = signal(false);
 
     /** Current page size as a percentage of the normal size. */
-    protected readonly percent = computed(() => Math.round((PAGE_SIZE_OPTIONS[this.layoutService.pageSizeIndex()].fontSize / NORMAL_FONT_SIZE) * 100));
+    protected readonly percent = computed(() => this.percentOf(PAGE_SIZE_OPTIONS[this.layoutService.pageSizeIndex()].fontSize));
+
+    /** Part of the slider track painted up to the thumb. */
+    protected readonly fill = computed(() => `${(this.layoutService.pageSizeIndex() / (PAGE_SIZE_OPTIONS.length - 1)) * 100}%`);
+
+    /**
+     * Converts a font size into a percentage of the normal size.
+     *
+     * @param fontSize base font size in pixels
+     * @returns rounded percentage
+     */
+    protected percentOf(fontSize: number): number {
+        return Math.round((fontSize / NORMAL_FONT_SIZE) * 100);
+    }
+
+    /**
+     * Applies the size picked with the slider.
+     *
+     * @param event input event of the range element
+     */
+    protected selectSize(event: Event): void {
+        const index = Number((event.target as HTMLInputElement).value);
+        this.layoutService.setPageSize(PAGE_SIZE_OPTIONS[index].value);
+    }
 
     /** Opens or closes the panel. */
     protected toggle(): void {

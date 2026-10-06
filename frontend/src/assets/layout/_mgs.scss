@@ -773,83 +773,122 @@
         color: var(--mgs-accent-text);
     }
 
-    &__size {
-        display: flex;
+    /* Slider with a small and a big letter at its ends, and the percentages below it. */
+    &__slider {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
         align-items: center;
-        justify-content: space-between;
-        height: 2.9rem;
-        padding: 0 0.35rem;
-        border: 1px solid var(--surface-border);
-        border-radius: 999px;
-        background: var(--surface-ground);
+        gap: 0.4rem 0.75rem;
     }
 
-    &__step {
-        min-width: 2.6rem;
-        height: 2.2rem;
-        padding: 0 0.6rem;
-        border: 0;
-        border-radius: 999px;
-        cursor: pointer;
+    &__letter {
+        flex: none;
         font-family: var(--mgs-font-display);
-        font-size: 1rem;
         font-weight: 700;
+        line-height: 1;
         color: var(--heading-color);
-        background: transparent;
-        transition: background-color var(--element-transition-duration);
 
-        &:hover:not(:disabled) {
-            background: var(--surface-hover);
+        &--small {
+            font-size: 0.8rem;
         }
 
-        &:disabled {
-            cursor: default;
-            opacity: 0.35;
-        }
-
-        &:focus-visible {
-            outline: 2px solid var(--mgs-accent-text);
-            outline-offset: 2px;
+        &--large {
+            font-size: 1.3rem;
         }
     }
 
-    &__levels {
-        display: inline-flex;
-        align-items: flex-end;
-        gap: 0.3rem;
-    }
-
-    /* Bars that grow with each level, like a volume meter. */
-    &__level {
-        width: 0.4rem;
-        padding: 0;
-        border: 0;
-        border-radius: 2px;
+    /* Native range input: --mgs-prefs-fill paints the track up to the thumb. */
+    &__range {
+        --mgs-prefs-thumb: 1.15rem;
+        width: 100%;
+        height: var(--mgs-prefs-thumb);
+        margin: 0;
         cursor: pointer;
-        background: var(--surface-border);
-        transition: background-color var(--element-transition-duration);
+        background: transparent;
+        appearance: none;
+        -webkit-appearance: none;
 
-        &:nth-child(1) {
-            height: 0.55rem;
-        }
-        &:nth-child(2) {
-            height: 0.85rem;
-        }
-        &:nth-child(3) {
-            height: 1.15rem;
-        }
-        &:nth-child(4) {
-            height: 1.45rem;
+        &::-webkit-slider-runnable-track {
+            height: 0.4rem;
+            border-radius: 999px;
+            background: linear-gradient(to right, var(--mgs-accent-text) var(--mgs-prefs-fill), var(--surface-border) var(--mgs-prefs-fill));
         }
 
-        &--active {
+        &::-webkit-slider-thumb {
+            width: var(--mgs-prefs-thumb);
+            height: var(--mgs-prefs-thumb);
+            margin-top: calc((0.4rem - var(--mgs-prefs-thumb)) / 2);
+            border: 3px solid var(--mgs-accent-text);
+            border-radius: 50%;
+            background: var(--surface-overlay);
+            box-shadow: 0 1px 4px rgba(11, 11, 13, 0.25);
+            transition: transform 0.15s var(--mgs-ease);
+            -webkit-appearance: none;
+        }
+
+        &::-moz-range-track {
+            height: 0.4rem;
+            border-radius: 999px;
+            background: var(--surface-border);
+        }
+
+        &::-moz-range-progress {
+            height: 0.4rem;
+            border-radius: 999px;
             background: var(--mgs-accent-text);
         }
 
-        &:focus-visible {
-            outline: 2px solid var(--mgs-accent-text);
-            outline-offset: 2px;
+        &::-moz-range-thumb {
+            width: var(--mgs-prefs-thumb);
+            height: var(--mgs-prefs-thumb);
+            box-sizing: border-box;
+            border: 3px solid var(--mgs-accent-text);
+            border-radius: 50%;
+            background: var(--surface-overlay);
+            box-shadow: 0 1px 4px rgba(11, 11, 13, 0.25);
         }
+
+        &:hover::-webkit-slider-thumb,
+        &:active::-webkit-slider-thumb {
+            transform: scale(1.12);
+        }
+
+        &:focus-visible {
+            outline: none;
+
+            &::-webkit-slider-thumb {
+                outline: 2px solid var(--mgs-accent-text);
+                outline-offset: 2px;
+            }
+
+            &::-moz-range-thumb {
+                outline: 2px solid var(--mgs-accent-text);
+                outline-offset: 2px;
+            }
+        }
+    }
+
+    /* Percentages under the slider, aligned with the thumb positions. */
+    &__ticks {
+        grid-column: 2;
+        display: flex;
+        justify-content: space-between;
+        padding: 0 calc(1.15rem / 2);
+        font-size: 0.7rem;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-color-secondary);
+
+        span {
+            width: 0;
+            display: flex;
+            justify-content: center;
+            white-space: nowrap;
+        }
+    }
+
+    &__tick--active {
+        font-weight: 700;
+        color: var(--mgs-accent-text);
     }
 
     &__reset {
