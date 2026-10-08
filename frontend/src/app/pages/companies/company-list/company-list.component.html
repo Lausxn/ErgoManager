@@ -126,3 +126,5 @@
         </ng-template>
     </p-table>
 </div>
+
+<app-deactivate-company-dialog [(visible)]="isDeactivationDialogOpen" [company]="deactivationTarget()" [isDeactivating]="!!deactivationTarget() && isBusy(deactivationTarget()!.id)" (confirmed)="deactivate($event)" />
