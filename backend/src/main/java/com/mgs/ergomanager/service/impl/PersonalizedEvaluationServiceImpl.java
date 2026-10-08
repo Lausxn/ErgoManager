@@ -82,6 +82,9 @@ public class PersonalizedEvaluationServiceImpl implements PersonalizedEvaluation
         if (!Objects.equals(appointment.getUser().getId(), ergonomist.getId())) {
             throw new AccessDeniedException(ACCESS_DENIED_MESSAGE);
         }
+        if (!appointment.getSelfEvaluation().getCompany().isActive()) {
+            throw new BusinessException("La empresa está inactiva. No se pueden registrar evaluaciones.");
+        }
         // Checked before the status: an evaluated appointment is already COMPLETED,
         // and "already evaluated" is the more useful answer in that case.
         if (personalizedEvaluationRepository.existsByAppointmentId(appointment.getId())) {

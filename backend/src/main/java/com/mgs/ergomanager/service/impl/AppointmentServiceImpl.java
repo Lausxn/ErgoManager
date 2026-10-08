@@ -135,6 +135,9 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .orElseThrow(() -> new BusinessException("El espacio seleccionado no existe."));
         User ergonomist = availability.getUser();
         currentUserService.checkOwnerOrAdmin(ergonomist.getId());
+        if (!selfEvaluation.getCompany().isActive()) {
+            throw new BusinessException("La empresa está inactiva. No se pueden agendar citas.");
+        }
         if (availability.isTaken()) {
             throw new BusinessException("El espacio seleccionado ya fue reservado. Elija otro horario.");
         }
