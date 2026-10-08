@@ -103,6 +103,44 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     @Override
     @Transactional(readOnly = true)
+    public AvailabilityResponseDTO findAvailabilityById(Long id) {
+        Availability availability = availabilityRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró la disponibilidad."));
+        currentUserService.checkOwnerOrAdmin(availability.getUser().getId());
+        return toAvailabilityResponse(availability);
+    }
+
+    @Override
+    @Transactional
+    public AvailabilityResponseDTO updateAvailability(Long id, AvailabilityRequestDTO request) {
+        // Uses the same lock as booking/deletion so a reserved slot cannot be edited.
+        Availability availability = availabilityRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró la disponibilidad."));
+        User ergonomist = availability.getUser();
+        currentUserService.checkOwnerOrAdmin(ergonomist.getId());
+        if (!ergonomist.getId().equals(request.userId())) {
+            throw new BusinessException("No se puede cambiar el propietario de la disponibilidad.");
+        }
+        if (availability.isTaken()) {
+            throw new BusinessException("No se puede editar un espacio que ya tiene una cita.");
+        }
+        if (!ergonomist.isActive() || ergonomist.getRole() != Role.ERGONOMIST) {
+            throw new BusinessException("El usuario seleccionado no es un ergónomo activo.");
+        }
+        if (!request.endDateTime().isAfter(request.startDateTime())) {
+            throw new BusinessException("La hora de fin debe ser posterior a la de inicio.");
+        }
+        if (availabilityRepository.existsByUserIdAndIdNotAndStartDateTimeBeforeAndEndDateTimeAfter(
+                ergonomist.getId(), id, request.endDateTime(), request.startDateTime())) {
+            throw new DuplicateResourceException("Ya tiene una disponibilidad que se cruza con ese horario.");
+        }
+        availability.setStartDateTime(request.startDateTime());
+        availability.setEndDateTime(request.endDateTime());
+        return toAvailabilityResponse(availabilityRepository.save(availability));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<AvailabilityResponseDTO> findFreeAvailabilities(Long userId, LocalDateTime from, LocalDateTime to) {
         currentUserService.checkOwnerOrAdmin(userId);
         return availabilityRepository
