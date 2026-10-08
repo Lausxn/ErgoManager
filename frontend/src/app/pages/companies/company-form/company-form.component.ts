@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, input, numberAttribute, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { map, merge } from 'rxjs';
 import { AvatarModule } from 'primeng/avatar';
@@ -19,7 +19,7 @@ import { trackUnsavedChanges } from '../../../shared/forms/unsaved-changes';
 import { CompanyRequest, CompanyResponse } from '../../../shared/models/company.model';
 import { ToastService } from '../../../shared/services/toast.service';
 import { applyApiErrors, isConflict } from '../../../shared/utils/api-error';
-import { markFormAsDirty, notBlank } from '../../../shared/utils/form';
+import { markFormAsDirty, matchesFormat, notBlank } from '../../../shared/utils/form';
 import { ACTIVE_TAG_CLASSES } from '../../../shared/utils/labels';
 import { companyInitials } from '../company-initials';
 import { CompanyService } from '../company.service';
@@ -30,8 +30,45 @@ const LIMITS = { businessName: 150, taxId: 20, contactEmail: 120, phoneNumber: 3
 /** Message shown under the tax id when the backend answers HTTP 409. */
 const DUPLICATED_TAX_ID_MESSAGE = 'Ya existe una empresa con esa cédula jurídica.';
 
+/** Message shown under the business name when another company already uses it. */
+const DUPLICATED_BUSINESS_NAME_MESSAGE = 'Ya existe una empresa con esa razón social.';
+
+/** Formats checked before saving, so the user learns what to fix without waiting for the server. */
+const FORMATS = {
+    businessName: /[\p{L}\p{N}]/u,
+    taxId: /^[0-9]+(-[0-9]+)*$/,
+    phoneNumber: /^\+?(?:[ ()-]*[0-9]){8,15}[ ()-]*$/
+} as const;
+
+/** Messages of the format errors, each one explains the expected value. */
+const FORMAT_MESSAGES = {
+    businessName: 'La razón social debe incluir letras o números.',
+    taxId: 'Use solo números y guiones, por ejemplo 3-101-123456.',
+    phoneNumber: 'Escriba un teléfono válido de 8 a 15 dígitos, por ejemplo 2222-3333.'
+} as const;
+
+/** Names of the fields as the user reads them, used to list the ones to fix. */
+const FIELD_LABELS = {
+    businessName: 'Razón social',
+    taxId: 'Cédula jurídica',
+    contactEmail: 'Correo de contacto',
+    phoneNumber: 'Teléfono',
+    address: 'Dirección'
+} as const;
+
 /** Fields that must hold a valid value before saving. */
 const REQUIRED_FIELDS = ['businessName', 'taxId', 'contactEmail'] as const;
+
+/**
+ * Turns a business name into the form used to compare it with the others:
+ * no accents, single spaces and lower case, so "Café  Sol" and "cafe sol" match.
+ *
+ * @param businessName name typed or stored
+ * @returns comparable name
+ */
+function comparableBusinessName(businessName: string): string {
+    return businessName.normalize('NFD').replace(/\p{M}/gu, '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('es');
+}
 
 /**
  * Form used to register a client company or to edit one. When editing, the
@@ -119,13 +156,21 @@ export class CompanyFormComponent implements OnInit, HasUnsavedChanges {
     readonly id = input<number | undefined, unknown>(undefined, { transform: numberAttribute });
     protected readonly limits = LIMITS;
     protected readonly activeTagClasses = ACTIVE_TAG_CLASSES;
-    protected readonly taxIdErrors = { duplicated: DUPLICATED_TAX_ID_MESSAGE };
+    protected readonly businessNameErrors = { duplicated: DUPLICATED_BUSINESS_NAME_MESSAGE, businessNameFormat: FORMAT_MESSAGES.businessName };
+    protected readonly taxIdErrors = { duplicated: DUPLICATED_TAX_ID_MESSAGE, taxIdFormat: FORMAT_MESSAGES.taxId };
+    protected readonly phoneNumberErrors = { phoneNumberFormat: FORMAT_MESSAGES.phoneNumber };
+
+    /** Comparable business names of every other registered company, active or not. */
+    private readonly takenBusinessNames = signal<ReadonlySet<string>>(new Set());
+
+    /** Rejects a business name already used by another registered company. */
+    private readonly uniqueBusinessName: ValidatorFn = (control: AbstractControl): ValidationErrors | null => (this.takenBusinessNames().has(comparableBusinessName(control.value ?? '')) ? { duplicated: true } : null);
 
     protected readonly companyForm = this.formBuilder.nonNullable.group({
-        businessName: ['', [Validators.required, notBlank, Validators.maxLength(LIMITS.businessName)]],
-        taxId: ['', [Validators.required, notBlank, Validators.maxLength(LIMITS.taxId)]],
+        businessName: ['', [Validators.required, notBlank, Validators.maxLength(LIMITS.businessName), matchesFormat(FORMATS.businessName, 'businessNameFormat'), this.uniqueBusinessName]],
+        taxId: ['', [Validators.required, notBlank, Validators.maxLength(LIMITS.taxId), matchesFormat(FORMATS.taxId, 'taxIdFormat')]],
         contactEmail: ['', [Validators.required, notBlank, Validators.email, Validators.maxLength(LIMITS.contactEmail)]],
-        phoneNumber: ['', [Validators.maxLength(LIMITS.phoneNumber)]],
+        phoneNumber: ['', [Validators.maxLength(LIMITS.phoneNumber), matchesFormat(FORMATS.phoneNumber, 'phoneNumberFormat')]],
         address: ['', [Validators.maxLength(LIMITS.address)]]
     });
 
@@ -166,6 +211,7 @@ export class CompanyFormComponent implements OnInit, HasUnsavedChanges {
     protected readonly progress = computed(() => Math.round((this.completedCount() / this.requiredCount) * 100));
 
     ngOnInit(): void {
+        this.loadTakenBusinessNames();
         if (!this.isEditing()) {
             return;
         }
@@ -190,6 +236,24 @@ export class CompanyFormComponent implements OnInit, HasUnsavedChanges {
                     this.toastService.error('No se encontró la empresa', 'Puede que ya no exista.');
                     void this.router.navigate(['/companies']);
                 }
+            });
+    }
+
+    /**
+     * Reads the names of the other registered companies, so a repeated business
+     * name is flagged while typing instead of after saving.
+     */
+    private loadTakenBusinessNames(): void {
+        this.companyService
+            .findAll()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: (companies) => {
+                    const otherNames = companies.filter((company) => company.id !== this.id()).map((company) => comparableBusinessName(company.businessName));
+                    this.takenBusinessNames.set(new Set(otherNames));
+                    this.companyForm.controls.businessName.updateValueAndValidity();
+                },
+                error: () => this.toastService.error('No se pudo verificar la razón social', 'Confirme que ninguna otra empresa use el mismo nombre.')
             });
     }
 
@@ -221,7 +285,7 @@ export class CompanyFormComponent implements OnInit, HasUnsavedChanges {
         }
         if (this.companyForm.invalid) {
             markFormAsDirty(this.companyForm);
-            this.errorMessage.set('Revise los campos marcados antes de guardar.');
+            this.errorMessage.set(`Revise los campos marcados antes de guardar: ${this.invalidFieldLabels()}.`);
             return;
         }
 
@@ -252,13 +316,23 @@ export class CompanyFormComponent implements OnInit, HasUnsavedChanges {
     }
 
     /**
-     * Builds the body of the request with clean values: trimmed text, email in
-     * lower case and no blank optional fields.
+     * Lists the fields that still hold an invalid value, in the order of the form.
+     *
+     * @returns names of the fields joined in a readable sentence
+     */
+    private invalidFieldLabels(): string {
+        const labels = (Object.keys(FIELD_LABELS) as (keyof typeof FIELD_LABELS)[]).filter((field) => this.companyForm.controls[field].invalid).map((field) => FIELD_LABELS[field]);
+        return labels.length > 1 ? `${labels.slice(0, -1).join(', ')} y ${labels.at(-1)}` : labels.join('');
+    }
+
+    /**
+     * Builds the body of the request with clean values: trimmed text, single
+     * spaces in the business name, email in lower case and no blank optional fields.
      */
     private buildRequest(): CompanyRequest {
         const { businessName, taxId, contactEmail, phoneNumber, address } = this.companyForm.getRawValue();
         return {
-            businessName: businessName.trim(),
+            businessName: businessName.trim().replace(/\s+/g, ' '),
             taxId: taxId.trim(),
             contactEmail: contactEmail.trim().toLowerCase(),
             phoneNumber: phoneNumber.trim() || undefined,
