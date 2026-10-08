@@ -1,0 +1,163 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { Router, provideRouter } from '@angular/router';
+
+import { environment } from '../../../../environments/environment';
+import { CompanyResponse } from '../../../shared/models/company.model';
+import { CompanyFormComponent } from './company-form.component';
+
+const COMPANIES_URL = `${environment.apiUrl}/companies`;
+
+const COMPANY_URL = `${COMPANIES_URL}/7`;
+
+/** Company stored in the backend, opened for editing. */
+const STORED_COMPANY: CompanyResponse = {
+    id: 7,
+    businessName: 'Comercial Norte',
+    taxId: '3-101-000010',
+    contactEmail: 'rrhh@norte.test',
+    phoneNumber: '2222-3333',
+    address: 'Heredia',
+    active: true,
+    createdAt: '2026-10-01T10:00:00'
+};
+
+/** Every registered company: the one being edited, another active one and an inactive one. */
+const REGISTERED_COMPANIES: CompanyResponse[] = [STORED_COMPANY, { ...STORED_COMPANY, id: 8, businessName: 'Industrias del Valle', taxId: '3-101-000009' }, { ...STORED_COMPANY, id: 9, businessName: 'Café Sol', taxId: '3-101-000011', active: false }];
+
+describe('CompanyFormComponent (HU-020 validaciones de edición)', () => {
+    let fixture: ComponentFixture<CompanyFormComponent>;
+    let element: HTMLElement;
+    let httpTesting: HttpTestingController;
+
+    beforeEach(() => {
+        TestBed.configureTestingModule({
+            imports: [CompanyFormComponent],
+            providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations()]
+        });
+        httpTesting = TestBed.inject(HttpTestingController);
+        spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+        fixture = TestBed.createComponent(CompanyFormComponent);
+        fixture.componentRef.setInput('id', 7);
+        fixture.detectChanges();
+        httpTesting.expectOne({ method: 'GET', url: COMPANIES_URL }).flush(REGISTERED_COMPANIES);
+        httpTesting.expectOne({ method: 'GET', url: COMPANY_URL }).flush(STORED_COMPANY);
+        fixture.detectChanges();
+        element = fixture.nativeElement;
+    });
+
+    afterEach(() => httpTesting.verify());
+
+    /**
+     * Types a value in a field, as the user would.
+     *
+     * @param id    id of the input
+     * @param value text typed
+     */
+    function type(id: string, value: string): void {
+        const input = element.querySelector<HTMLInputElement>(`#${id}`)!;
+        input.value = value;
+        input.dispatchEvent(new Event('input'));
+        input.dispatchEvent(new Event('blur'));
+        fixture.detectChanges();
+    }
+
+    /** Sends the form. */
+    function submit(): void {
+        element.querySelector('form')!.dispatchEvent(new Event('submit'));
+        fixture.detectChanges();
+    }
+
+    /**
+     * Reads the message shown under a field.
+     *
+     * @param id id of the input
+     * @returns text of the error, empty when there is none
+     */
+    function errorOf(id: string): string {
+        return element.querySelector(`#${id}-error`)?.textContent?.trim() ?? '';
+    }
+
+    /** Text of the general alert above the actions. */
+    function alertText(): string {
+        return element.querySelector('.mgs-alert')?.textContent?.trim() ?? '';
+    }
+
+    it('carga los datos guardados de la empresa en los campos', () => {
+        expect(element.querySelector<HTMLInputElement>('#businessName')!.value).toBe('Comercial Norte');
+        expect(element.querySelector<HTMLInputElement>('#taxId')!.value).toBe('3-101-000010');
+    });
+
+    it('no guarda con campos vacíos y explica cuáles debe corregir', () => {
+        type('businessName', '   ');
+        type('contactEmail', '');
+        submit();
+
+        httpTesting.expectNone({ method: 'PUT', url: COMPANY_URL });
+        expect(errorOf('businessName')).toBe('Este campo es obligatorio.');
+        expect(errorOf('contactEmail')).toBe('Este campo es obligatorio.');
+        expect(alertText()).toBe('Revise los campos marcados antes de guardar: Razón social y Correo de contacto.');
+    });
+
+    it('explica el formato esperado de la razón social, la cédula jurídica y el teléfono', () => {
+        type('businessName', '---');
+        type('taxId', '3-101-ABC');
+        type('phoneNumber', '123');
+        submit();
+
+        httpTesting.expectNone({ method: 'PUT', url: COMPANY_URL });
+        expect(errorOf('businessName')).toBe('La razón social debe incluir letras o números.');
+        expect(errorOf('taxId')).toBe('Use solo números y guiones, por ejemplo 3-101-123456.');
+        expect(errorOf('phoneNumber')).toBe('Escriba un teléfono válido de 8 a 15 dígitos, por ejemplo 2222-3333.');
+        expect(alertText()).toBe('Revise los campos marcados antes de guardar: Razón social, Cédula jurídica y Teléfono.');
+    });
+
+    it('no permite la razón social de otra empresa, sin importar mayúsculas, espacios ni tildes', () => {
+        for (const name of ['Industrias del Valle', 'INDUSTRIAS  DEL   VALLE', ' industrias del valle ']) {
+            type('businessName', name);
+            expect(errorOf('businessName')).withContext(name).toBe('Ya existe una empresa con esa razón social.');
+        }
+        // An inactive company keeps its name reserved.
+        type('businessName', 'cafe sol');
+        expect(errorOf('businessName')).toBe('Ya existe una empresa con esa razón social.');
+
+        submit();
+        httpTesting.expectNone({ method: 'PUT', url: COMPANY_URL });
+        expect(alertText()).toBe('Revise los campos marcados antes de guardar: Razón social.');
+    });
+
+    it('permite conservar su propia razón social y envía los datos limpios', () => {
+        type('businessName', '  COMERCIAL   norte ');
+        expect(errorOf('businessName')).toBe('');
+        submit();
+
+        const request = httpTesting.expectOne({ method: 'PUT', url: COMPANY_URL });
+        expect(request.request.body.businessName).toBe('COMERCIAL norte');
+        request.flush({ ...STORED_COMPANY, businessName: 'COMERCIAL norte' });
+    });
+
+    it('marca la cédula jurídica cuando el servidor indica que ya existe', () => {
+        type('taxId', '3-101-000009');
+        submit();
+
+        const message = 'Ya existe una empresa con esa cédula jurídica.';
+        httpTesting.expectOne({ method: 'PUT', url: COMPANY_URL }).flush({ status: 409, message }, { status: 409, statusText: 'Conflict' });
+        fixture.detectChanges();
+
+        expect(errorOf('taxId')).toBe(message);
+        expect(alertText()).toBe(message);
+    });
+
+    it('muestra bajo cada campo los errores de validación que devuelve el servidor', () => {
+        type('address', 'San José');
+        submit();
+
+        httpTesting.expectOne({ method: 'PUT', url: COMPANY_URL }).flush({ status: 400, message: 'Revise los datos ingresados.', fieldErrors: { contactEmail: 'Escriba un correo válido.' } }, { status: 400, statusText: 'Bad Request' });
+        fixture.detectChanges();
+
+        expect(errorOf('contactEmail')).toBe('Escriba un correo válido.');
+        expect(alertText()).toBe('Revise los datos ingresados.');
+    });
+});

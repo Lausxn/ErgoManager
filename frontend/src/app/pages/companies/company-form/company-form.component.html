@@ -8,7 +8,7 @@
             <div class="mgs-card-header">
                 <div>
                     <h2 class="mgs-section-title">Identificación</h2>
-                    <p class="mgs-section-lead">Tal como aparece en los registros legales. La cédula jurídica no se puede repetir.</p>
+                    <p class="mgs-section-lead">Tal como aparece en los registros legales. La razón social y la cédula jurídica no se pueden repetir con otra empresa registrada.</p>
                 </div>
             </div>
             @if (isLoading()) {
@@ -18,7 +18,7 @@
                 </div>
             } @else {
                 <div class="mgs-form-grid">
-                    <app-form-field label="Razón social" inputId="businessName" [control]="companyForm.controls.businessName">
+                    <app-form-field label="Razón social" inputId="businessName" [control]="companyForm.controls.businessName" [errors]="businessNameErrors" hint="Nombre único de la empresa en el sistema.">
                         <input pInputText id="businessName" formControlName="businessName" [maxlength]="limits.businessName" autocomplete="organization" placeholder="Ej. Servicios Industriales del Valle S.A." />
                     </app-form-field>
                     <app-form-field label="Cédula jurídica" inputId="taxId" [control]="companyForm.controls.taxId" [errors]="taxIdErrors" [half]="true" hint="Identificador único de la empresa.">
@@ -46,7 +46,7 @@
                     <app-form-field label="Correo de contacto" inputId="contactEmail" [control]="companyForm.controls.contactEmail">
                         <input pInputText id="contactEmail" type="email" formControlName="contactEmail" [maxlength]="limits.contactEmail" autocomplete="email" placeholder="contacto@empresa.com" />
                     </app-form-field>
-                    <app-form-field label="Teléfono" inputId="phoneNumber" [control]="companyForm.controls.phoneNumber" [half]="true" [optional]="true">
+                    <app-form-field label="Teléfono" inputId="phoneNumber" [control]="companyForm.controls.phoneNumber" [errors]="phoneNumberErrors" [half]="true" [optional]="true">
                         <input pInputText id="phoneNumber" type="tel" formControlName="phoneNumber" [maxlength]="limits.phoneNumber" autocomplete="tel" placeholder="Ej. 2222-3333" />
                     </app-form-field>
                     <app-form-field label="Dirección" inputId="address" [control]="companyForm.controls.address" [half]="true" [optional]="true">
