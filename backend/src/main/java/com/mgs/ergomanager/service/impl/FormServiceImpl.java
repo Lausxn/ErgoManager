@@ -41,6 +41,8 @@ public class FormServiceImpl implements FormService {
     private static final Logger LOGGER = LoggerFactory.getLogger(FormServiceImpl.class);
     private static final String FORM_NOT_FOUND_MESSAGE = "No se encontró el formulario.";
     private static final String COMPANY_NOT_FOUND_MESSAGE = "No se encontró la empresa.";
+    private static final String ACTIVE_FORM_EXISTS_MESSAGE =
+            "Ya existe un formulario activo. Desactívelo antes de activar otro formulario.";
 
     private static final Comparator<Question> BY_ORDER =
             Comparator.comparing(Question::getQuestionOrder).thenComparing(Question::getId);
@@ -98,6 +100,8 @@ public class FormServiceImpl implements FormService {
     @Override
     @Transactional
     public FormResponseDTO create(FormRequestDTO request) {
+        validateNoActiveForm();
+
         Form form = new Form();
         copy(request, form);
         form.setActive(true);
@@ -166,6 +170,15 @@ public class FormServiceImpl implements FormService {
     @Transactional
     public FormResponseDTO activate(Long id) {
         Form form = getForm(id);
+
+        if (form.isActive()) {
+            return toResponse(form, questionRepository.findByFormIdAndActiveTrueOrderByQuestionOrderAsc(id));
+        }
+
+        if (formRepository.existsByActiveTrueAndIdNot(id)) {
+            throw new BusinessException(ACTIVE_FORM_EXISTS_MESSAGE);
+        }
+
         form.setActive(true);
         formRepository.save(form);
         return toResponse(form, questionRepository.findByFormIdAndActiveTrueOrderByQuestionOrderAsc(id));
@@ -212,6 +225,15 @@ public class FormServiceImpl implements FormService {
         LOGGER.info("Formulario {} reenviado a la empresa {}: {} de {} correos enviados",
                 formId, companyId, sent, recipients.size());
         return new FormResendResponseDTO(sent);
+    }
+
+    /**
+     * Checks that a new active form can be created.
+     */
+    private void validateNoActiveForm() {
+        if (formRepository.existsByActiveTrue()) {
+            throw new BusinessException(ACTIVE_FORM_EXISTS_MESSAGE);
+        }
     }
 
     /**

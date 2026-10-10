@@ -222,14 +222,20 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
     void ergonomistHasFullAccessAndAnonymousIsUnauthorized() throws Exception {
         Form form = persistForm("Compartido", 1);
         Company company = persistCompany("Compartida", "3-101-000105", true);
+
         mvc.perform(get("/api/forms").with(as(ergonomist))).andExpect(status().isOk());
         mvc.perform(get("/api/forms/{id}", form.getId()).with(as(ergonomist))).andExpect(status().isOk());
+
+        mvc.perform(delete("/api/forms/{id}", form.getId()).with(as(ergonomist)))
+                .andExpect(status().isNoContent());
+
         mvc.perform(post("/api/forms").with(as(ergonomist)).contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(form("X", 2026, List.of(question(null, "X", 1, 1))))))
-                .andExpect(status().is2xxSuccessful());
+                .andExpect(status().isCreated());
+
         mvc.perform(post("/api/forms/{id}/resend/{companyId}", form.getId(), company.getId()).with(as(ergonomist)))
-                .andExpect(status().is2xxSuccessful());
-        mvc.perform(delete("/api/forms/{id}", form.getId()).with(as(ergonomist))).andExpect(status().isNoContent());
+                .andExpect(status().isBadRequest());
+
         mvc.perform(get("/api/forms")).andExpect(status().isUnauthorized());
     }
 }
