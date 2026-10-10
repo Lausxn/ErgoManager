@@ -42,7 +42,7 @@ public class FormServiceImpl implements FormService {
     private static final String FORM_NOT_FOUND_MESSAGE = "No se encontró el formulario.";
     private static final String COMPANY_NOT_FOUND_MESSAGE = "No se encontró la empresa.";
     private static final String ACTIVE_FORM_EXISTS_MESSAGE =
-            "Ya existe un formulario activo. Desactívelo antes de activar otro formulario.";
+            "Ya existe un formulario activo. Desactívelo antes de crear o activar otro formulario.";
 
     private static final Comparator<Question> BY_ORDER =
             Comparator.comparing(Question::getQuestionOrder).thenComparing(Question::getId);
@@ -320,6 +320,7 @@ public class FormServiceImpl implements FormService {
                         question.getWeight(),
                         question.isActive()))
                 .toList();
+
         return new FormResponseDTO(
                 form.getId(),
                 form.getTitle(),

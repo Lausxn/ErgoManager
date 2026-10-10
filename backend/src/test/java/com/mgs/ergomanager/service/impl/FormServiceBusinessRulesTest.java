@@ -13,7 +13,6 @@ import com.mgs.ergomanager.dto.form.FormRequestDTO;
 import com.mgs.ergomanager.dto.form.QuestionRequestDTO;
 import com.mgs.ergomanager.exception.BusinessException;
 import com.mgs.ergomanager.model.Form;
-import com.mgs.ergomanager.model.Question;
 import com.mgs.ergomanager.repository.CompanyRepository;
 import com.mgs.ergomanager.repository.FormRepository;
 import com.mgs.ergomanager.repository.QuestionRepository;
@@ -35,7 +34,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class FormServiceBusinessRulesTest {
 
     private static final String ACTIVE_FORM_EXISTS_MESSAGE =
-            "Ya existe un formulario activo. Desactívelo antes de activar otro formulario.";
+            "Ya existe un formulario activo. Desactívelo antes de crear o activar otro formulario.";
 
     @Mock
     private FormRepository formRepository;
