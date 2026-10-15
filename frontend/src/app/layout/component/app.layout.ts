@@ -7,6 +7,7 @@ import { AppSidebar } from './app.sidebar';
 import { AppFooter } from './app.footer';
 import { LayoutService } from '../service/layout.service';
 import { AuthService } from '../../core/services/auth.service';
+import { InactivityService } from '../../core/services/inactivity.service';
 import { UPDATE_PASSWORD_URL } from '../../pages/account/account.routes';
 import { PasswordUpdatePopupComponent } from '../../pages/auth/password-update-popup/password-update-popup.component';
 
@@ -41,8 +42,12 @@ export class AppLayout {
         public layoutService: LayoutService,
         public renderer: Renderer2,
         public router: Router,
-        private readonly authService: AuthService
+        private readonly authService: AuthService,
+        private readonly inactivityService: InactivityService
     ) {
+        // The layout only exists while somebody is signed in.
+        this.inactivityService.start();
+
         this.overlayMenuOpenSubscription = this.layoutService.overlayOpen$.subscribe(() => {
             if (!this.menuOutsideClickListener) {
                 this.menuOutsideClickListener = this.renderer.listen('document', 'click', (event) => {
@@ -131,6 +136,8 @@ export class AppLayout {
     }
 
     ngOnDestroy() {
+        this.inactivityService.stop();
+
         if (this.overlayMenuOpenSubscription) {
             this.overlayMenuOpenSubscription.unsubscribe();
         }

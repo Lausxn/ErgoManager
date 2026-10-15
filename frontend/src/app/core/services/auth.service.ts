@@ -8,6 +8,9 @@ import { Role } from '../../shared/models/role.model';
 
 const SESSION_STORAGE_KEY = 'ergomanager.session';
 
+/** Key of the time of the last user activity, shared by every open tab (see InactivityService). */
+export const LAST_ACTIVITY_STORAGE_KEY = 'ergomanager.lastActivity';
+
 /**
  * Demo user of the preview mode (see environment.previewMode). It has no token,
  * so the backend still rejects any protected call.
@@ -111,7 +114,19 @@ export class AuthService {
      */
     logout(): void {
         localStorage.removeItem(SESSION_STORAGE_KEY);
+        localStorage.removeItem(LAST_ACTIVITY_STORAGE_KEY);
         this.currentSession.set(this.getPreviewSession());
+    }
+
+    /**
+     * Checks whether the stored session exists but its token already expired,
+     * to tell that case apart from a visitor who never signed in.
+     *
+     * @returns true when the session expired
+     */
+    hasExpiredSession(): boolean {
+        const session = this.currentSession();
+        return !this.isPreviewMode && session !== null && session.expiresAtMs <= Date.now();
     }
 
     /**
@@ -154,6 +169,8 @@ export class AuthService {
      */
     private storeSession(session: LoginResponse): void {
         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+        // A new session starts with fresh activity, so an old timestamp cannot close it.
+        localStorage.setItem(LAST_ACTIVITY_STORAGE_KEY, String(Date.now()));
         this.currentSession.set(session);
     }
 }
