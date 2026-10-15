@@ -85,6 +85,18 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    void rejectsCreatingFormWhenAnotherFormIsActive() throws Exception {
+        persistForm("Activo", 1);
+
+        mvc.perform(post("/api/forms").with(as(admin))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(form("Nuevo", 2026, List.of(question(null, "Pregunta", 1, 1))))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("message")
+                        .value("Ya existe un formulario activo. Desactívelo antes de crear o activar otro formulario."));
+    }
+
+    @Test
     void listsNewestYearFirstAndPublishesOnlyActiveForms() throws Exception {
         Form old = persistForm("Antiguo", 1);
         old.setPublicationYear(2024);
@@ -168,6 +180,21 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    void rejectsActivatingFormWhenAnotherFormIsActive() throws Exception {
+        persistForm("Activo", 1);
+        Form inactive = persistForm("Inactivo", 1);
+        inactive.setActive(false);
+        formRepository.flush();
+
+        mvc.perform(patch("/api/forms/{id}/activate", inactive.getId()).with(as(admin)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("message")
+                        .value("Ya existe un formulario activo. Desactívelo antes de crear o activar otro formulario."));
+
+        assertThat(formRepository.findById(inactive.getId()).orElseThrow().isActive()).isFalse();
+    }
+
+    @Test
     void resendsToContactAndDistinctEmployees() throws Exception {
         Form form = persistForm("Anual", 1);
         Company company = persistCompany("Reenvío", "3-101-000100", true);
@@ -222,14 +249,24 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
     void ergonomistHasFullAccessAndAnonymousIsUnauthorized() throws Exception {
         Form form = persistForm("Compartido", 1);
         Company company = persistCompany("Compartida", "3-101-000105", true);
+
         mvc.perform(get("/api/forms").with(as(ergonomist))).andExpect(status().isOk());
         mvc.perform(get("/api/forms/{id}", form.getId()).with(as(ergonomist))).andExpect(status().isOk());
-        mvc.perform(post("/api/forms").with(as(ergonomist)).contentType(MediaType.APPLICATION_JSON)
+
+        mvc.perform(delete("/api/forms/{id}", form.getId()).with(as(ergonomist)))
+                .andExpect(status().isNoContent());
+
+        MvcResult created = mvc.perform(post("/api/forms").with(as(ergonomist))
+                        .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(form("X", 2026, List.of(question(null, "X", 1, 1))))))
-                .andExpect(status().is2xxSuccessful());
-        mvc.perform(post("/api/forms/{id}/resend/{companyId}", form.getId(), company.getId()).with(as(ergonomist)))
-                .andExpect(status().is2xxSuccessful());
-        mvc.perform(delete("/api/forms/{id}", form.getId()).with(as(ergonomist))).andExpect(status().isNoContent());
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        long createdFormId = idOf(created);
+
+        mvc.perform(post("/api/forms/{id}/resend/{companyId}", createdFormId, company.getId()).with(as(ergonomist)))
+                .andExpect(status().isAccepted());
+
         mvc.perform(get("/api/forms")).andExpect(status().isUnauthorized());
     }
 }
