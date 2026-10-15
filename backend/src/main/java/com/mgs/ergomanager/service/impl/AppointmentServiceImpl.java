@@ -122,7 +122,6 @@ public class AppointmentServiceImpl implements AppointmentService {
         if (availability.isTaken()) {
             throw new BusinessException("No se puede eliminar un espacio que ya tiene una cita.");
         }
-        // Cancelled appointments may still point to the slot.
         appointmentRepository.detachAvailability(id);
         availabilityRepository.deleteById(id);
     }
@@ -136,6 +135,10 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .orElseThrow(() -> new BusinessException("El espacio seleccionado no existe."));
         User ergonomist = availability.getUser();
         currentUserService.checkOwnerOrAdmin(ergonomist.getId());
+
+        if (!selfEvaluation.getCompany().isActive()) {
+            throw new BusinessException("La empresa está inactiva. No se pueden agendar citas.");
+        }
         if (availability.isTaken()) {
             throw new BusinessException("El espacio seleccionado ya fue reservado. Elija otro horario.");
         }
@@ -184,15 +187,25 @@ public class AppointmentServiceImpl implements AppointmentService {
         Appointment appointment = appointmentRepository.findDetailedById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(APPOINTMENT_NOT_FOUND_MESSAGE));
         currentUserService.checkOwnerOrAdmin(appointment.getUser().getId());
+
         if (!PENDING_STATUSES.contains(appointment.getStatus())) {
             throw new BusinessException("Solo se pueden cancelar citas programadas o confirmadas.");
         }
+
         appointment.setStatus(AppointmentStatus.CANCELLED);
+
         if (appointment.getAvailability() != null) {
             appointment.getAvailability().setTaken(false);
         }
-        historyRepository.save(HistoryEntries.of(HistoryType.APPOINTMENT_CANCELLED, appointment.getSelfEvaluation(), null, "Cita cancelada."));
-        return toResponse(appointmentRepository.save(appointment),
+
+        historyRepository.save(HistoryEntries.of(
+                HistoryType.APPOINTMENT_CANCELLED,
+                appointment.getSelfEvaluation(),
+                null,
+                "Cita cancelada."));
+
+        return toResponse(
+                appointmentRepository.save(appointment),
                 personalizedEvaluationRepository.existsByAppointmentId(id));
     }
 
@@ -208,26 +221,41 @@ public class AppointmentServiceImpl implements AppointmentService {
     public AppointmentResponseDTO reschedule(Long id, AppointmentRescheduleRequestDTO request) {
         Appointment appointment = appointmentRepository.findDetailedById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(APPOINTMENT_NOT_FOUND_MESSAGE));
+
         currentUserService.checkOwnerOrAdmin(appointment.getUser().getId());
 
         if (!PENDING_STATUSES.contains(appointment.getStatus())) {
             throw new BusinessException("Solo se pueden reprogramar citas programadas o confirmadas.");
         }
 
+        if (!appointment.getSelfEvaluation().getCompany().isActive()) {
+            throw new BusinessException("La empresa está inactiva. No se pueden reprogramar citas.");
+        }
+
+        Availability currentAvailability = appointment.getAvailability();
+
+        if (currentAvailability != null
+                && currentAvailability.getId().equals(request.availabilityId())) {
+            return toResponse(
+                    appointment,
+                    personalizedEvaluationRepository.existsByAppointmentId(id));
+        }
+
         Availability newAvailability = availabilityRepository.findByIdForUpdate(request.availabilityId())
                 .orElseThrow(() -> new BusinessException("El espacio seleccionado no existe."));
 
         if (!newAvailability.getUser().getId().equals(appointment.getUser().getId())) {
-            throw new BusinessException("La nueva disponibilidad debe pertenecer al mismo ergónomo.");
+            throw new BusinessException("El nuevo espacio debe pertenecer al mismo ergonomista.");
         }
+
         if (newAvailability.isTaken()) {
             throw new BusinessException("El espacio seleccionado ya fue reservado. Elija otro horario.");
         }
+
         if (!newAvailability.getStartDateTime().isAfter(LocalDateTime.now())) {
             throw new BusinessException("El espacio seleccionado ya pasó. Elija otro horario.");
         }
 
-        Availability currentAvailability = appointment.getAvailability();
         if (currentAvailability != null) {
             currentAvailability.setTaken(false);
         }
@@ -240,13 +268,15 @@ public class AppointmentServiceImpl implements AppointmentService {
         Appointment saved = appointmentRepository.save(appointment);
 
         historyRepository.save(HistoryEntries.of(
-                HistoryType.APPOINTMENT_BOOKED,
+                HistoryType.APPOINTMENT_RESCHEDULED,
                 appointment.getSelfEvaluation(),
                 null,
                 "Cita reprogramada para el " + HISTORY_DATE_FORMAT.format(saved.getStartDateTime())
                         + " con " + appointment.getUser().getFullName() + "."));
 
-        return toResponse(saved, personalizedEvaluationRepository.existsByAppointmentId(id));
+        return toResponse(
+                saved,
+                personalizedEvaluationRepository.existsByAppointmentId(id));
     }
 
     /**
@@ -274,6 +304,7 @@ public class AppointmentServiceImpl implements AppointmentService {
      */
     static AppointmentResponseDTO toResponse(Appointment appointment, boolean evaluated) {
         SelfEvaluation selfEvaluation = appointment.getSelfEvaluation();
+
         return new AppointmentResponseDTO(
                 appointment.getId(),
                 selfEvaluation.getId(),

@@ -7,6 +7,7 @@ package com.mgs.ergomanager.model.enums;
 public enum HistoryType {
     SELF_EVALUATION,
     APPOINTMENT_BOOKED,
+    APPOINTMENT_RESCHEDULED,
     APPOINTMENT_CANCELLED,
     PERSONALIZED_EVALUATION
 }

@@ -2,6 +2,7 @@ package com.mgs.ergomanager.service.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -35,10 +36,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
- * Unit tests for the cancellation and rescheduling rules of Task 107.
+ * Unit tests for appointment cancellation and rescheduling rules.
  */
 @ExtendWith(MockitoExtension.class)
-class AppointmentServiceTask107Test {
+class AppointmentRescheduleTest {
 
     @Mock
     private AvailabilityRepository availabilityRepository;
@@ -435,7 +436,7 @@ class AppointmentServiceTask107Test {
                                                         23L)));
 
         assertEquals(
-                "La nueva disponibilidad debe pertenecer al mismo ergónomo.",
+                "El nuevo espacio debe pertenecer al mismo ergonomista.",
                 exception.getMessage());
 
         assertTrue(
@@ -542,6 +543,96 @@ class AppointmentServiceTask107Test {
     }
 
     /**
+     * Verifies that selecting the current slot keeps the appointment unchanged
+     * instead of reporting that the slot is already occupied.
+     */
+    @Test
+    void rescheduleShouldKeepAppointmentWhenSameAvailabilityIsSelected() {
+        Appointment appointment =
+                buildAppointment(
+                        10L,
+                        AppointmentStatus.SCHEDULED);
+
+        Availability currentAvailability =
+                appointment.getAvailability();
+
+        when(appointmentRepository.findDetailedById(10L))
+                .thenReturn(Optional.of(appointment));
+
+        when(personalizedEvaluationRepository
+                .existsByAppointmentId(10L))
+                .thenReturn(false);
+
+        var response =
+                appointmentService.reschedule(
+                        10L,
+                        new AppointmentRescheduleRequestDTO(
+                                currentAvailability.getId()));
+
+        assertSame(
+                currentAvailability,
+                appointment.getAvailability());
+
+        assertTrue(
+                currentAvailability.isTaken());
+
+        assertEquals(
+                currentAvailability.getStartDateTime(),
+                response.startDateTime());
+
+        verify(availabilityRepository, never())
+                .findByIdForUpdate(any());
+
+        verify(appointmentRepository, never())
+                .save(any(Appointment.class));
+
+        verify(historyRepository, never())
+                .save(any(History.class));
+    }
+
+    /**
+     * Verifies that an appointment belonging to an inactive company cannot be
+     * rescheduled.
+     */
+    @Test
+    void rescheduleShouldRejectInactiveCompany() {
+        Appointment appointment =
+                buildAppointment(
+                        11L,
+                        AppointmentStatus.SCHEDULED);
+
+        appointment.getSelfEvaluation()
+                .getCompany()
+                .setActive(false);
+
+        when(appointmentRepository.findDetailedById(11L))
+                .thenReturn(Optional.of(appointment));
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () ->
+                                appointmentService
+                                        .reschedule(
+                                                11L,
+                                                new AppointmentRescheduleRequestDTO(
+                                                        26L)));
+
+        assertEquals(
+                "La empresa está inactiva. No se pueden reprogramar citas.",
+                exception.getMessage());
+
+        verify(availabilityRepository, never())
+                .findByIdForUpdate(any());
+
+        verify(appointmentRepository, never())
+                .save(any(Appointment.class));
+
+        verify(historyRepository, never())
+                .save(any(History.class));
+    }
+
+    /**
      * Creates an appointment with all associations required by the response
      * mapper.
      *
@@ -567,6 +658,7 @@ class AppointmentServiceTask107Test {
                 "Empresa de prueba");
         company.setContactEmail(
                 "contacto@empresa.test");
+        company.setActive(true);
 
         SelfEvaluation selfEvaluation =
                 new SelfEvaluation();

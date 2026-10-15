@@ -29,10 +29,7 @@ public interface AppointmentService {
      * @param to     end of the range
      * @return list of free slots
      */
-    List<AvailabilityResponseDTO> findFreeAvailabilities(
-            Long userId,
-            LocalDateTime from,
-            LocalDateTime to);
+    List<AvailabilityResponseDTO> findFreeAvailabilities(Long userId, LocalDateTime from, LocalDateTime to);
 
     /**
      * Deletes a slot that has not been booked.
@@ -57,10 +54,7 @@ public interface AppointmentService {
      * @param to     end of the range
      * @return list of appointments
      */
-    List<AppointmentResponseDTO> findAgenda(
-            Long userId,
-            LocalDateTime from,
-            LocalDateTime to);
+    List<AppointmentResponseDTO> findAgenda(Long userId, LocalDateTime from, LocalDateTime to);
 
     /**
      * Cancels an appointment and frees its slot.
@@ -78,7 +72,5 @@ public interface AppointmentService {
      * @param request new time slot selected for the appointment
      * @return the rescheduled appointment
      */
-    AppointmentResponseDTO reschedule(
-            Long id,
-            AppointmentRescheduleRequestDTO request);
+    AppointmentResponseDTO reschedule(Long id, AppointmentRescheduleRequestDTO request);
 }
