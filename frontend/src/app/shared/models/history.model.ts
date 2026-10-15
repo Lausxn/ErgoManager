@@ -1,5 +1,5 @@
 /** Milestone recorded by a history entry. */
-export type HistoryType = 'SELF_EVALUATION' | 'APPOINTMENT_BOOKED' | 'APPOINTMENT_CANCELLED' | 'PERSONALIZED_EVALUATION';
+export type HistoryType = 'SELF_EVALUATION' | 'APPOINTMENT_BOOKED' | 'APPOINTMENT_RESCHEDULED' | 'APPOINTMENT_CANCELLED' | 'PERSONALIZED_EVALUATION';
 
 /** History entry returned by /api/histories. */
 export interface HistoryResponse {

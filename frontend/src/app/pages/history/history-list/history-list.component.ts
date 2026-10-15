@@ -28,12 +28,13 @@ import { HistoryService } from '../history.service';
 type SearchMode = 'company' | 'employee';
 
 /** Kind of event a history entry records, grouped for the timeline. */
-type EntryType = 'PERSONALIZED' | 'SELF' | 'APPOINTMENT' | 'CANCELLED';
+type EntryType = 'PERSONALIZED' | 'SELF' | 'APPOINTMENT' | 'RESCHEDULED' | 'CANCELLED';
 
 /** Group of each milestone recorded by the backend. */
 const ENTRY_TYPE_BY_HISTORY_TYPE: Record<HistoryType, EntryType> = {
     SELF_EVALUATION: 'SELF',
     APPOINTMENT_BOOKED: 'APPOINTMENT',
+    APPOINTMENT_RESCHEDULED: 'RESCHEDULED',
     APPOINTMENT_CANCELLED: 'CANCELLED',
     PERSONALIZED_EVALUATION: 'PERSONALIZED'
 };
@@ -59,6 +60,7 @@ const ENTRY_TYPES: Record<EntryType, { label: string; icon: string; tagClass: st
     PERSONALIZED: { label: 'Evaluación personalizada', icon: 'fa-solid fa-clipboard-check', tagClass: 'mgs-tag mgs-tag--accent' },
     SELF: { label: 'Autoevaluación', icon: 'fa-solid fa-square-check', tagClass: 'mgs-tag mgs-tag--strong' },
     APPOINTMENT: { label: 'Cita agendada', icon: 'fa-regular fa-calendar-check', tagClass: 'mgs-tag mgs-tag--neutral' },
+    RESCHEDULED: { label: 'Cita reprogramada', icon: 'fa-solid fa-calendar-days', tagClass: 'mgs-tag mgs-tag--neutral' },
     CANCELLED: { label: 'Cita cancelada', icon: 'fa-regular fa-calendar-xmark', tagClass: 'mgs-tag mgs-tag--muted' }
 };
 

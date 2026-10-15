@@ -1,6 +1,7 @@
 package com.mgs.ergomanager.controller;
 
 import com.mgs.ergomanager.dto.appointment.AppointmentRequestDTO;
+import com.mgs.ergomanager.dto.appointment.AppointmentRescheduleRequestDTO;
 import com.mgs.ergomanager.dto.appointment.AppointmentResponseDTO;
 import com.mgs.ergomanager.dto.appointment.AvailabilityRequestDTO;
 import com.mgs.ergomanager.dto.appointment.AvailabilityResponseDTO;
@@ -134,5 +135,19 @@ public class AppointmentController {
     @PatchMapping("/{id}/cancel")
     public ResponseEntity<AppointmentResponseDTO> cancel(@PathVariable Long id) {
         return ResponseEntity.ok(appointmentService.cancel(id));
+    }
+
+    /**
+     * Moves an appointment to another free slot of the same ergonomist.
+     *
+     * @param id      identifier of the appointment
+     * @param request new slot selected for the appointment
+     * @return the rescheduled appointment
+     */
+    @PatchMapping("/{id}/reschedule")
+    public ResponseEntity<AppointmentResponseDTO> reschedule(
+            @PathVariable Long id,
+            @Valid @RequestBody AppointmentRescheduleRequestDTO request) {
+        return ResponseEntity.ok(appointmentService.reschedule(id, request));
     }
 }
