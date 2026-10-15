@@ -122,6 +122,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         if (availability.isTaken()) {
             throw new BusinessException("No se puede eliminar un espacio que ya tiene una cita.");
         }
+        // Cancelled appointments may still point to the slot.
         appointmentRepository.detachAvailability(id);
         availabilityRepository.deleteById(id);
     }
@@ -135,10 +136,6 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .orElseThrow(() -> new BusinessException("El espacio seleccionado no existe."));
         User ergonomist = availability.getUser();
         currentUserService.checkOwnerOrAdmin(ergonomist.getId());
-
-        if (!selfEvaluation.getCompany().isActive()) {
-            throw new BusinessException("La empresa está inactiva. No se pueden agendar citas.");
-        }
         if (availability.isTaken()) {
             throw new BusinessException("El espacio seleccionado ya fue reservado. Elija otro horario.");
         }
@@ -187,25 +184,15 @@ public class AppointmentServiceImpl implements AppointmentService {
         Appointment appointment = appointmentRepository.findDetailedById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(APPOINTMENT_NOT_FOUND_MESSAGE));
         currentUserService.checkOwnerOrAdmin(appointment.getUser().getId());
-
         if (!PENDING_STATUSES.contains(appointment.getStatus())) {
             throw new BusinessException("Solo se pueden cancelar citas programadas o confirmadas.");
         }
-
         appointment.setStatus(AppointmentStatus.CANCELLED);
-
         if (appointment.getAvailability() != null) {
             appointment.getAvailability().setTaken(false);
         }
-
-        historyRepository.save(HistoryEntries.of(
-                HistoryType.APPOINTMENT_CANCELLED,
-                appointment.getSelfEvaluation(),
-                null,
-                "Cita cancelada."));
-
-        return toResponse(
-                appointmentRepository.save(appointment),
+        historyRepository.save(HistoryEntries.of(HistoryType.APPOINTMENT_CANCELLED, appointment.getSelfEvaluation(), null, "Cita cancelada."));
+        return toResponse(appointmentRepository.save(appointment),
                 personalizedEvaluationRepository.existsByAppointmentId(id));
     }
 
