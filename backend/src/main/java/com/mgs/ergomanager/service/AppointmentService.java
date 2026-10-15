@@ -20,6 +20,12 @@ public interface AppointmentService {
      */
     AvailabilityResponseDTO createAvailability(AvailabilityRequestDTO request);
 
+    /** Reads one slot, including its reserved state. */
+    AvailabilityResponseDTO findAvailabilityById(Long id);
+
+    /** Changes the dates of a free slot without changing its owner. */
+    AvailabilityResponseDTO updateAvailability(Long id, AvailabilityRequestDTO request);
+
     /**
      * Returns the free slots of an ergonomist inside a date range.
      *

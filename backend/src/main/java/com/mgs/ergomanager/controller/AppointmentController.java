@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -53,6 +54,19 @@ public class AppointmentController {
             @Valid @RequestBody AvailabilityRequestDTO request) {
         AvailabilityResponseDTO created = appointmentService.createAvailability(request);
         return ResponseEntity.created(URI.create("/api/appointments/availabilities/" + created.id())).body(created);
+    }
+
+    /** Returns the slot used to populate the edit form. */
+    @GetMapping("/availabilities/{id}")
+    public ResponseEntity<AvailabilityResponseDTO> findAvailabilityById(@PathVariable Long id) {
+        return ResponseEntity.ok(appointmentService.findAvailabilityById(id));
+    }
+
+    /** Updates a free slot; booked appointments are managed separately. */
+    @PutMapping("/availabilities/{id}")
+    public ResponseEntity<AvailabilityResponseDTO> updateAvailability(
+            @PathVariable Long id, @Valid @RequestBody AvailabilityRequestDTO request) {
+        return ResponseEntity.ok(appointmentService.updateAvailability(id, request));
     }
 
     /**
