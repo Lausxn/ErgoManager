@@ -99,6 +99,16 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
         return post("/api/appointments").contentType(MediaType.APPLICATION_JSON).content(toJson(body));
     }
 
+    private MockHttpServletRequestBuilder rescheduleRequest(long appointmentId, Long availabilityId) {
+        Map<String, Object> body = new HashMap<>();
+        if (availabilityId != null) {
+            body.put("availabilityId", availabilityId);
+        }
+        return patch("/api/appointments/{id}/reschedule", appointmentId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(toJson(body));
+    }
+
     private MockHttpServletRequestBuilder evaluationRequest(long appointmentId) {
         Map<String, Object> body = new HashMap<>();
         body.put("appointmentId", appointmentId);
@@ -280,7 +290,7 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
                 .andExpect(status().isNotFound());
     }
 
-    // ----- booking and cancellation -----
+    // ----- booking, cancellation and rescheduling -----
 
     @Test
     void bookingRules() throws Exception {
@@ -354,9 +364,88 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    void rescheduleMovesAppointmentAndUpdatesAvailabilities() throws Exception {
+        long selfEvaluationId = submitSelfEvaluation(3, 3, 3);
+        Availability originalSlot = persistAvailability(ergonomist, futureAt(10, 8), futureAt(10, 9));
+        Availability newSlot = persistAvailability(ergonomist, futureAt(10, 10), futureAt(10, 11));
+
+        long appointmentId = idOf(mvc.perform(
+                        bookingRequest(selfEvaluationId, originalSlot.getId()).with(as(ergonomist)))
+                .andExpect(status().isCreated())
+                .andReturn());
+
+        mvc.perform(rescheduleRequest(appointmentId, newSlot.getId()).with(as(ergonomist)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("id").value(appointmentId))
+                .andExpect(jsonPath("status").value("SCHEDULED"))
+                .andExpect(jsonPath("startDateTime").value(
+                        newSlot.getStartDateTime().format(QUERY_DATE_FORMAT)))
+                .andExpect(jsonPath("endDateTime").value(
+                        newSlot.getEndDateTime().format(QUERY_DATE_FORMAT)));
+
+        Availability updatedOriginal = availabilityRepository.findById(originalSlot.getId()).orElseThrow();
+        Availability updatedNew = availabilityRepository.findById(newSlot.getId()).orElseThrow();
+
+        assertThat(updatedOriginal.isTaken()).isFalse();
+        assertThat(updatedNew.isTaken()).isTrue();
+
+        mvc.perform(get("/api/histories/employees/{email}", "ANA.MORA@flujo.test").with(as(ergonomist)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].type").value("APPOINTMENT_RESCHEDULED"))
+                .andExpect(jsonPath("$[0].description")
+                        .value(org.hamcrest.Matchers.startsWith("Cita reprogramada para el ")));
+    }
+
+    @Test
+    void rescheduleRejectsMissingAvailabilityId() throws Exception {
+        long selfEvaluationId = submitSelfEvaluation(3, 3, 3);
+        Availability slot = persistAvailability(ergonomist, futureAt(11, 8), futureAt(11, 9));
+
+        long appointmentId = idOf(mvc.perform(
+                        bookingRequest(selfEvaluationId, slot.getId()).with(as(ergonomist)))
+                .andExpect(status().isCreated())
+                .andReturn());
+
+        mvc.perform(rescheduleRequest(appointmentId, null).with(as(ergonomist)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("fieldErrors.availabilityId")
+                        .value("Este campo es obligatorio."));
+    }
+
+    @Test
+    void rescheduleRejectsAnotherErgonomist() throws Exception {
+        long selfEvaluationId = submitSelfEvaluation(3, 3, 3);
+        Availability originalSlot = persistAvailability(ergonomist, futureAt(12, 8), futureAt(12, 9));
+        Availability newSlot = persistAvailability(ergonomist, futureAt(12, 10), futureAt(12, 11));
+
+        long appointmentId = idOf(mvc.perform(
+                        bookingRequest(selfEvaluationId, originalSlot.getId()).with(as(ergonomist)))
+                .andExpect(status().isCreated())
+                .andReturn());
+
+        mvc.perform(rescheduleRequest(appointmentId, newSlot.getId()).with(as(otherErgonomist)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void rescheduleRequiresAuthentication() throws Exception {
+        long selfEvaluationId = submitSelfEvaluation(3, 3, 3);
+        Availability originalSlot = persistAvailability(ergonomist, futureAt(13, 8), futureAt(13, 9));
+        Availability newSlot = persistAvailability(ergonomist, futureAt(13, 10), futureAt(13, 11));
+
+        long appointmentId = idOf(mvc.perform(
+                        bookingRequest(selfEvaluationId, originalSlot.getId()).with(as(ergonomist)))
+                .andExpect(status().isCreated())
+                .andReturn());
+
+        mvc.perform(rescheduleRequest(appointmentId, newSlot.getId()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void agendaIsRestrictedToItsOwner() throws Exception {
         long selfEvaluationId = submitSelfEvaluation(1, 2, 3);
-        Availability slot = persistAvailability(ergonomist, futureAt(10, 8), futureAt(10, 9));
+        Availability slot = persistAvailability(ergonomist, futureAt(14, 8), futureAt(14, 9));
         mvc.perform(bookingRequest(selfEvaluationId, slot.getId()).with(as(admin))).andExpect(status().isCreated());
 
         mvc.perform(withRange(get("/api/appointments"), ergonomist.getId()).with(as(ergonomist)))
@@ -378,7 +467,7 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
     void fullFlowFromSelfEvaluationToPdfReport() throws Exception {
         long selfEvaluationId = submitSelfEvaluation(3, 3, 2);
 
-        LocalDateTime start = futureAt(12, 9);
+        LocalDateTime start = futureAt(16, 9);
         long slotId = idOf(mvc.perform(availabilityRequest(ergonomist.getId(), start, start.plusHours(1))
                         .with(as(ergonomist)))
                 .andExpect(status().isCreated()).andReturn());
@@ -493,10 +582,10 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
         userRepository.flush();
 
         long selfEvaluationId = submitSelfEvaluation(1, 1, 1);
-        Availability slot = persistAvailability(ergonomist, futureAt(15, 8), futureAt(15, 9));
+        Availability slot = persistAvailability(ergonomist, futureAt(18, 8), futureAt(18, 9));
         mvc.perform(bookingRequest(selfEvaluationId, slot.getId()).with(as(admin))).andExpect(status().isCreated());
         long cancelledSelfEvaluation = submitSelfEvaluation(1, 1, 1);
-        Availability otherSlot = persistAvailability(ergonomist, futureAt(15, 10), futureAt(15, 11));
+        Availability otherSlot = persistAvailability(ergonomist, futureAt(18, 10), futureAt(18, 11));
         long cancelled = idOf(mvc.perform(bookingRequest(cancelledSelfEvaluation, otherSlot.getId()).with(as(admin)))
                 .andExpect(status().isCreated()).andReturn());
         mvc.perform(patch("/api/appointments/{id}/cancel", cancelled).with(as(admin))).andExpect(status().isOk());
