@@ -19,6 +19,21 @@ public interface FormRepository extends JpaRepository<Form, Long> {
     List<Form> findByActiveTrue();
 
     /**
+     * Checks whether at least one form is currently active.
+     *
+     * @return true when an active form exists
+     */
+    boolean existsByActiveTrue();
+
+    /**
+     * Checks whether an active form different from the supplied one exists.
+     *
+     * @param id identifier of the form that must be ignored
+     * @return true when another active form exists
+     */
+    boolean existsByActiveTrueAndIdNot(Long id);
+
+    /**
      * Returns the forms that can currently be answered, newest first.
      *
      * @return ordered list of active forms
