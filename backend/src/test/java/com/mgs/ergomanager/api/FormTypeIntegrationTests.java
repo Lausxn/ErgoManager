@@ -12,7 +12,6 @@ import com.mgs.ergomanager.model.Form;
 import com.mgs.ergomanager.model.User;
 import com.mgs.ergomanager.model.enums.FormType;
 import com.mgs.ergomanager.model.enums.Role;
-import com.mgs.ergomanager.repository.AnswerOptionRepository;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -20,7 +19,6 @@ import java.util.Map;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -30,9 +28,6 @@ class FormTypeIntegrationTests extends ApiIntegrationTestSupport {
 
     private static final String SELF = "SELF_EVALUATION";
     private static final String PERSONALIZED = "PERSONALIZED_EVALUATION";
-
-    @Autowired
-    private AnswerOptionRepository answerOptionRepository;
 
     private User admin;
 

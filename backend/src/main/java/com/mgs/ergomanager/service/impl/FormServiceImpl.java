@@ -46,8 +46,11 @@ public class FormServiceImpl implements FormService {
     private static final Logger LOGGER = LoggerFactory.getLogger(FormServiceImpl.class);
     private static final String FORM_NOT_FOUND_MESSAGE = "No se encontró el formulario.";
     private static final String COMPANY_NOT_FOUND_MESSAGE = "No se encontró la empresa.";
-    private static final String ACTIVE_FORM_EXISTS_MESSAGE =
-            "Ya existe un formulario activo. Desactívelo antes de crear o activar otro formulario.";
+    private static final Map<FormType, String> ACTIVE_FORM_EXISTS_MESSAGES = Map.of(
+            FormType.SELF_EVALUATION,
+            "Ya existe una autoevaluación activa. Desactívela antes de activar otra.",
+            FormType.PERSONALIZED_EVALUATION,
+            "Ya existe una evaluación personalizada activa. Desactívela antes de activar otra.");
     private static final int MAX_OPTIONS_PER_QUESTION = 10;
 
     private static final Comparator<Question> BY_ORDER =
@@ -104,7 +107,21 @@ public class FormServiceImpl implements FormService {
     @Override
     @Transactional(readOnly = true)
     public List<FormResponseDTO> findActive() {
-        return toResponses(formRepository.findByActiveTrueOrderByPublicationYearDescCreatedAtDescIdDesc());
+        List<Form> forms = formRepository.findByActiveTrueOrderByPublicationYearDescCreatedAtDescIdDesc().stream()
+                .filter(form -> form.getType() == FormType.SELF_EVALUATION)
+                .toList();
+        // Public: the employee picks an answer without seeing its risk weight.
+        return toResponses(forms).stream().map(FormServiceImpl::withoutWeights).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public FormResponseDTO findActivePersonalized() {
+        Form form = formRepository.findByActiveTrueOrderByPublicationYearDescCreatedAtDescIdDesc().stream()
+                .filter(candidate -> candidate.getType() == FormType.PERSONALIZED_EVALUATION)
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("No hay una evaluación personalizada activa."));
+        return toResponse(form, questionRepository.findByFormIdAndActiveTrueOrderByQuestionOrderAsc(form.getId()));
     }
 
     @Override
@@ -117,13 +134,14 @@ public class FormServiceImpl implements FormService {
     @Override
     @Transactional
     public FormResponseDTO create(FormRequestDTO request) {
-        validateNoActiveForm();
         validateStructure(request.type(), request.questionList());
 
+        // Created as an inactive draft, so the active form of the same type keeps
+        // being answered until the new one is activated.
         Form form = new Form();
         copy(request, form);
         form.setType(request.type());
-        form.setActive(true);
+        form.setActive(false);
         Form saved = formRepository.save(form);
 
         // A new form has no questions yet, so any question or option id sent is ignored.
@@ -213,18 +231,24 @@ public class FormServiceImpl implements FormService {
     @Transactional
     public FormResponseDTO activate(Long id) {
         Form form = getForm(id);
+        List<Question> questions = questionRepository.findByFormIdAndActiveTrueOrderByQuestionOrderAsc(id);
 
         if (form.isActive()) {
-            return toResponse(form, questionRepository.findByFormIdAndActiveTrueOrderByQuestionOrderAsc(id));
+            return toResponse(form, questions);
         }
 
-        if (formRepository.existsByActiveTrueAndIdNot(id)) {
-            throw new BusinessException(ACTIVE_FORM_EXISTS_MESSAGE);
+        boolean anotherActive = formRepository.findByActiveTrue().stream()
+                .anyMatch(other -> other.getType() == form.getType() && !other.getId().equals(id));
+        if (anotherActive) {
+            throw new BusinessException(ACTIVE_FORM_EXISTS_MESSAGES.get(form.getType()));
         }
+
+        Map<Long, List<AnswerOption>> optionsByQuestion = optionsByQuestion(questions);
+        validateReadyToActivate(form, questions, optionsByQuestion);
 
         form.setActive(true);
         formRepository.save(form);
-        return toResponse(form, questionRepository.findByFormIdAndActiveTrueOrderByQuestionOrderAsc(id));
+        return toResponse(form, questions, optionsByQuestion);
     }
 
     /**
@@ -242,6 +266,9 @@ public class FormServiceImpl implements FormService {
         Form form = getForm(formId);
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException(COMPANY_NOT_FOUND_MESSAGE));
+        if (form.getType() != FormType.SELF_EVALUATION) {
+            throw new BusinessException("Solo las autoevaluaciones se reenvían a las empresas.");
+        }
         if (!form.isActive()) {
             throw new BusinessException("El formulario está inactivo. Actívelo antes de reenviarlo.");
         }
@@ -271,12 +298,52 @@ public class FormServiceImpl implements FormService {
     }
 
     /**
-     * Checks that a new active form can be created.
+     * Checks that a form can be answered before it is activated: it needs at
+     * least one question and, for a self evaluation, every question needs its
+     * predefined answers. Forms stored before the answers existed fail here.
+     *
+     * @param form              form to activate
+     * @param questions         active questions of the form, ordered
+     * @param optionsByQuestion active options by question id
      */
-    private void validateNoActiveForm() {
-        if (formRepository.existsByActiveTrue()) {
-            throw new BusinessException(ACTIVE_FORM_EXISTS_MESSAGE);
+    private static void validateReadyToActivate(Form form,
+                                                List<Question> questions,
+                                                Map<Long, List<AnswerOption>> optionsByQuestion) {
+        if (questions.isEmpty()) {
+            throw new BusinessException("Agregue al menos una pregunta antes de activar el formulario.");
         }
+        if (form.getType() != FormType.SELF_EVALUATION) {
+            return;
+        }
+        for (Question question : questions) {
+            if (optionsByQuestion.getOrDefault(question.getId(), List.of()).isEmpty()) {
+                throw new BusinessException("La pregunta " + question.getQuestionOrder()
+                        + " no tiene respuestas predefinidas. Agréguelas antes de activar el formulario.");
+            }
+        }
+    }
+
+    /**
+     * Copies a form response without the weights of its answers, for the
+     * public view used by the employees.
+     *
+     * @param form form response with weights
+     * @return the same form without weights
+     */
+    private static FormResponseDTO withoutWeights(FormResponseDTO form) {
+        List<QuestionResponseDTO> questions = form.questionList().stream()
+                .map(question -> new QuestionResponseDTO(
+                        question.id(),
+                        question.statement(),
+                        question.questionOrder(),
+                        question.active(),
+                        question.optionList().stream()
+                                .map(option -> new AnswerOptionResponseDTO(
+                                        option.id(), option.label(), null, option.optionOrder()))
+                                .toList()))
+                .toList();
+        return new FormResponseDTO(form.id(), form.title(), form.description(), form.publicationYear(),
+                form.type(), form.active(), form.createdAt(), questions);
     }
 
     /**

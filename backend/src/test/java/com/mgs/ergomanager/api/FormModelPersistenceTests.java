@@ -7,7 +7,6 @@ import com.mgs.ergomanager.model.AnswerOption;
 import com.mgs.ergomanager.model.Form;
 import com.mgs.ergomanager.model.Question;
 import com.mgs.ergomanager.model.enums.FormType;
-import com.mgs.ergomanager.repository.AnswerOptionRepository;
 import jakarta.persistence.EntityManager;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -15,9 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 /** Storage of the form types and of the weighted answer options. */
 class FormModelPersistenceTests extends ApiIntegrationTestSupport {
-
-    @Autowired
-    private AnswerOptionRepository answerOptionRepository;
 
     @Autowired
     private EntityManager entityManager;
@@ -30,6 +26,14 @@ class FormModelPersistenceTests extends ApiIntegrationTestSupport {
         option.setOptionOrder(order);
         option.setActive(active);
         return answerOptionRepository.saveAndFlush(option);
+    }
+
+    private Question persistQuestion(Form form, int order) {
+        Question question = new Question();
+        question.setForm(form);
+        question.setStatement("Pregunta " + order);
+        question.setQuestionOrder(order);
+        return questionRepository.saveAndFlush(question);
     }
 
     @Test
@@ -62,9 +66,9 @@ class FormModelPersistenceTests extends ApiIntegrationTestSupport {
 
     @Test
     void returnsTheActiveOptionsOfSeveralQuestionsInOrder() {
-        List<Question> questions = questionsOf(persistForm("Autoevaluación", 1, 1));
-        Question first = questions.get(0);
-        Question second = questions.get(1);
+        Form form = persistForm("Autoevaluación");
+        Question first = persistQuestion(form, 1);
+        Question second = persistQuestion(form, 2);
         persistOption(first, "Siempre", 3, 2, true);
         persistOption(first, "Nunca", 1, 1, true);
         persistOption(first, "Retirada", 2, 3, false);

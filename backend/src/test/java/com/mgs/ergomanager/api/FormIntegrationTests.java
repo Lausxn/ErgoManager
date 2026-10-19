@@ -90,7 +90,7 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
                 .andExpect(jsonPath("title").value("Postura 2026"))
                 .andExpect(jsonPath("description").doesNotExist())
                 .andExpect(jsonPath("type").value("SELF_EVALUATION"))
-                .andExpect(jsonPath("active").value(true))
+                .andExpect(jsonPath("active").value(false))
                 .andExpect(jsonPath("questionList.length()").value(2))
                 .andExpect(jsonPath("questionList[0].statement").value("Primera"))
                 .andExpect(jsonPath("questionList[0].optionList.length()").value(2))
@@ -109,15 +109,18 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
-    void rejectsCreatingFormWhenAnotherFormIsActive() throws Exception {
+    void createsDraftWhileAnotherFormIsActive() throws Exception {
         persistForm("Activo", 1);
 
         mvc.perform(post("/api/forms").with(as(admin))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(form("Nuevo", 2026, List.of(question(null, "Pregunta", 1))))))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("message")
-                        .value("Ya existe un formulario activo. Desactívelo antes de crear o activar otro formulario."));
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("active").value(false));
+        // The active form keeps being answered while the draft is prepared.
+        mvc.perform(get("/api/forms/active"))
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].title").value("Activo"));
     }
 
     @Test
@@ -139,7 +142,9 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].title").value("Vigente"))
-                .andExpect(jsonPath("$[0].questionList[0].statement").value("Pregunta 1"));
+                .andExpect(jsonPath("$[0].questionList[0].statement").value("Pregunta 1"))
+                .andExpect(jsonPath("$[0].questionList[0].optionList[0].label").value("Bajo"))
+                .andExpect(jsonPath("$[0].questionList[0].optionList[0].weight").doesNotExist());
     }
 
     @Test
@@ -213,7 +218,7 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
         mvc.perform(patch("/api/forms/{id}/activate", inactive.getId()).with(as(admin)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("message")
-                        .value("Ya existe un formulario activo. Desactívelo antes de crear o activar otro formulario."));
+                        .value("Ya existe una autoevaluación activa. Desactívela antes de activar otra."));
 
         assertThat(formRepository.findById(inactive.getId()).orElseThrow().isActive()).isFalse();
     }
@@ -287,6 +292,8 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
                 .andReturn();
 
         long createdFormId = idOf(created);
+        mvc.perform(patch("/api/forms/{id}/activate", createdFormId).with(as(ergonomist)))
+                .andExpect(status().isOk());
 
         mvc.perform(post("/api/forms/{id}/resend/{companyId}", createdFormId, company.getId()).with(as(ergonomist)))
                 .andExpect(status().isAccepted());

@@ -21,11 +21,19 @@ public interface FormService {
     List<FormResponseDTO> findAll(FormType type);
 
     /**
-     * Returns the forms that can currently be answered.
+     * Returns the active self evaluation forms that the employees answer, without
+     * the weights of the answers.
      *
-     * @return list of active forms
+     * @return list of active self evaluation forms
      */
     List<FormResponseDTO> findActive();
+
+    /**
+     * Returns the active personalized evaluation form filled in by the ergonomist.
+     *
+     * @return the active personalized evaluation form
+     */
+    FormResponseDTO findActivePersonalized();
 
     /**
      * Returns a single form with its questions.
@@ -36,7 +44,7 @@ public interface FormService {
     FormResponseDTO findById(Long id);
 
     /**
-     * Creates a form together with its questions.
+     * Creates a form together with its questions as an inactive draft.
      *
      * @param request data of the form
      * @return the created form
@@ -60,7 +68,8 @@ public interface FormService {
     void deactivate(Long id);
 
     /**
-     * Activates a form that had been deactivated.
+     * Activates a draft or deactivated form, when no other form of the same type
+     * is active and the form is complete.
      *
      * @param id identifier of the form
      * @return the activated form
