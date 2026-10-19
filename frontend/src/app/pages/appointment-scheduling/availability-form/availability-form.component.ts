@@ -24,7 +24,7 @@ import { UserService } from '../../users/user.service';
 import { AppointmentService } from '../appointment.service';
 import { formatDuration } from '../appointment-utils';
 
-const OVERLAP_MESSAGE = 'Este horario se cruza con otro espacio ya publicado. Elija otra hora.';
+const OVERLAP_MESSAGE = 'El horario seleccionado se cruza con una disponibilidad existente. Seleccione otro rango de fecha y hora.';
 
 /** Ergonomist offered in the selector of the administrator. */
 interface ErgonomistOption {
@@ -191,7 +191,7 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
                 },
                 error: (error: unknown) => {
                     this.isSubmitting.set(false);
-                    this.errorMessage.set(isConflict(error) ? getApiErrorMessage(error, OVERLAP_MESSAGE) : applyApiErrors(this.availabilityForm, error, 'No se pudo publicar el espacio. Intente de nuevo.'));
+                    this.errorMessage.set(isConflict(error) ? OVERLAP_MESSAGE : applyApiErrors(this.availabilityForm, error, 'No se pudo publicar el espacio. Intente de nuevo.'));
                 }
             });
     }

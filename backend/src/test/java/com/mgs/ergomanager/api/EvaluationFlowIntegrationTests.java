@@ -261,7 +261,7 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
         mvc.perform(availabilityRequest(ergonomist.getId(), start.plusMinutes(30), start.plusMinutes(90))
                         .with(as(ergonomist)))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("message").value("Ya tiene una disponibilidad que se cruza con ese horario."));
+                .andExpect(jsonPath("message").value("El horario seleccionado se cruza con una disponibilidad existente. Seleccione otro rango de fecha y hora."));
         // Back to back is not an overlap, and another ergonomist may use the same hour.
         mvc.perform(availabilityRequest(ergonomist.getId(), start.plusHours(1), start.plusHours(2))
                         .with(as(ergonomist)))

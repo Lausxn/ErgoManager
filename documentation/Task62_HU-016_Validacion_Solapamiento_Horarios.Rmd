@@ -1,0 +1,81 @@
+---
+title: "Task62 / HU-016 - Validar cruces y solapamiento de horarios"
+author: "Jocabed Sibaja Castillo"
+output: html_document
+---
+
+# Información de la tarea
+
+- Task: 62
+- HU: HU-016 — Gestionar Disponibilidad
+- Sprint: 2
+- Responsable: Jocabed Sibaja Castillo
+- Tipo: Backend / Frontend
+
+# Objetivo
+
+Validar que no puedan registrarse disponibilidades con fechas y rangos horarios duplicados o solapados, y brindar retroalimentación clara al usuario cuando exista un conflicto.
+
+# Implementación realizada
+
+La infraestructura existente ya comprobaba cruces en creación y edición, excluyendo el propio registro al editar. Task62 reutiliza esas consultas y refuerza ambas operaciones con el bloqueo de usuario ya disponible, por ergonomista, y aislamiento `READ_COMMITTED`. Esto serializa la comprobación y escritura de una misma agenda y permite ver los rangos confirmados mientras otra solicitud esperaba.
+
+Se mantienen el rechazo de duplicados exactos, cruces parciales e intervalos contenidos o contenedores; los bloques consecutivos y la edición del propio horario se permiten. Los conflictos conservan HTTP 409 mediante `DuplicateResourceException` y el manejo de errores existente. El mensaje explica que el rango se cruza y solicita seleccionar otro horario.
+
+El frontend utiliza la alerta compartida existente, conserva los valores después del error y permite corregirlos y reintentar, sin mostrar detalles técnicos de una respuesta de conflicto. La ayuda del formulario aclara que un espacio puede empezar cuando termina el anterior. No se cambió el diseño.
+
+# Archivos modificados
+
+La lista se obtuvo de `git diff --name-only` y `git ls-files --others --exclude-standard` antes de crear esta documentación.
+
+- `backend/src/main/java/com/mgs/ergomanager/service/impl/AppointmentServiceImpl.java`: Reutiliza las consultas de cruce y el bloqueo por ergonomista en creación/edición; aplica READ_COMMITTED y un mensaje de conflicto accionable.
+- `backend/src/test/java/com/mgs/ergomanager/api/EvaluationFlowIntegrationTests.java`: Actualiza el mensaje esperado del conflicto de disponibilidad en el flujo existente.
+- `frontend/src/app/pages/appointment-scheduling/availability-form/availability-form.component.html`: Aclara que los espacios consecutivos del mismo ergonomista están permitidos.
+- `frontend/src/app/pages/appointment-scheduling/availability-form/availability-form.component.ts`: Presenta ayuda segura ante HTTP 409 y conserva los valores para corregir el horario.
+- `backend/src/test/java/com/mgs/ergomanager/api/AvailabilityConcurrencyIntegrationTests.java`: Verifica solicitudes simultáneas con transacciones reales y una única operación exitosa por cruce.
+- `backend/src/test/java/com/mgs/ergomanager/api/AvailabilityOverlapIntegrationTests.java`: Añade cobertura de rangos en creación/edición, límites, reserva, propietario y medianoche.
+- `frontend/src/app/pages/appointment-scheduling/availability-form/availability-form.component.spec.ts`: Comprueba el mensaje, conservación de valores, ausencia de detalles técnicos y reintento.
+- `documentation/Task62_HU-016_Validacion_Solapamiento_Horarios.Rmd`: documentación de esta Task, incluida en el mismo commit.
+
+# Decisiones técnicas
+
+La regla principal permanece en la capa de negocio del backend. El frontend solo presenta retroalimentación amigable usando componentes, servicios y manejo de errores existentes. Se reutilizan repositorios, endpoints y DTOs sin consultas paralelas ni cambios de esquema. Se respetan la arquitectura, los estándares y los estilos del proyecto. No se duplica el CRUD de Task61 ni se implementa la reprogramación de Task107. La edición se comprueba mediante el PUT existente; no se añade un editor frontend.
+
+# Casos de solapamiento cubiertos
+
+Para un bloque existente de 10:00 a 11:00:
+
+| Caso | Rango solicitado | Resultado |
+|---|---|---|
+| Duplicado exacto | 10:00–11:00 | HTTP 409 |
+| Cruce por el inicio | 09:30–10:30 | HTTP 409 |
+| Cruce por el final | 10:30–11:30 | HTTP 409 |
+| Intervalo contenido | 10:15–10:45 | HTTP 409 |
+| Intervalo contenedor | 09:00–12:00 | HTTP 409 |
+| Consecutivo anterior | 09:00–10:00 | Permitido |
+| Consecutivo posterior | 11:00–12:00 | Permitido |
+| Edición del propio horario | Conserva su rango | Permitido |
+
+Los tests cubren los cinco cruces tanto al crear como al editar; un conflicto no cambia el rango almacenado. También comprueban agendas de distintos ergonomistas en el mismo horario, que un bloque reservado sigue impidiendo cruces, intervalos que atraviesan medianoche y concurrencia entre creación/creación, creación/edición y edición/edición. En los pares concurrentes incompatibles solo una solicitud tiene éxito y la otra recibe HTTP 409.
+
+# Validaciones realizadas
+
+- Backend del módulo: 41 pruebas aprobadas.
+- Backend completo: 215 pruebas aprobadas sobre H2.
+- Frontend de disponibilidad: 4 pruebas aprobadas.
+- Prettier de archivos frontend modificados: correcto.
+- npm run build: correcto.
+- git diff --check: correcto.
+- Revisión funcional desde la aplicación: correcta.
+
+Se conservaron los resultados obtenidos antes de la aprobación, sin repetir la batería porque no cambió el código. En el navegador se comprobó el rechazo del duplicado, conservación de valores y publicación al corregir la fecha, sobre H2 temporal y sin capturas. No se verificó MySQL en esta sesión.
+
+# Dependencias
+
+Task61 y Task107 ya se encuentran integradas. No quedan dependencias bloqueantes para Task62.
+
+# Resultado
+
+La validación de cruces y solapamientos de disponibilidad quedó reforzada en backend y acompañada por retroalimentación clara en frontend y cobertura automatizada de los principales escenarios de conflicto.
+
+La Task queda lista para revisión e integración mediante Pull Request hacia `feature/HU-016-GestionarDisponibilidad`.

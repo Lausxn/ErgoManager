@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 /**
  * Default implementation of {@link AppointmentService}. An administrator works
@@ -43,6 +44,7 @@ public class AppointmentServiceImpl implements AppointmentService {
             List.of(AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED);
 
     private static final DateTimeFormatter HISTORY_DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final String OVERLAP_MESSAGE = "El horario seleccionado se cruza con una disponibilidad existente. Seleccione otro rango de fecha y hora.";
     private static final String APPOINTMENT_NOT_FOUND_MESSAGE = "No se encontró la cita.";
     private final AvailabilityRepository availabilityRepository;
     private final AppointmentRepository appointmentRepository;
@@ -80,10 +82,11 @@ public class AppointmentServiceImpl implements AppointmentService {
     }
 
     @Override
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public AvailabilityResponseDTO createAvailability(AvailabilityRequestDTO request) {
         currentUserService.checkOwnerOrAdmin(request.userId());
-        User ergonomist = userRepository.findById(request.userId())
+        // Serialize range checks and writes for this agenda, even when it has no slots yet.
+        User ergonomist = userRepository.findByIdForUpdate(request.userId())
                 .filter(user -> user.isActive() && user.getRole() == Role.ERGONOMIST)
                 .orElseThrow(() -> new BusinessException("El usuario seleccionado no es un ergónomo activo."));
         if (!request.endDateTime().isAfter(request.startDateTime())) {
@@ -91,7 +94,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         }
         if (availabilityRepository.existsByUserIdAndStartDateTimeBeforeAndEndDateTimeAfter(
                 ergonomist.getId(), request.endDateTime(), request.startDateTime())) {
-            throw new DuplicateResourceException("Ya tiene una disponibilidad que se cruza con ese horario.");
+            throw new DuplicateResourceException(OVERLAP_MESSAGE);
         }
 
         Availability availability = new Availability();
@@ -112,7 +115,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     }
 
     @Override
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public AvailabilityResponseDTO updateAvailability(Long id, AvailabilityRequestDTO request) {
         // Uses the same lock as booking/deletion so a reserved slot cannot be edited.
         Availability availability = availabilityRepository.findByIdForUpdate(id)
@@ -125,6 +128,9 @@ public class AppointmentServiceImpl implements AppointmentService {
         if (availability.isTaken()) {
             throw new BusinessException("No se puede editar un espacio que ya tiene una cita.");
         }
+        // Share the creation lock; READ_COMMITTED sees ranges saved while this request waited.
+        userRepository.findByIdForUpdate(ergonomist.getId())
+                .orElseThrow(() -> new BusinessException("El usuario seleccionado no es un ergónomo activo."));
         if (!ergonomist.isActive() || ergonomist.getRole() != Role.ERGONOMIST) {
             throw new BusinessException("El usuario seleccionado no es un ergónomo activo.");
         }
@@ -133,7 +139,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         }
         if (availabilityRepository.existsByUserIdAndIdNotAndStartDateTimeBeforeAndEndDateTimeAfter(
                 ergonomist.getId(), id, request.endDateTime(), request.startDateTime())) {
-            throw new DuplicateResourceException("Ya tiene una disponibilidad que se cruza con ese horario.");
+            throw new DuplicateResourceException(OVERLAP_MESSAGE);
         }
         availability.setStartDateTime(request.startDateTime());
         availability.setEndDateTime(request.endDateTime());
