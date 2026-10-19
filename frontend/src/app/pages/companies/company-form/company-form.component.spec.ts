@@ -39,16 +39,38 @@ describe('CompanyFormComponent (HU-020 validaciones de edición)', () => {
         });
         httpTesting = TestBed.inject(HttpTestingController);
         spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
-        fixture = TestBed.createComponent(CompanyFormComponent);
-        fixture.componentRef.setInput('id', 7);
-        fixture.detectChanges();
-        httpTesting.expectOne({ method: 'GET', url: COMPANIES_URL }).flush(REGISTERED_COMPANIES);
-        httpTesting.expectOne({ method: 'GET', url: COMPANY_URL }).flush(STORED_COMPANY);
-        fixture.detectChanges();
-        element = fixture.nativeElement;
+        open(STORED_COMPANY);
     });
 
     afterEach(() => httpTesting.verify());
+
+    /**
+     * Opens the form to edit a company, answering the requests it makes on start.
+     *
+     * @param stored company stored in the backend
+     */
+    function open(stored: CompanyResponse): void {
+        fixture = TestBed.createComponent(CompanyFormComponent);
+        fixture.componentRef.setInput('id', stored.id);
+        fixture.detectChanges();
+        httpTesting.expectOne({ method: 'GET', url: COMPANIES_URL }).flush(REGISTERED_COMPANIES.map((company) => (company.id === stored.id ? stored : company)));
+        httpTesting.expectOne({ method: 'GET', url: `${COMPANIES_URL}/${stored.id}` }).flush(stored);
+        fixture.detectChanges();
+        element = fixture.nativeElement;
+    }
+
+    /**
+     * Answers the save with HTTP 409 and then the list the form reads again to
+     * find the taken field.
+     *
+     * @param message   explanation sent by the backend
+     * @param companies companies registered at that moment
+     */
+    function rejectAsDuplicate(message: string, companies: CompanyResponse[]): void {
+        httpTesting.expectOne({ method: 'PUT', url: COMPANY_URL }).flush({ status: 409, message }, { status: 409, statusText: 'Conflict' });
+        httpTesting.expectOne({ method: 'GET', url: COMPANIES_URL }).flush(companies);
+        fixture.detectChanges();
+    }
 
     /**
      * Types a value in a field, as the user would.
@@ -143,11 +165,64 @@ describe('CompanyFormComponent (HU-020 validaciones de edición)', () => {
         submit();
 
         const message = 'Ya existe una empresa con esa cédula jurídica.';
-        httpTesting.expectOne({ method: 'PUT', url: COMPANY_URL }).flush({ status: 409, message }, { status: 409, statusText: 'Conflict' });
-        fixture.detectChanges();
+        rejectAsDuplicate(message, REGISTERED_COMPANIES);
 
         expect(errorOf('taxId')).toBe(message);
+        expect(errorOf('businessName')).toBe('');
         expect(alertText()).toBe(message);
+    });
+
+    it('marca la razón social, y no la cédula, cuando el servidor rechaza un nombre registrado después de abrir el formulario', () => {
+        type('businessName', 'Distribuidora Central');
+        submit();
+
+        const message = 'Ya existe una empresa con ese nombre.';
+        const registeredLater = { ...STORED_COMPANY, id: 10, businessName: 'Distribuidora Central', taxId: '3-101-000020' };
+        rejectAsDuplicate(message, [...REGISTERED_COMPANIES, registeredLater]);
+
+        expect(errorOf('businessName')).toBe('Ya existe una empresa con esa razón social.');
+        expect(errorOf('taxId')).toBe('');
+        expect(alertText()).toBe(message);
+    });
+
+    it('muestra solo el mensaje del servidor cuando no puede saber qué campo está repetido', () => {
+        type('businessName', 'Nombre Nuevo');
+        submit();
+
+        const message = 'Ya existe un perfil de cliente con ese nombre.';
+        rejectAsDuplicate(message, REGISTERED_COMPANIES);
+
+        expect(errorOf('businessName')).toBe('');
+        expect(errorOf('taxId')).toBe('');
+        expect(alertText()).toBe(message);
+    });
+
+    it('actualiza la alerta mientras el usuario corrige los campos', () => {
+        type('businessName', '---');
+        type('taxId', '3-101-ABC');
+        type('phoneNumber', '123');
+        submit();
+        expect(alertText()).toBe('Revise los campos marcados antes de guardar: Razón social, Cédula jurídica y Teléfono.');
+
+        type('taxId', '3-101-000010');
+        type('phoneNumber', '2222-3333');
+        expect(alertText()).toBe('Revise los campos marcados antes de guardar: Razón social.');
+
+        type('businessName', 'Comercial Norte');
+        expect(alertText()).toBe('');
+    });
+
+    it('permite guardar una empresa registrada con formatos anteriores mientras no cambie esos campos', () => {
+        open({ ...STORED_COMPANY, taxId: '3101ABC', phoneNumber: '123' });
+        type('address', 'Alajuela');
+        submit();
+
+        const request = httpTesting.expectOne({ method: 'PUT', url: COMPANY_URL });
+        expect(request.request.body.taxId).toBe('3101ABC');
+        request.flush(STORED_COMPANY);
+
+        type('phoneNumber', '1234');
+        expect(errorOf('phoneNumber')).toBe('Escriba un teléfono válido de 8 a 15 dígitos, por ejemplo 2222-3333.');
     });
 
     it('muestra bajo cada campo los errores de validación que devuelve el servidor', () => {
