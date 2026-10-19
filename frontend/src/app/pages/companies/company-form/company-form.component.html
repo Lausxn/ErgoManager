@@ -1,14 +1,18 @@
-<app-page-header eyebrow="Empresas cliente" [title]="isEditing() ? 'Editar empresa' : 'Registro de empresa'" subtitle="Datos legales y de contacto de la organización que recibe los formularios.">
+<app-page-header
+    eyebrow="Empresas cliente"
+    [title]="isEditing() ? 'Editar perfil de cliente' : 'Registro de empresa'"
+    [subtitle]="isEditing() ? 'Actualice los datos del perfil. Los cambios se aplicarán cuando seleccione Guardar cambios.' : 'Datos legales y de contacto de la organización que recibe los formularios.'"
+>
     <p-button label="Volver a empresas" icon="fa-solid fa-arrow-left" severity="secondary" [text]="true" routerLink="/companies" />
 </app-page-header>
 
-<form [formGroup]="companyForm" (ngSubmit)="submit()" class="mgs-form-layout" novalidate>
+<form [formGroup]="companyForm" (ngSubmit)="submit()" class="mgs-form-layout" [attr.aria-busy]="isLoading() || isSubmitting()" novalidate>
     <div class="mgs-stack">
         <section class="mgs-card">
             <div class="mgs-card-header">
                 <div>
-                    <h2 class="mgs-section-title">Identificación</h2>
-                    <p class="mgs-section-lead">Tal como aparece en los registros legales. La cédula jurídica no se puede repetir.</p>
+                    <h2 class="mgs-section-title">{{ isEditing() ? 'Datos del perfil' : 'Identificación' }}</h2>
+                    <p class="mgs-section-lead">{{ isEditing() ? 'Revise la razón social y la cédula jurídica de la empresa que está editando.' : 'Tal como aparece en los registros legales. La cédula jurídica no se puede repetir.' }}</p>
                 </div>
             </div>
             @if (isLoading()) {
@@ -57,7 +61,10 @@
         </section>
     </div>
 
-    <aside class="mgs-card mgs-sticky flex flex-col gap-6">
+    <aside class="mgs-card mgs-sticky flex flex-col gap-6" [attr.aria-label]="isEditing() ? 'Vista previa del perfil' : 'Resumen de empresa'">
+        @if (isEditing()) {
+            <span class="mgs-eyebrow">Vista previa del perfil</span>
+        }
         @if (isLoading()) {
             <div class="flex flex-col items-center gap-3" aria-hidden="true">
                 <p-skeleton shape="circle" size="4rem" />
@@ -104,6 +111,10 @@
         </div>
 
         @if (isEditing()) {
+            <div class="mgs-details-note">
+                <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+                <span>La vista previa refleja los datos del formulario. Use Guardar cambios para actualizarlos o Restablecer para recuperar los datos cargados.</span>
+            </div>
             <div class="company-link">
                 <span class="mgs-eyebrow">Enlace de autoevaluación</span>
                 <p class="company-link__lead">Los colaboradores de la empresa responden el formulario desde este enlace, sin iniciar sesión.</p>
