@@ -1,0 +1,66 @@
+---
+title: "Task43 / HU-009 - Diseñar interfaz de formularios"
+author: "Jocabed Sibaja Castillo"
+output: html_document
+---
+
+# Información de la tarea
+
+- Task: 43
+- HU: HU-009 — Crear/Desactivar formularios
+- Sprint: 2
+- Responsable: Jocabed Sibaja Castillo
+- Tipo: Frontend
+- PR: [Task43/HU-009 - Diseñar interfaz de formularios, #55](https://github.com/Lausxn/ErgoManager/pull/55)
+- Base: `feature/HU-009-CrearDesactivarFormularios`
+
+# Objetivo
+
+Diseñar el espacio de Formularios para acceder a los instrumentos de autoevaluación y evaluación personalizada, preparar sus preguntas y administrar su disponibilidad, manteniendo la navegación y presentación de ErgoManager.
+
+# Implementación realizada
+
+- Se agregó el dashboard general con accesos a ambos tipos y un resumen de autoevaluaciones.
+- Se incorporó navegación local compartida entre resumen, autoevaluación y evaluación personalizada.
+- Se reutilizó el listado de autoevaluaciones existente con búsqueda, filtros y acciones de activación/desactivación. Estas operaciones y sus servicios ya existían; no se implementaron nuevamente.
+- Se adaptó el editor existente para conservar la creación de autoevaluaciones, las preguntas ordenables, los pesos y el resumen de puntaje. El regreso del editor conduce al listado de autoevaluaciones.
+- Se prepararon la vista y el editor de evaluación personalizada reutilizando el componente de detalle. Este modo permite explorar preguntas sin mostrar pesos; informa que no se guardarán y bloquea el envío a la API de autoevaluación.
+- Se añadieron siete pruebas de navegación, estados y comportamiento de los dos modos del editor.
+
+# Archivos modificados
+
+Rutas relativas a `frontend/src/app/pages/forms/`:
+
+| Archivo | Cambio |
+|---|---|
+| `forms.routes.ts` | Rutas del resumen, categorías y editor personalizado. |
+| `form-list/form-list.component.html` | Dashboard, navegación y vista de disponibilidad del modo personalizado; conserva el listado existente. |
+| `form-list/form-list.component.ts` | Selección de sección, título y carga de autoevaluaciones solo donde corresponde. |
+| `form-detail/form-detail.component.html` | Navegación, presentación por categoría y guardado personalizado deshabilitado. |
+| `form-detail/form-detail.component.ts` | Modo personalizado sin envío y regreso al listado de autoevaluaciones. |
+| `form-navigation/form-navigation.component.ts` (nuevo) | Navegación local reutilizada por listado y editor. |
+| `form-list/form-list.component.spec.ts` (nuevo) | Pruebas del dashboard, listado, navegación, error de carga y separación de categorías. |
+| `form-detail/form-detail.component.spec.ts` (nuevo) | Pruebas de pesos, contrato de autoevaluación y bloqueo del guardado personalizado. |
+
+Esta documentación se incorpora en `documentation/Task43_HU-009_Diseno_Interfaz_Formularios.Rmd`.
+
+# Decisiones de diseño y arquitectura
+
+Se mantuvo la arquitectura Angular existente y se reutilizaron `FormService`, los modelos, `PageHeaderComponent`, `StatCardComponent`, `EmptyStateComponent`, `FormFieldComponent`, `SaveBarComponent` y los diálogos compartidos. No se creó una implementación paralela ni se cambiaron contratos. Se respetaron los estándares de nombres y formato, los estilos y tokens existentes, la identidad de MGS y la línea del Sprint 1. No se modificaron logo, tipografía, colores ni navegación global.
+
+# Validaciones realizadas
+
+- Prettier: comprobación de los ocho archivos de frontend de la Task; correcta.
+- `npm run build`: compilación correcta, repetida antes de publicar.
+- `npm test -- --watch=false --browsers=ChromeHeadless`: 23 pruebas aprobadas, incluidas siete nuevas de formularios.
+- `git diff --check`: sin errores antes de publicar el frontend.
+- Revisión funcional en navegador: dashboard, navegación entre categorías, búsqueda, editor personalizado con guardado bloqueado, preguntas y pesos de autoevaluación, reordenamiento, creación, desactivación y reactivación comprobados con datos temporales en H2. Revisión visual aprobada por la responsable.
+- Renderizado: R está instalado, pero el paquete `rmarkdown` no está disponible. No se generó HTML ni se instaló software adicional. No se encontró una plantilla `.Rmd` ni un procedimiento de renderizado del equipo.
+
+# Dependencias o trabajo fuera de alcance
+
+El servicio y los modelos existentes representan únicamente autoevaluaciones. El guardado, listado real y activación/desactivación de formularios personalizados dependen del contrato y backend correspondiente. No se implementaron endpoints, persistencia, reglas de negocio ni trabajo backend de otros integrantes. La creación, los pesos y las acciones existentes de autoevaluación se reutilizaron; no se atribuyen como implementaciones nuevas de Task43.
+
+# Resultado
+
+La interfaz de Task43 quedó implementada y aprobada visualmente. El PR #55 está dirigido a la feature de HU-009 para revisión e integración; no se realizó merge. La evaluación personalizada queda preparada visualmente con su dependencia de guardado indicada.
