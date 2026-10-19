@@ -8,6 +8,8 @@ import com.mgs.ergomanager.model.Company;
 import com.mgs.ergomanager.repository.CompanyRepository;
 import com.mgs.ergomanager.service.CompanyService;
 import java.util.List;
+import java.util.Locale;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,7 @@ public class CompanyServiceImpl implements CompanyService {
 
     private static final String COMPANY_NOT_FOUND_MESSAGE = "No se encontró la empresa.";
     private static final String DUPLICATE_TAX_ID_MESSAGE = "Ya existe una empresa con esa cédula jurídica.";
+    private static final String DUPLICATE_NAME_MESSAGE = "Ya existe una empresa con ese nombre.";
     private final CompanyRepository companyRepository;
 
     /**
@@ -48,6 +51,9 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     @Transactional
     public CompanyResponseDTO create(CompanyRequestDTO request) {
+        if (companyRepository.existsByBusinessNameIgnoreCase(request.businessName())) {
+            throw new DuplicateResourceException(DUPLICATE_NAME_MESSAGE);
+        }
         if (companyRepository.existsByTaxId(request.taxId())) {
             throw new DuplicateResourceException(DUPLICATE_TAX_ID_MESSAGE);
         }
@@ -61,6 +67,9 @@ public class CompanyServiceImpl implements CompanyService {
     @Transactional
     public CompanyResponseDTO update(Long id, CompanyRequestDTO request) {
         Company company = getCompany(id);
+        if (companyRepository.existsByBusinessNameIgnoreCaseAndIdNot(request.businessName(), id)) {
+            throw new DuplicateResourceException(DUPLICATE_NAME_MESSAGE);
+        }
         if (companyRepository.existsByTaxIdAndIdNot(request.taxId(), id)) {
             throw new DuplicateResourceException(DUPLICATE_TAX_ID_MESSAGE);
         }
@@ -106,6 +115,16 @@ public class CompanyServiceImpl implements CompanyService {
         try {
             return companyRepository.saveAndFlush(company);
         } catch (DataIntegrityViolationException exception) {
+            // A concurrent insert can win after the existence checks above.
+            // Use the named constraint; do not query a failed transaction.
+            for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+                if (cause instanceof ConstraintViolationException violation
+                        && violation.getConstraintName() != null
+                        && violation.getConstraintName().toLowerCase(Locale.ROOT)
+                                .contains("uk_companies_business_name")) {
+                    throw new DuplicateResourceException(DUPLICATE_NAME_MESSAGE);
+                }
+            }
             throw new DuplicateResourceException(DUPLICATE_TAX_ID_MESSAGE);
         }
     }
