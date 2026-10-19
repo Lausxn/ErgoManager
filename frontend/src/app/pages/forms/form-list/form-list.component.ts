@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -25,6 +25,7 @@ import { getApiErrorMessage } from '../../../shared/utils/api-error';
 import { ACTIVE_TAG_CLASSES } from '../../../shared/utils/labels';
 import { CompanyService } from '../../companies/company.service';
 import { FormService } from '../form.service';
+import { FormNavigationComponent, FormSection } from '../form-navigation/form-navigation.component';
 
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
 
@@ -69,7 +70,8 @@ interface CompanyOption {
         TooltipModule,
         EmptyStateComponent,
         PageHeaderComponent,
-        StatCardComponent
+        StatCardComponent,
+        FormNavigationComponent
     ],
     templateUrl: './form-list.component.html',
     styles: [
@@ -145,7 +147,9 @@ interface CompanyOption {
         `
     ]
 })
-export class FormListComponent {
+export class FormListComponent implements OnInit {
+    readonly section = input<FormSection>('overview');
+    protected readonly pageTitle = computed(() => (this.section() === 'overview' ? 'Formularios' : this.section() === 'personalized' ? 'Formularios de evaluación personalizada' : 'Formularios de autoevaluación'));
     private readonly formService = inject(FormService);
     private readonly companyService = inject(CompanyService);
     private readonly dialogService = inject(DialogService);
@@ -207,8 +211,12 @@ export class FormListComponent {
         return this.rows().filter((row) => (status === 'ALL' || row.active === (status === 'ACTIVE')) && (search === '' || row.searchKey.includes(search)));
     });
 
-    constructor() {
-        this.loadForms();
+    ngOnInit(): void {
+        if (this.section() !== 'personalized') {
+            this.loadForms();
+        } else {
+            this.isLoading.set(false);
+        }
     }
 
     /**

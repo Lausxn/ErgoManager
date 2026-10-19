@@ -22,6 +22,7 @@ import { applyApiErrors, getApiFieldErrors } from '../../../shared/utils/api-err
 import { markFormAsDirty, notBlank } from '../../../shared/utils/form';
 import { ACTIVE_TAG_CLASSES } from '../../../shared/utils/labels';
 import { FormService } from '../form.service';
+import { FormNavigationComponent } from '../form-navigation/form-navigation.component';
 
 /** Limits of FormRequestDTO and QuestionRequestDTO in the backend. */
 const LIMITS = { title: 150, description: 500, statement: 500 } as const;
@@ -58,7 +59,7 @@ const QUESTION_FIELD_PATTERN = /^questionList\[(\d+)\]\.(\w+)$/;
     selector: 'app-form-detail',
     standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [ReactiveFormsModule, RouterLink, ButtonModule, InputNumberModule, InputTextModule, SkeletonModule, TagModule, TextareaModule, TooltipModule, FormFieldComponent, PageHeaderComponent, SaveBarComponent],
+    imports: [ReactiveFormsModule, RouterLink, ButtonModule, InputNumberModule, InputTextModule, SkeletonModule, TagModule, TextareaModule, TooltipModule, FormNavigationComponent, FormFieldComponent, PageHeaderComponent, SaveBarComponent],
     templateUrl: './form-detail.component.html',
     styles: [
         `
@@ -170,6 +171,8 @@ export class FormDetailComponent implements OnInit, HasUnsavedChanges {
 
     /** Identifier of the form being edited, absent when creating a new one. */
     readonly id = input<number | undefined, unknown>(undefined, { transform: numberAttribute });
+    readonly category = input<'self-evaluation' | 'personalized'>('self-evaluation');
+    protected readonly isPersonalized = computed(() => this.category() === 'personalized');
     protected readonly limits = LIMITS;
     protected readonly firstPublicationYear = FIRST_PUBLICATION_YEAR;
     protected readonly maxAnswerScore = MAX_ANSWER_SCORE;
@@ -233,7 +236,7 @@ export class FormDetailComponent implements OnInit, HasUnsavedChanges {
                 },
                 error: () => {
                     this.toastService.error('No se encontró el formulario', 'Puede que ya no exista.');
-                    void this.router.navigate(['/forms']);
+                    void this.router.navigate(['/forms/self-evaluation']);
                 }
             });
     }
@@ -294,6 +297,10 @@ export class FormDetailComponent implements OnInit, HasUnsavedChanges {
 
     /** Sends the form to the backend, creating or updating it. */
     protected submit(): void {
+        // No personalized request is sent until the existing API supports this category.
+        if (this.isPersonalized()) {
+            return;
+        }
         if (this.isSubmitting()) {
             return;
         }
@@ -314,7 +321,7 @@ export class FormDetailComponent implements OnInit, HasUnsavedChanges {
                 this.isSubmitting.set(false);
                 this.unsaved.markSaved();
                 this.toastService.success(this.isEditing() ? 'Formulario actualizado' : 'Formulario creado', form.title);
-                void this.router.navigate(['/forms']);
+                void this.router.navigate(['/forms/self-evaluation']);
             },
             error: (error: unknown) => {
                 this.isSubmitting.set(false);

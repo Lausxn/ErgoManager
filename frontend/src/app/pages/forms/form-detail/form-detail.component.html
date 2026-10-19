@@ -1,6 +1,19 @@
-<app-page-header eyebrow="Formularios de autoevaluación" [title]="isEditing() ? 'Editar formulario' : 'Creación de formulario'" subtitle="Defina el cuestionario y el peso de cada pregunta en el puntaje de riesgo.">
-    <p-button label="Volver a formularios" icon="fa-solid fa-arrow-left" severity="secondary" [text]="true" routerLink="/forms" />
+<app-page-header
+    [eyebrow]="isPersonalized() ? 'Evaluación personalizada' : 'Formularios de autoevaluación'"
+    [title]="isEditing() ? 'Editar formulario' : 'Crear formulario'"
+    [subtitle]="isPersonalized() ? 'Prepare las preguntas para la evaluación realizada por el ergonomista.' : 'Defina el cuestionario y el peso de cada pregunta en el puntaje de riesgo.'"
+>
+    <p-button label="Volver a formularios" icon="fa-solid fa-arrow-left" severity="secondary" [text]="true" [routerLink]="isPersonalized() ? '/forms/personalized' : '/forms/self-evaluation'" />
 </app-page-header>
+
+<app-form-navigation [section]="isPersonalized() ? 'personalized' : 'self-evaluation'" />
+
+@if (isPersonalized()) {
+    <div class="mgs-details-note mb-6" role="status">
+        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+        <span>El guardado de formularios personalizados todavía no está disponible. Puede explorar el editor; las preguntas no se guardarán al salir.</span>
+    </div>
+}
 
 <form [formGroup]="formDetail" (ngSubmit)="submit()" class="mgs-form-layout" novalidate>
     <div class="mgs-stack">
@@ -8,7 +21,7 @@
             <div class="mgs-card-header">
                 <div>
                     <h2 class="mgs-section-title">Información general</h2>
-                    <p class="mgs-section-lead">Así verán los colaboradores el formulario al abrir el enlace de su empresa.</p>
+                    <p class="mgs-section-lead">{{ isPersonalized() ? 'Datos del instrumento que utilizará el ergonomista durante la evaluación.' : 'Así verán los colaboradores el formulario al abrir el enlace de su empresa.' }}</p>
                 </div>
             </div>
             @if (isLoading()) {
@@ -36,7 +49,7 @@
             <div class="mgs-card-header">
                 <div>
                     <h2 class="mgs-section-title">Preguntas</h2>
-                    <p class="mgs-section-lead">Cada respuesta vale de 0 a {{ maxAnswerScore }} puntos y se multiplica por el peso de la pregunta.</p>
+                    <p class="mgs-section-lead">{{ isPersonalized() ? 'Escriba y ordene las preguntas que utilizará el ergonomista.' : 'Cada respuesta vale de 0 a ' + maxAnswerScore + ' puntos y se multiplica por el peso de la pregunta.' }}</p>
                 </div>
                 <p-button type="button" label="Agregar pregunta" icon="fa-solid fa-plus" severity="secondary" [outlined]="true" [disabled]="isLoading()" (onClick)="addQuestion()" />
             </div>
@@ -106,16 +119,18 @@
                                         placeholder="Ej. ¿Su silla le permite apoyar la espalda completamente?"
                                     ></textarea>
                                 </app-form-field>
-                                <app-form-field
-                                    label="Peso"
-                                    [inputId]="'weight-' + index"
-                                    [control]="question.controls.weight"
-                                    [errors]="weightErrors"
-                                    [half]="true"
-                                    [hint]="'Aporta hasta ' + maxAnswerScore * (question.controls.weight.value ?? 0) + ' puntos.'"
-                                >
-                                    <p-inputnumber [inputId]="'weight-' + index" formControlName="weight" [min]="1" [maxFractionDigits]="0" [showButtons]="true" [fluid]="true" />
-                                </app-form-field>
+                                @if (!isPersonalized()) {
+                                    <app-form-field
+                                        label="Peso"
+                                        [inputId]="'weight-' + index"
+                                        [control]="question.controls.weight"
+                                        [errors]="weightErrors"
+                                        [half]="true"
+                                        [hint]="'Aporta hasta ' + maxAnswerScore * (question.controls.weight.value ?? 0) + ' puntos.'"
+                                    >
+                                        <p-inputnumber [inputId]="'weight-' + index" formControlName="weight" [min]="1" [maxFractionDigits]="0" [showButtons]="true" [fluid]="true" />
+                                    </app-form-field>
+                                }
                             </div>
                         </div>
                     }
@@ -149,21 +164,24 @@
                 }
             </div>
 
-            <div class="form-summary__score" aria-live="polite">
-                <span class="form-summary__score-label">Puntaje máximo</span>
-                <span class="form-summary__score-value">{{ summary().maxScore }}</span>
-                <span class="form-summary__score-note">{{ maxAnswerScore }} puntos × {{ summary().totalWeight }} de peso total</span>
-            </div>
-
+            @if (!isPersonalized()) {
+                <div class="form-summary__score" aria-live="polite">
+                    <span class="form-summary__score-label">Puntaje máximo</span>
+                    <span class="form-summary__score-value">{{ summary().maxScore }}</span>
+                    <span class="form-summary__score-note">{{ maxAnswerScore }} puntos × {{ summary().totalWeight }} de peso total</span>
+                </div>
+            }
             <dl class="mgs-details">
                 <div>
                     <dt>Preguntas</dt>
                     <dd class="tabular-nums">{{ summary().questionCount }}</dd>
                 </div>
-                <div>
-                    <dt>Peso total</dt>
-                    <dd class="tabular-nums">{{ summary().totalWeight }}</dd>
-                </div>
+                @if (!isPersonalized()) {
+                    <div>
+                        <dt>Peso total</dt>
+                        <dd class="tabular-nums">{{ summary().totalWeight }}</dd>
+                    </div>
+                }
                 <div>
                     <dt>Año</dt>
                     <dd class="tabular-nums">{{ summary().year ?? '—' }}</dd>
@@ -174,14 +192,14 @@
         @if (!isLoading() && summary().incompleteCount > 0) {
             <div class="mgs-details-note">
                 <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-                <span>{{ summary().incompleteCount }} pregunta(s) sin completar: escriba el enunciado y un peso de al menos 1.</span>
+                <span>{{ summary().incompleteCount }} pregunta(s) sin completar: {{ isPersonalized() ? 'escriba el enunciado.' : 'escriba el enunciado y un peso de al menos 1.' }}</span>
             </div>
         } @else if (!isLoading() && isEditing()) {
             <div class="mgs-details-note">
                 <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
                 <span>Las preguntas que quite se desactivan; las respuestas anteriores se conservan en el historial.</span>
             </div>
-        } @else if (!isLoading()) {
+        } @else if (!isLoading() && !isPersonalized()) {
             <div class="mgs-details-note">
                 <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
                 <span>Use pesos mayores en las preguntas que representan más riesgo ergonómico.</span>
@@ -195,12 +213,19 @@
         </div>
     }
 
-    <app-save-bar
-        [tracker]="unsaved"
-        [saving]="isSubmitting()"
-        [message]="isEditing() ? 'Cuidado, tiene cambios sin guardar.' : 'Cuidado, el formulario todavía no se ha creado.'"
-        [discardLabel]="isEditing() ? 'Restablecer' : 'Vaciar campos'"
-        [submitLabel]="isEditing() ? 'Guardar cambios' : 'Crear formulario'"
-        (discarded)="clearError()"
-    />
+    @if (isPersonalized()) {
+        <div class="flex flex-wrap justify-end gap-2 col-span-full">
+            <p-button type="button" label="Vaciar campos" severity="secondary" [text]="true" (onClick)="unsaved.discard()" />
+            <p-button type="button" label="Guardar formulario personalizado" icon="fa-solid fa-check" [disabled]="true" />
+        </div>
+    } @else {
+        <app-save-bar
+            [tracker]="unsaved"
+            [saving]="isSubmitting()"
+            [message]="isEditing() ? 'Cuidado, tiene cambios sin guardar.' : 'Cuidado, el formulario todavía no se ha creado.'"
+            [discardLabel]="isEditing() ? 'Restablecer' : 'Vaciar campos'"
+            [submitLabel]="isEditing() ? 'Guardar cambios' : 'Crear formulario'"
+            (discarded)="clearError()"
+        />
+    }
 </form>
