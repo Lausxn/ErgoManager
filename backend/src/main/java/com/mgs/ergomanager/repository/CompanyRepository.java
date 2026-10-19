@@ -11,10 +11,23 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface CompanyRepository extends JpaRepository<Company, Long> {
 
-    /** Includes inactive profiles: their names remain reserved. */
+    /**
+     * Checks whether a company already uses a name, ignoring case. Inactive
+     * companies are included, so their names remain reserved.
+     *
+     * @param businessName name to look for
+     * @return true when a company already uses that name
+     */
     boolean existsByBusinessNameIgnoreCase(String businessName);
 
-    /** Allows a profile to keep its own name when it is updated. */
+    /**
+     * Checks whether a company other than the given one uses a name, ignoring
+     * case, so a company can keep its own name when it is updated.
+     *
+     * @param businessName name to look for
+     * @param id           identifier of the company being updated
+     * @return true when another company already uses that name
+     */
     boolean existsByBusinessNameIgnoreCaseAndIdNot(String businessName, Long id);
 
     /**

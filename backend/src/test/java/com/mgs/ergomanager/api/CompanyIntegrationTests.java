@@ -1,5 +1,7 @@
 package com.mgs.ergomanager.api;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -16,6 +18,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -86,8 +89,8 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(body("cliente ACME", "106-002"))))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("message").value("Ya existe un perfil de cliente con ese nombre."));
-        org.junit.jupiter.api.Assertions.assertEquals(1, companyRepository.count());
+                .andExpect(jsonPath("message").value("Ya existe una empresa con ese nombre."));
+        assertEquals(1, companyRepository.count());
     }
 
     @Test
@@ -107,7 +110,7 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(body("PRIMERO", "106-006"))))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("message").value("Ya existe un perfil de cliente con ese nombre."));
+                .andExpect(jsonPath("message").value("Ya existe una empresa con ese nombre."));
         mvc.perform(get("/api/companies/{id}", second).with(as(admin)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("businessName").value("Segundo"));
@@ -132,8 +135,7 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
     @Test
     void databaseRejectsDuplicateNamesEvenWhenServiceIsBypassed() {
         persistCompany("Nombre único", "106-008", true);
-        org.junit.jupiter.api.Assertions.assertThrows(
-                org.springframework.dao.DataIntegrityViolationException.class,
+        assertThrows(DataIntegrityViolationException.class,
                 () -> persistCompany("Nombre único", "106-009", true));
     }
 

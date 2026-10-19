@@ -8,6 +8,8 @@ import com.mgs.ergomanager.model.Company;
 import com.mgs.ergomanager.repository.CompanyRepository;
 import com.mgs.ergomanager.service.CompanyService;
 import java.util.List;
+import java.util.Locale;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +22,7 @@ public class CompanyServiceImpl implements CompanyService {
 
     private static final String COMPANY_NOT_FOUND_MESSAGE = "No se encontró la empresa.";
     private static final String DUPLICATE_TAX_ID_MESSAGE = "Ya existe una empresa con esa cédula jurídica.";
-    private static final String DUPLICATE_NAME_MESSAGE = "Ya existe un perfil de cliente con ese nombre.";
+    private static final String DUPLICATE_NAME_MESSAGE = "Ya existe una empresa con ese nombre.";
     private final CompanyRepository companyRepository;
 
     /**
@@ -116,9 +118,9 @@ public class CompanyServiceImpl implements CompanyService {
             // A concurrent insert can win after the existence checks above.
             // Use the named constraint; do not query a failed transaction.
             for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
-                if (cause instanceof org.hibernate.exception.ConstraintViolationException violation
+                if (cause instanceof ConstraintViolationException violation
                         && violation.getConstraintName() != null
-                        && violation.getConstraintName().toLowerCase(java.util.Locale.ROOT)
+                        && violation.getConstraintName().toLowerCase(Locale.ROOT)
                                 .contains("uk_companies_business_name")) {
                     throw new DuplicateResourceException(DUPLICATE_NAME_MESSAGE);
                 }
