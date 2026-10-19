@@ -56,4 +56,13 @@ public interface SelfEvaluationRepository extends JpaRepository<SelfEvaluation, 
      * @return list of self evaluations
      */
     List<SelfEvaluation> findByEmployeeEmailOrderBySubmittedAtDesc(String employeeEmail);
+
+    /**
+     * Returns every self evaluation with its company and form, used by the
+     * evaluation report, which filters and sorts them.
+     *
+     * @return list of self evaluations
+     */
+    @Query("select s from SelfEvaluation s join fetch s.company join fetch s.form")
+    List<SelfEvaluation> findAllForReport();
 }
