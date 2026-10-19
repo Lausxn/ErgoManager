@@ -11,8 +11,10 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 /**
- * Question that belongs to a self evaluation form. The weight is used when the
- * risk level of a self evaluation is calculated.
+ * Question of a self evaluation or personalized evaluation form. The risk
+ * weights live in the predefined answers ({@link AnswerOption}); the weight
+ * column of the question is no longer used and is only kept so databases
+ * updated in place keep their older rows.
  */
 @Entity
 @Table(name = "questions")

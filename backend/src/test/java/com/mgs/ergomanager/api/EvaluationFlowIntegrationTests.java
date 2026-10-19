@@ -9,11 +9,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.mgs.ergomanager.model.AnswerOption;
 import com.mgs.ergomanager.model.Availability;
 import com.mgs.ergomanager.model.Company;
 import com.mgs.ergomanager.model.Form;
 import com.mgs.ergomanager.model.Question;
 import com.mgs.ergomanager.model.User;
+import com.mgs.ergomanager.model.enums.FormType;
 import com.mgs.ergomanager.model.enums.Role;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -48,20 +50,33 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
         ergonomist = persistUser("ergo.flow@example.test", Role.ERGONOMIST);
         otherErgonomist = persistUser("otro.flow@example.test", Role.ERGONOMIST);
         company = persistCompany("Flujo S.A.", "3-101-000200", true);
-        // Weights 1, 2 and 3: the highest weighted score is 3 * 6 = 18.
-        form = persistForm("Postura", 1, 2, 3);
+        // Three questions, each with the answers Bajo (1), Medio (2) and Alto (3).
+        form = persistForm("Postura", 1, 1, 1);
         questions = questionsOf(form);
     }
 
     // ----- helpers -----
 
-    private Map<String, Object> selfEvaluationBody(Long companyId, int... scores) {
+    /**
+     * Returns the predefined answer of a question that has the given weight.
+     *
+     * @param question question of the form
+     * @param weight   weight of the answer, from 1 to 3
+     * @return the predefined answer
+     */
+    private AnswerOption optionOf(Question question, int weight) {
+        return answerOptionRepository.findByQuestionIdIn(List.of(question.getId())).stream()
+                .filter(option -> option.getWeight() == weight)
+                .findFirst()
+                .orElseThrow();
+    }
+
+    private Map<String, Object> selfEvaluationBody(Long companyId, int... weights) {
         List<Map<String, Object>> answers = new ArrayList<>();
-        for (int index = 0; index < scores.length; index++) {
+        for (int index = 0; index < weights.length; index++) {
             Map<String, Object> answer = new HashMap<>();
             answer.put("questionId", questions.get(index).getId());
-            answer.put("selectedOption", "Opción " + scores[index]);
-            answer.put("score", scores[index]);
+            answer.put("optionId", optionOf(questions.get(index), weights[index]).getId());
             answers.add(answer);
         }
         Map<String, Object> body = new HashMap<>();
@@ -74,10 +89,10 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
         return body;
     }
 
-    private long submitSelfEvaluation(int... scores) throws Exception {
+    private long submitSelfEvaluation(int... weights) throws Exception {
         MvcResult result = mvc.perform(post("/api/self-evaluations")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(selfEvaluationBody(company.getId(), scores))))
+                        .content(toJson(selfEvaluationBody(company.getId(), weights))))
                 .andExpect(status().isCreated())
                 .andReturn();
         return idOf(result);
@@ -116,38 +131,45 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
 
     // ----- self evaluations -----
 
+    // Average = total / 3 questions; percentage = (average - 1) / 2 * 100. The rows
+    // 2-1-2 and 3-2-2 fall exactly on the limits between levels.
     @ParameterizedTest
     @CsvSource({
-            "0, 0, 0, 0, LOW",
-            "0, 0, 1, 3, LOW",
-            "1, 1, 1, 6, MEDIUM",
-            "3, 0, 2, 9, HIGH",
-            "3, 3, 2, 15, CRITICAL",
-            "3, 3, 3, 18, CRITICAL"
+            "1, 1, 1, 3, 1.0, 0.0, LOW",
+            "1, 1, 2, 4, 1.33, 16.67, LOW",
+            "2, 1, 2, 5, 1.67, 33.33, MEDIUM",
+            "2, 2, 2, 6, 2.0, 50.0, MEDIUM",
+            "3, 2, 2, 7, 2.33, 66.67, HIGH",
+            "3, 3, 3, 9, 3.0, 100.0, HIGH"
     })
-    void calculatesWeightedScoreAndRiskLevel(int first, int second, int third, int total, String risk)
+    void calculatesTheRiskLevelFromTheAverageWeight(int first, int second, int third, int total,
+                                                    double average, double percentage, String risk)
             throws Exception {
         mvc.perform(post("/api/self-evaluations")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(selfEvaluationBody(company.getId(), first, second, third))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("totalScore").value(total))
+                .andExpect(jsonPath("averageScore").value(average))
+                .andExpect(jsonPath("riskPercentage").value(percentage))
                 .andExpect(jsonPath("riskLevel").value(risk))
                 .andExpect(jsonPath("employeeEmail").value("ana.mora@flujo.test"))
                 .andExpect(jsonPath("employeeName").value("Ana Mora"))
                 .andExpect(jsonPath("answerList.length()").value(3))
-                .andExpect(jsonPath("answerList[0].statement").value("Pregunta 1"));
+                .andExpect(jsonPath("answerList[0].statement").value("Pregunta 1"))
+                .andExpect(jsonPath("answerList[0].optionId").value(optionOf(questions.get(0), first).getId()))
+                .andExpect(jsonPath("answerList[0].score").value(first));
     }
 
     @Test
     void submissionCreatesHistoryEntry() throws Exception {
-        long id = submitSelfEvaluation(1, 1, 1);
+        long id = submitSelfEvaluation(2, 2, 2);
         mvc.perform(get("/api/histories").param("companyId", String.valueOf(company.getId())).with(as(admin)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].selfEvaluationId").value(id))
                 .andExpect(jsonPath("$[0].companyName").value("Flujo S.A."))
                 .andExpect(jsonPath("$[0].employeeEmail").value("ana.mora@flujo.test"))
-                .andExpect(jsonPath("$[0].description").value("Autoevaluación \"Postura\" enviada. Riesgo Medio (6 pts)."))
+                .andExpect(jsonPath("$[0].description").value("Autoevaluación \"Postura\" enviada. Riesgo Medio (50 %)."))
                 .andExpect(jsonPath("$[0].type").value("SELF_EVALUATION"));
     }
 
@@ -166,10 +188,57 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("message").value("Responda todas las preguntas del formulario."));
 
-        mvc.perform(post("/api/self-evaluations").contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(selfEvaluationBody(company.getId(), 1, 4, 1))))
+        Map<String, Object> withoutOption = selfEvaluationBody(company.getId(), 1, 1, 1);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> withoutOptionAnswers = (List<Map<String, Object>>) withoutOption.get("answerList");
+        withoutOptionAnswers.get(1).remove("optionId");
+        mvc.perform(post("/api/self-evaluations").contentType(MediaType.APPLICATION_JSON).content(toJson(withoutOption)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("fieldErrors['answerList[1].score']").value("El puntaje debe estar entre 0 y 3."));
+                .andExpect(jsonPath("fieldErrors['answerList[1].optionId']").value("Seleccione una respuesta."));
+    }
+
+    @Test
+    void theChosenAnswerMustBelongToItsActiveQuestion() throws Exception {
+        Map<String, Object> foreign = selfEvaluationBody(company.getId(), 1, 1, 1);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> answers = (List<Map<String, Object>>) foreign.get("answerList");
+        answers.get(1).put("optionId", optionOf(questions.get(2), 3).getId());
+        mvc.perform(post("/api/self-evaluations").contentType(MediaType.APPLICATION_JSON).content(toJson(foreign)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("message").value("La respuesta seleccionada no corresponde a la pregunta 2."));
+
+        AnswerOption hidden = optionOf(questions.get(0), 3);
+        hidden.setActive(false);
+        answerOptionRepository.flush();
+        mvc.perform(post("/api/self-evaluations").contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(selfEvaluationBody(company.getId(), 3, 1, 1))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("message").value("La respuesta seleccionada no corresponde a la pregunta 1."));
+    }
+
+    @Test
+    void keepsTheAnswerAsTheEmployeeSawItWhenTheFormIsEditedLater() throws Exception {
+        long id = submitSelfEvaluation(3, 1, 1);
+        AnswerOption chosen = optionOf(questions.get(0), 3);
+        chosen.setLabel("Texto editado");
+        chosen.setWeight(1);
+        answerOptionRepository.flush();
+
+        mvc.perform(get("/api/self-evaluations/{id}", id).with(as(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("totalScore").value(5))
+                .andExpect(jsonPath("answerList[0].selectedOption").value("Alto"))
+                .andExpect(jsonPath("answerList[0].score").value(3));
+    }
+
+    @Test
+    void aPersonalizedEvaluationFormCannotBeAnsweredAsASelfEvaluation() throws Exception {
+        form.setType(FormType.PERSONALIZED_EVALUATION);
+        formRepository.flush();
+        mvc.perform(post("/api/self-evaluations").contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(selfEvaluationBody(company.getId(), 1, 1, 1))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("message").value("Este formulario no es una autoevaluación."));
     }
 
     @Test
@@ -192,7 +261,7 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
 
     @Test
     void readingSelfEvaluationsRequiresSignIn() throws Exception {
-        long older = submitSelfEvaluation(0, 0, 0);
+        long older = submitSelfEvaluation(1, 1, 1);
         long newer = submitSelfEvaluation(3, 3, 3);
         mvc.perform(get("/api/self-evaluations/{id}", older)).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/self-evaluations/{id}", older).with(as(ergonomist)))
@@ -464,7 +533,7 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
                 .andExpect(jsonPath("$[1].description").value(org.hamcrest.Matchers.startsWith("Cita agendada para el ")))
                 .andExpect(jsonPath("$[1].description").value(org.hamcrest.Matchers.endsWith(" con Nombre Ergo.")))
                 .andExpect(jsonPath("$[2].description")
-                        .value("Autoevaluación \"Postura\" enviada. Riesgo Crítico (15 pts)."));
+                        .value("Autoevaluación \"Postura\" enviada. Riesgo Alto (83 %)."));
         mvc.perform(get("/api/histories").param("companyId", String.valueOf(company.getId())).with(as(admin)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(3))

@@ -8,11 +8,14 @@ import com.mgs.ergomanager.dto.selfevaluation.SelfEvaluationResponseDTO;
 import com.mgs.ergomanager.exception.BusinessException;
 import com.mgs.ergomanager.exception.ResourceNotFoundException;
 import com.mgs.ergomanager.model.Answer;
+import com.mgs.ergomanager.model.AnswerOption;
 import com.mgs.ergomanager.model.Company;
 import com.mgs.ergomanager.model.Form;
 import com.mgs.ergomanager.model.Question;
 import com.mgs.ergomanager.model.SelfEvaluation;
+import com.mgs.ergomanager.model.enums.FormType;
 import com.mgs.ergomanager.model.enums.RiskLevel;
+import com.mgs.ergomanager.repository.AnswerOptionRepository;
 import com.mgs.ergomanager.repository.AnswerRepository;
 import com.mgs.ergomanager.repository.CompanyRepository;
 import com.mgs.ergomanager.repository.FormRepository;
@@ -37,8 +40,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SelfEvaluationServiceImpl implements SelfEvaluationService {
 
-    /** Highest score an answer can have. */
-    private static final int MAX_ANSWER_SCORE = 3;
+    /** Lowest and highest weight of a predefined answer. */
+    private static final int MIN_WEIGHT = 1;
+    private static final int MAX_WEIGHT = 3;
     private static final String INCOMPLETE_ANSWERS_MESSAGE = "Responda todas las preguntas del formulario.";
 
     private static final Comparator<Answer> BY_QUESTION_ORDER =
@@ -49,6 +53,7 @@ public class SelfEvaluationServiceImpl implements SelfEvaluationService {
     private final AnswerRepository answerRepository;
     private final FormRepository formRepository;
     private final QuestionRepository questionRepository;
+    private final AnswerOptionRepository answerOptionRepository;
     private final CompanyRepository companyRepository;
     private final HistoryRepository historyRepository;
 
@@ -59,6 +64,7 @@ public class SelfEvaluationServiceImpl implements SelfEvaluationService {
      * @param answerRepository         repository of answers
      * @param formRepository           repository of forms
      * @param questionRepository       repository of questions
+     * @param answerOptionRepository   repository of the predefined answers of the questions
      * @param companyRepository        repository of client companies
      * @param historyRepository        repository of history entries
      */
@@ -66,12 +72,14 @@ public class SelfEvaluationServiceImpl implements SelfEvaluationService {
                                      AnswerRepository answerRepository,
                                      FormRepository formRepository,
                                      QuestionRepository questionRepository,
+                                     AnswerOptionRepository answerOptionRepository,
                                      CompanyRepository companyRepository,
                                      HistoryRepository historyRepository) {
         this.selfEvaluationRepository = selfEvaluationRepository;
         this.answerRepository = answerRepository;
         this.formRepository = formRepository;
         this.questionRepository = questionRepository;
+        this.answerOptionRepository = answerOptionRepository;
         this.companyRepository = companyRepository;
         this.historyRepository = historyRepository;
     }
@@ -81,6 +89,9 @@ public class SelfEvaluationServiceImpl implements SelfEvaluationService {
     public SelfEvaluationResponseDTO submit(SelfEvaluationRequestDTO request) {
         Form form = formRepository.findById(request.formId())
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el formulario."));
+        if (form.getType() != FormType.SELF_EVALUATION) {
+            throw new BusinessException("Este formulario no es una autoevaluación.");
+        }
         if (!form.isActive()) {
             throw new BusinessException("El formulario ya no está disponible.");
         }
@@ -92,13 +103,10 @@ public class SelfEvaluationServiceImpl implements SelfEvaluationService {
         List<Question> questions = questionRepository.findByFormIdAndActiveTrueOrderByQuestionOrderAsc(form.getId());
         Map<Long, Question> questionsById = questions.stream()
                 .collect(Collectors.toMap(Question::getId, Function.identity()));
-        validateAnswers(request.answerList(), questionsById);
-
-        int totalScore = 0;
-        int maxScore = 0;
-        for (Question question : questions) {
-            maxScore += MAX_ANSWER_SCORE * question.getWeight();
-        }
+        Map<Long, AnswerOption> optionsById = questions.isEmpty() ? Map.of() : answerOptionRepository
+                .findByQuestionIdInAndActiveTrueOrderByOptionOrderAsc(questionsById.keySet()).stream()
+                .collect(Collectors.toMap(AnswerOption::getId, Function.identity()));
+        validateAnswers(request.answerList(), questionsById, optionsById);
 
         SelfEvaluation selfEvaluation = new SelfEvaluation();
         selfEvaluation.setForm(form);
@@ -107,26 +115,33 @@ public class SelfEvaluationServiceImpl implements SelfEvaluationService {
         selfEvaluation.setEmployeeEmail(request.employeeEmail());
         selfEvaluation.setEmployeePosition(request.employeePosition());
 
+        int totalScore = 0;
         List<Answer> answers = new ArrayList<>();
         for (AnswerRequestDTO answerRequest : request.answerList()) {
-            Question question = questionsById.get(answerRequest.questionId());
-            totalScore += answerRequest.score() * question.getWeight();
+            AnswerOption option = optionsById.get(answerRequest.optionId());
+            totalScore += option.getWeight();
             Answer answer = new Answer();
             answer.setSelfEvaluation(selfEvaluation);
-            answer.setQuestion(question);
-            answer.setSelectedOption(answerRequest.selectedOption());
-            answer.setScore(answerRequest.score());
+            answer.setQuestion(questionsById.get(answerRequest.questionId()));
+            answer.setOption(option);
+            // Copies, so the history keeps what the employee saw if the form is edited.
+            answer.setSelectedOption(option.getLabel());
+            answer.setScore(option.getWeight());
             answers.add(answer);
         }
-        RiskLevel riskLevel = calculateRiskLevel(totalScore, maxScore);
+        int questionCount = questions.size();
+        double riskPercentage = riskPercentage(totalScore, questionCount);
+        RiskLevel riskLevel = calculateRiskLevel(totalScore, questionCount);
         selfEvaluation.setTotalScore(totalScore);
+        selfEvaluation.setAverageScore(round(averageScore(totalScore, questionCount)));
+        selfEvaluation.setRiskPercentage(round(riskPercentage));
         selfEvaluation.setRiskLevel(riskLevel);
 
         SelfEvaluation saved = selfEvaluationRepository.save(selfEvaluation);
         List<Answer> savedAnswers = answerRepository.saveAll(answers);
         historyRepository.save(HistoryEntries.of(HistoryType.SELF_EVALUATION, saved, null,
                 "Autoevaluación \"" + form.getTitle() + "\" enviada. Riesgo " + riskLevel.getLabel()
-                        + " (" + totalScore + " pts)."));
+                        + " (" + Math.round(riskPercentage) + " %)."));
 
         return toResponse(saved, savedAnswers);
     }
@@ -157,36 +172,78 @@ public class SelfEvaluationServiceImpl implements SelfEvaluationService {
                 .toList();
     }
 
+    /**
+     * Compares in whole numbers: average < 5/3 is the same as 3 * total < 5 * questions,
+     * so a result right on a limit is never misread because of decimals.
+     */
     @Override
-    public RiskLevel calculateRiskLevel(int totalScore, int maxScore) {
-        if (maxScore <= 0) {
+    public RiskLevel calculateRiskLevel(int totalScore, int questionCount) {
+        if (questionCount <= 0) {
             return RiskLevel.LOW;
         }
-        double percentage = totalScore * 100.0 / maxScore;
-        if (percentage < 25) {
+        if (3L * totalScore < 5L * questionCount) {
             return RiskLevel.LOW;
         }
-        if (percentage < 50) {
+        if (3L * totalScore < 7L * questionCount) {
             return RiskLevel.MEDIUM;
         }
-        if (percentage < 75) {
-            return RiskLevel.HIGH;
-        }
-        return RiskLevel.CRITICAL;
+        return RiskLevel.HIGH;
     }
 
     /**
-     * Checks that every active question is answered exactly once and that no
-     * other question is answered.
+     * Average weight per question, from 1 to 3.
+     *
+     * @param totalScore    sum of the weights of the chosen answers
+     * @param questionCount number of questions of the form
+     * @return average weight
+     */
+    private static double averageScore(int totalScore, int questionCount) {
+        return questionCount <= 0 ? MIN_WEIGHT : (double) totalScore / questionCount;
+    }
+
+    /**
+     * Position of the average in the 1 to 3 scale: 1 is 0 %, 2 is 50 % and 3 is
+     * 100 %, whatever the number of questions.
+     *
+     * @param totalScore    sum of the weights of the chosen answers
+     * @param questionCount number of questions of the form
+     * @return risk percentage, from 0 to 100
+     */
+    private static double riskPercentage(int totalScore, int questionCount) {
+        return (averageScore(totalScore, questionCount) - MIN_WEIGHT) * 100.0 / (MAX_WEIGHT - MIN_WEIGHT);
+    }
+
+    /**
+     * Rounds a value to two decimals.
+     *
+     * @param value value to round
+     * @return rounded value
+     */
+    private static double round(double value) {
+        return Math.round(value * 100.0) / 100.0;
+    }
+
+    /**
+     * Checks that every active question is answered exactly once, that no other
+     * question is answered and that each chosen option belongs to its question.
      *
      * @param answers       answers sent by the employee
      * @param questionsById active questions of the form
+     * @param optionsById   active options of those questions
      */
-    private static void validateAnswers(List<AnswerRequestDTO> answers, Map<Long, Question> questionsById) {
+    private static void validateAnswers(List<AnswerRequestDTO> answers,
+                                        Map<Long, Question> questionsById,
+                                        Map<Long, AnswerOption> optionsById) {
         Set<Long> answered = new HashSet<>();
         for (AnswerRequestDTO answer : answers) {
-            if (!questionsById.containsKey(answer.questionId()) || !answered.add(answer.questionId())) {
+            Question question = questionsById.get(answer.questionId());
+            if (question == null || !answered.add(answer.questionId())) {
                 throw new BusinessException(INCOMPLETE_ANSWERS_MESSAGE);
+            }
+            AnswerOption option = optionsById.get(answer.optionId());
+            if (option == null || !option.getQuestion().getId().equals(question.getId())) {
+                throw new BusinessException("La respuesta seleccionada no corresponde a la pregunta "
+                        + question.getQuestionOrder() + ".");
             }
         }
         if (answered.size() != questionsById.size()) {
@@ -208,6 +265,7 @@ public class SelfEvaluationServiceImpl implements SelfEvaluationService {
                         answer.getId(),
                         answer.getQuestion().getId(),
                         answer.getQuestion().getStatement(),
+                        answer.getOption() == null ? null : answer.getOption().getId(),
                         answer.getSelectedOption(),
                         answer.getScore()))
                 .toList();
@@ -219,6 +277,8 @@ public class SelfEvaluationServiceImpl implements SelfEvaluationService {
                 selfEvaluation.getEmployeeEmail(),
                 selfEvaluation.getEmployeePosition(),
                 selfEvaluation.getTotalScore(),
+                selfEvaluation.getAverageScore(),
+                selfEvaluation.getRiskPercentage(),
                 selfEvaluation.getRiskLevel(),
                 selfEvaluation.getSubmittedAt(),
                 answerList);
