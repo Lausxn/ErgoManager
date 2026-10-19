@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -13,7 +14,8 @@ import org.hibernate.annotations.CreationTimestamp;
  * Client company whose employees fill in the ergonomic self evaluation forms.
  */
 @Entity
-@Table(name = "companies")
+@Table(name = "companies", uniqueConstraints =
+        @UniqueConstraint(name = "uk_companies_business_name", columnNames = "business_name"))
 public class Company {
 
     @Id

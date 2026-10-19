@@ -1,5 +1,7 @@
 package com.mgs.ergomanager.api;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -16,6 +18,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -80,6 +83,63 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    void rejectsDuplicateNameIgnoringCaseAndSurroundingSpaces() throws Exception {
+        create("Cliente Acme", "106-001");
+        mvc.perform(post("/api/companies").with(as(admin))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(body("cliente ACME", "106-002"))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("message").value("Ya existe una empresa con ese nombre."));
+        assertEquals(1, companyRepository.count());
+    }
+
+    @Test
+    void inactiveProfileStillReservesItsName() throws Exception {
+        persistCompany("Reservado", "106-003", false);
+        mvc.perform(post("/api/companies").with(as(ergonomist))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(body("RESERVADO", "106-004"))))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void rejectsRenameWithoutChangingStoredData() throws Exception {
+        create("Primero", "106-005");
+        long second = create("Segundo", "106-006");
+        mvc.perform(put("/api/companies/{id}", second).with(as(admin))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(body("PRIMERO", "106-006"))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("message").value("Ya existe una empresa con ese nombre."));
+        mvc.perform(get("/api/companies/{id}", second).with(as(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("businessName").value("Segundo"));
+    }
+
+    @Test
+    void updatesOwnNameAndPersistsContactDataWithoutReactivatingProfile() throws Exception {
+        Company company = persistCompany("Existente", "106-007", false);
+        Map<String, Object> request = body("EXISTENTE", "106-007");
+        request.put("contactEmail", " CONTACTO@Example.Test ");
+        request.put("phoneNumber", " 2222-3333 ");
+        mvc.perform(put("/api/companies/{id}", company.getId()).with(as(ergonomist))
+                        .contentType(MediaType.APPLICATION_JSON).content(toJson(request)))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/companies/{id}", company.getId()).with(as(admin)))
+                .andExpect(jsonPath("businessName").value("EXISTENTE"))
+                .andExpect(jsonPath("contactEmail").value("contacto@example.test"))
+                .andExpect(jsonPath("phoneNumber").value("2222-3333"))
+                .andExpect(jsonPath("active").value(false));
+    }
+
+    @Test
+    void databaseRejectsDuplicateNamesEvenWhenServiceIsBypassed() {
+        persistCompany("Nombre único", "106-008", true);
+        assertThrows(DataIntegrityViolationException.class,
+                () -> persistCompany("Nombre único", "106-009", true));
+    }
+
+    @Test
     void rejectsDuplicatedTaxIdOnCreateAndUpdate() throws Exception {
         create("Primera", "3-101-000004");
         long second = create("Segunda", "3-101-000005");
@@ -129,7 +189,7 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
                         .contentType(MediaType.APPLICATION_JSON).content(toJson(body("X", "3-101-000008"))))
                 .andExpect(status().isCreated());
         mvc.perform(put("/api/companies/{id}", company.getId()).with(as(ergonomist))
-                        .contentType(MediaType.APPLICATION_JSON).content(toJson(body("X", "3-101-000007"))))
+                        .contentType(MediaType.APPLICATION_JSON).content(toJson(body("Lectura actualizada", "3-101-000007"))))
                 .andExpect(status().isOk());
         mvc.perform(delete("/api/companies/{id}", company.getId()).with(as(ergonomist)))
                 .andExpect(status().isNoContent());
