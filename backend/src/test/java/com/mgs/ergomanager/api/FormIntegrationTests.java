@@ -42,22 +42,41 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
         ergonomist = persistUser("ergo.forms@example.test", Role.ERGONOMIST);
     }
 
-    private static Map<String, Object> question(Long id, String statement, int order, int weight) {
+    private static Map<String, Object> option(Long id, String label, int weight, int order) {
+        Map<String, Object> option = new HashMap<>();
+        option.put("id", id);
+        option.put("label", label);
+        option.put("weight", weight);
+        option.put("optionOrder", order);
+        return option;
+    }
+
+    private static Map<String, Object> question(Long id, String statement, int order, List<Map<String, Object>> options) {
         Map<String, Object> question = new HashMap<>();
         question.put("id", id);
         question.put("statement", statement);
         question.put("questionOrder", order);
-        question.put("weight", weight);
+        question.put("optionList", options);
         return question;
     }
 
-    private static Map<String, Object> form(String title, int year, List<Map<String, Object>> questions) {
+    /** Self evaluation question with two predefined answers. */
+    private static Map<String, Object> question(Long id, String statement, int order) {
+        return question(id, statement, order, List.of(option(null, "Nunca", 1, 1), option(null, "Siempre", 3, 2)));
+    }
+
+    private static Map<String, Object> form(String title, int year, String type, List<Map<String, Object>> questions) {
         Map<String, Object> form = new HashMap<>();
         form.put("title", title);
         form.put("description", "  ");
         form.put("publicationYear", year);
+        form.put("type", type);
         form.put("questionList", questions);
         return form;
+    }
+
+    private static Map<String, Object> form(String title, int year, List<Map<String, Object>> questions) {
+        return form(title, year, "SELF_EVALUATION", questions);
     }
 
     @Test
@@ -65,15 +84,20 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
         MvcResult result = mvc.perform(post("/api/forms").with(as(admin))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(form(" Postura 2026 ", 2026, List.of(
-                                question(null, "Segunda", 2, 1),
-                                question(null, " Primera ", 1, 2))))))
+                                question(null, "Segunda", 2),
+                                question(null, " Primera ", 1))))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("title").value("Postura 2026"))
                 .andExpect(jsonPath("description").doesNotExist())
+                .andExpect(jsonPath("type").value("SELF_EVALUATION"))
                 .andExpect(jsonPath("active").value(true))
                 .andExpect(jsonPath("questionList.length()").value(2))
                 .andExpect(jsonPath("questionList[0].statement").value("Primera"))
-                .andExpect(jsonPath("questionList[0].weight").value(2))
+                .andExpect(jsonPath("questionList[0].optionList.length()").value(2))
+                .andExpect(jsonPath("questionList[0].optionList[0].label").value("Nunca"))
+                .andExpect(jsonPath("questionList[0].optionList[0].weight").value(1))
+                .andExpect(jsonPath("questionList[0].optionList[1].label").value("Siempre"))
+                .andExpect(jsonPath("questionList[0].optionList[1].weight").value(3))
                 .andReturn();
         long id = idOf(result);
         mvc.perform(get("/api/forms/{id}", id).with(as(admin)))
@@ -90,7 +114,7 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
 
         mvc.perform(post("/api/forms").with(as(admin))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(form("Nuevo", 2026, List.of(question(null, "Pregunta", 1, 1))))))
+                        .content(toJson(form("Nuevo", 2026, List.of(question(null, "Pregunta", 1))))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("message")
                         .value("Ya existe un formulario activo. Desactívelo antes de crear o activar otro formulario."));
@@ -127,9 +151,9 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
         Question third = questions.get(2);
 
         List<Map<String, Object>> update = new ArrayList<>();
-        update.add(question(first.getId(), "Primera editada", 1, 3));
-        update.add(question(third.getId(), "Pregunta 3", 2, 1));
-        update.add(question(null, "Nueva", 3, 2));
+        update.add(question(first.getId(), "Primera editada", 1));
+        update.add(question(third.getId(), "Pregunta 3", 2));
+        update.add(question(null, "Nueva", 3));
         mvc.perform(put("/api/forms/{id}", form.getId()).with(as(admin))
                         .contentType(MediaType.APPLICATION_JSON).content(toJson(form("Editado", 2027, update))))
                 .andExpect(status().isOk())
@@ -138,7 +162,7 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
                 .andExpect(jsonPath("questionList.length()").value(3))
                 .andExpect(jsonPath("questionList[0].id").value(first.getId()))
                 .andExpect(jsonPath("questionList[0].statement").value("Primera editada"))
-                .andExpect(jsonPath("questionList[0].weight").value(3))
+                .andExpect(jsonPath("questionList[0].optionList.length()").value(2))
                 .andExpect(jsonPath("questionList[1].id").value(third.getId()))
                 .andExpect(jsonPath("questionList[2].statement").value("Nueva"));
 
@@ -154,7 +178,7 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
         Long foreignId = questionsOf(other).get(0).getId();
         mvc.perform(put("/api/forms/{id}", form.getId()).with(as(admin))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(form("Propio", 2026, List.of(question(foreignId, "X", 1, 1))))))
+                        .content(toJson(form("Propio", 2026, List.of(question(foreignId, "X", 1))))))
                 .andExpect(status().isBadRequest());
     }
 
@@ -258,7 +282,7 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
 
         MvcResult created = mvc.perform(post("/api/forms").with(as(ergonomist))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(form("X", 2026, List.of(question(null, "X", 1, 1))))))
+                        .content(toJson(form("X", 2026, List.of(question(null, "X", 1))))))
                 .andExpect(status().isCreated())
                 .andReturn();
 

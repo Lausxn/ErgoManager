@@ -3,6 +3,7 @@ package com.mgs.ergomanager.controller;
 import com.mgs.ergomanager.dto.form.FormRequestDTO;
 import com.mgs.ergomanager.dto.form.FormResendResponseDTO;
 import com.mgs.ergomanager.dto.form.FormResponseDTO;
+import com.mgs.ergomanager.model.enums.FormType;
 import com.mgs.ergomanager.service.FormService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -17,15 +18,17 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Endpoints used to manage the self evaluation forms. Only the list of active
- * forms is public, because the employees answer them without an account.
+ * Endpoints used to manage the self evaluation and personalized evaluation
+ * forms. Only the list of active forms is public, because the employees answer
+ * them without an account.
  */
 @RestController
 @RequestMapping("/api/forms")
-@Tag(name = "Forms", description = "Management of the self evaluation forms")
+@Tag(name = "Forms", description = "Management of the self evaluation and personalized evaluation forms")
 public class FormController {
 
     private final FormService formService;
@@ -40,13 +43,14 @@ public class FormController {
     }
 
     /**
-     * Returns every form, active or not.
+     * Returns every form, active or not, optionally of a single type.
      *
+     * @param type SELF_EVALUATION or PERSONALIZED_EVALUATION; every type when missing
      * @return list of forms
      */
     @GetMapping
-    public ResponseEntity<List<FormResponseDTO>> findAll() {
-        return ResponseEntity.ok(formService.findAll());
+    public ResponseEntity<List<FormResponseDTO>> findAll(@RequestParam(required = false) FormType type) {
+        return ResponseEntity.ok(formService.findAll(type));
     }
 
     /**

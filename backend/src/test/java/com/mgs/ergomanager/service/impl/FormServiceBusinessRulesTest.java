@@ -9,10 +9,13 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.mgs.ergomanager.dto.form.AnswerOptionRequestDTO;
 import com.mgs.ergomanager.dto.form.FormRequestDTO;
 import com.mgs.ergomanager.dto.form.QuestionRequestDTO;
 import com.mgs.ergomanager.exception.BusinessException;
 import com.mgs.ergomanager.model.Form;
+import com.mgs.ergomanager.model.enums.FormType;
+import com.mgs.ergomanager.repository.AnswerOptionRepository;
 import com.mgs.ergomanager.repository.CompanyRepository;
 import com.mgs.ergomanager.repository.FormRepository;
 import com.mgs.ergomanager.repository.QuestionRepository;
@@ -43,6 +46,9 @@ class FormServiceBusinessRulesTest {
     private QuestionRepository questionRepository;
 
     @Mock
+    private AnswerOptionRepository answerOptionRepository;
+
+    @Mock
     private CompanyRepository companyRepository;
 
     @Mock
@@ -61,6 +67,7 @@ class FormServiceBusinessRulesTest {
         formService = new FormServiceImpl(
                 formRepository,
                 questionRepository,
+                answerOptionRepository,
                 companyRepository,
                 selfEvaluationRepository,
                 emailService,
@@ -241,12 +248,13 @@ class FormServiceBusinessRulesTest {
                         null,
                         "¿Cómo se siente en su puesto de trabajo?",
                         1,
-                        1);
+                        List.of(new AnswerOptionRequestDTO(null, "Bien", 1, 1)));
 
         return new FormRequestDTO(
                 "Formulario ergonómico",
                 "Formulario de autoevaluación",
                 2026,
+                FormType.SELF_EVALUATION,
                 List.of(question));
     }
 

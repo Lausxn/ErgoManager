@@ -3,19 +3,22 @@ package com.mgs.ergomanager.service;
 import com.mgs.ergomanager.dto.form.FormRequestDTO;
 import com.mgs.ergomanager.dto.form.FormResendResponseDTO;
 import com.mgs.ergomanager.dto.form.FormResponseDTO;
+import com.mgs.ergomanager.model.enums.FormType;
 import java.util.List;
 
 /**
- * Management of the self evaluation forms and their annual resend.
+ * Management of the self evaluation and personalized evaluation forms and
+ * their annual resend.
  */
 public interface FormService {
 
     /**
-     * Returns every form, active or not.
+     * Returns every form, active or not, optionally of a single type.
      *
+     * @param type type of the forms to return, or null for every type
      * @return list of forms
      */
-    List<FormResponseDTO> findAll();
+    List<FormResponseDTO> findAll(FormType type);
 
     /**
      * Returns the forms that can currently be answered.
