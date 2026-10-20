@@ -35,13 +35,16 @@ public interface SelfEvaluationService {
     List<SelfEvaluationResponseDTO> findByCompany(Long companyId);
 
     /**
-     * Calculates the risk level that matches a total score, as a percentage of
-     * the highest score the form allows: below 25 % is low, below 50 % medium,
-     * below 75 % high and from 75 % on critical.
+     * Calculates the risk level of a self evaluation from the average weight of
+     * its answers (sum of the weights divided by the number of questions), so
+     * forms with a different number of questions are compared on the same 1 to
+     * 3 scale. The scale is split in three equal parts: an average below 5/3
+     * (under 33.33 %) is low, below 7/3 (under 66.67 %) is medium and from 7/3
+     * on is high.
      *
-     * @param totalScore sum of the weighted answer scores
-     * @param maxScore   highest weighted score the form allows
-     * @return risk level of the self evaluation
+     * @param totalScore    sum of the weights of the chosen answers
+     * @param questionCount number of questions of the form
+     * @return risk level of the self evaluation: LOW, MEDIUM or HIGH
      */
-    RiskLevel calculateRiskLevel(int totalScore, int maxScore);
+    RiskLevel calculateRiskLevel(int totalScore, int questionCount);
 }

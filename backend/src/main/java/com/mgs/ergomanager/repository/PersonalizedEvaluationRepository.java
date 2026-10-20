@@ -69,4 +69,15 @@ public interface PersonalizedEvaluationRepository extends JpaRepository<Personal
      */
     @Query("select p.appointment.id from PersonalizedEvaluation p where p.appointment.id in :appointmentIds")
     List<Long> findEvaluatedAppointmentIds(@Param("appointmentIds") Collection<Long> appointmentIds);
+
+    /**
+     * Returns every personalized evaluation with the employee, company,
+     * ergonomist and form, used by the evaluation report, which filters and
+     * sorts them.
+     *
+     * @return list of personalized evaluations
+     */
+    @Query("select p from PersonalizedEvaluation p join fetch p.appointment a join fetch a.selfEvaluation s"
+            + " join fetch s.company join fetch p.user left join fetch p.form")
+    List<PersonalizedEvaluation> findAllForReport();
 }
