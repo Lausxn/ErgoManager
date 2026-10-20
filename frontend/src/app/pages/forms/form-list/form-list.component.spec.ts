@@ -91,9 +91,7 @@ describe('Gestión de formularios', () => {
 
     it('conecta la acción de activar con PATCH y actualiza el estado del formulario', () => {
         open('self-evaluation');
-        http.expectOne(FORMS_URL).flush([
-            { id: 4, title: 'Autoevaluación borrador', publicationYear: 2026, type: 'SELF_EVALUATION', active: false, questionList: [] }
-        ]);
+        http.expectOne(FORMS_URL).flush([{ id: 4, title: 'Autoevaluación borrador', publicationYear: 2026, type: 'SELF_EVALUATION', active: false, questionList: [] }]);
 
         const row = fixture.componentInstance['rows']()[0];
         const toast = spyOn(fixture.componentInstance['toastService'], 'success');
@@ -120,9 +118,7 @@ describe('Gestión de formularios', () => {
 
     it('conecta la acción de desactivar con DELETE después de la confirmación', async () => {
         open('self-evaluation');
-        http.expectOne(FORMS_URL).flush([
-            { id: 5, title: 'Autoevaluación activa', publicationYear: 2026, type: 'SELF_EVALUATION', active: true, questionList: [] }
-        ]);
+        http.expectOne(FORMS_URL).flush([{ id: 5, title: 'Autoevaluación activa', publicationYear: 2026, type: 'SELF_EVALUATION', active: true, questionList: [] }]);
 
         const row = fixture.componentInstance['rows']()[0];
         spyOn(fixture.componentInstance['dialogService'], 'confirm').and.resolveTo(true);
@@ -142,9 +138,7 @@ describe('Gestión de formularios', () => {
 
     it('no llama al backend cuando se cancela la desactivación', async () => {
         open('self-evaluation');
-        http.expectOne(FORMS_URL).flush([
-            { id: 6, title: 'Formulario activo', publicationYear: 2026, type: 'SELF_EVALUATION', active: true, questionList: [] }
-        ]);
+        http.expectOne(FORMS_URL).flush([{ id: 6, title: 'Formulario activo', publicationYear: 2026, type: 'SELF_EVALUATION', active: true, questionList: [] }]);
 
         const row = fixture.componentInstance['rows']()[0];
         spyOn(fixture.componentInstance['dialogService'], 'confirm').and.resolveTo(false);
@@ -157,9 +151,7 @@ describe('Gestión de formularios', () => {
 
     it('conecta el reenvío con POST y muestra la cantidad de correos enviados', () => {
         open('self-evaluation');
-        http.expectOne(FORMS_URL).flush([
-            { id: 7, title: 'Autoevaluación anual', publicationYear: 2026, type: 'SELF_EVALUATION', active: true, questionList: [] }
-        ]);
+        http.expectOne(FORMS_URL).flush([{ id: 7, title: 'Autoevaluación anual', publicationYear: 2026, type: 'SELF_EVALUATION', active: true, questionList: [] }]);
 
         const row = fixture.componentInstance['rows']()[0];
         fixture.componentInstance['resendForm'].set(row);
@@ -182,9 +174,7 @@ describe('Gestión de formularios', () => {
 
     it('mantiene abierto el diálogo y muestra error cuando falla el reenvío', () => {
         open('self-evaluation');
-        http.expectOne(FORMS_URL).flush([
-            { id: 8, title: 'Autoevaluación anual', publicationYear: 2026, type: 'SELF_EVALUATION', active: true, questionList: [] }
-        ]);
+        http.expectOne(FORMS_URL).flush([{ id: 8, title: 'Autoevaluación anual', publicationYear: 2026, type: 'SELF_EVALUATION', active: true, questionList: [] }]);
 
         const row = fixture.componentInstance['rows']()[0];
         fixture.componentInstance['resendForm'].set(row);
@@ -194,10 +184,7 @@ describe('Gestión de formularios', () => {
 
         fixture.componentInstance['sendResend']();
 
-        http.expectOne(`${FORMS_URL}/8/resend/18`).flush(
-            { message: 'No se pudo realizar el reenvío.' },
-            { status: 500, statusText: 'Server error' }
-        );
+        http.expectOne(`${FORMS_URL}/8/resend/18`).flush({ message: 'No se pudo realizar el reenvío.' }, { status: 500, statusText: 'Server error' });
 
         expect(fixture.componentInstance['isSending']()).toBeFalse();
         expect(fixture.componentInstance['resendVisible']()).toBeTrue();

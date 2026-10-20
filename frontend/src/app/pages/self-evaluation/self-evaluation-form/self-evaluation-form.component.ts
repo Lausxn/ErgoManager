@@ -1,3 +1,4 @@
+import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, OnInit, computed, inject, input, numberAttribute, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormArray, FormBuilder, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -22,26 +23,6 @@ import { RISK_LEVEL_LABELS, RISK_LEVEL_TAG_CLASSES } from '../../../shared/utils
 import { FormService } from '../../forms/form.service';
 import { SelfEvaluationService } from '../self-evaluation.service';
 
-/** Option an employee can pick for a question. */
-interface AnswerOption {
-    label: string;
-    score: number;
-}
-
-/**
- * Frequency scale offered for every question. The backend multiplies the score
- * by the weight of the question.
- *
- * TODO: confirm the scale and its scores with MGS, together with the score
- * ranges of SelfEvaluationService.calculateRiskLevel in the backend.
- */
-const ANSWER_OPTIONS: readonly AnswerOption[] = [
-    { label: 'Nunca', score: 0 },
-    { label: 'A veces', score: 1 },
-    { label: 'Frecuentemente', score: 2 },
-    { label: 'Siempre', score: 3 }
-];
-
 /** Limits of SelfEvaluationRequestDTO in the backend. */
 const LIMITS = { name: 150, email: 120, position: 100 };
 
@@ -65,7 +46,7 @@ const SUBMIT_FAILED_MESSAGE = 'No se pudo enviar la autoevaluación. Intente de 
     selector: 'app-self-evaluation-form',
     standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [ReactiveFormsModule, ButtonModule, InputNumberModule, InputTextModule, ProgressBarModule, SkeletonModule, TagModule, AppFloatingConfigurator, BrandLogoComponent, FormFieldComponent],
+    imports: [DecimalPipe, ReactiveFormsModule, ButtonModule, InputNumberModule, InputTextModule, ProgressBarModule, SkeletonModule, TagModule, AppFloatingConfigurator, BrandLogoComponent, FormFieldComponent],
     templateUrl: './self-evaluation-form.component.html',
     styleUrl: './self-evaluation-form.component.scss'
 })
@@ -78,7 +59,6 @@ export class SelfEvaluationFormComponent implements OnInit {
 
     /** Company of the employee, bound from the query string when the link includes it. */
     readonly companyId = input<number | undefined, unknown>(undefined, { transform: numberAttribute });
-    protected readonly answerOptions = ANSWER_OPTIONS;
     protected readonly limits = LIMITS;
     protected readonly riskLevelLabels = RISK_LEVEL_LABELS;
     protected readonly riskLevelTagClasses = RISK_LEVEL_TAG_CLASSES;
@@ -102,7 +82,9 @@ export class SelfEvaluationFormComponent implements OnInit {
 
     /** Warns before closing the tab with answers that were not sent. */
     private readonly unsaved = trackUnsavedChanges(this.employeeForm);
+
     private readonly answers = toSignal(this.employeeForm.controls.answerList.valueChanges.pipe(map(() => this.answerList.getRawValue())), { initialValue: [] as (number | null)[] });
+
     protected readonly answeredCount = computed(() => this.answers().filter((answer) => answer !== null).length);
 
     protected readonly progress = computed(() => {
@@ -112,15 +94,19 @@ export class SelfEvaluationFormComponent implements OnInit {
 
     ngOnInit(): void {
         const companyId = this.companyId();
+
         if (companyId !== undefined && !Number.isNaN(companyId) && companyId > 0) {
             this.employeeForm.patchValue({ companyId });
             this.hasCompanyInLink.set(true);
         }
+
         this.loadActiveForm();
     }
 
     /**
      * Returns the answer controls, one per question, typed for the template.
+     *
+     * Each control stores the identifier of the selected predefined answer.
      *
      * @returns array of answer controls
      */
@@ -129,24 +115,40 @@ export class SelfEvaluationFormComponent implements OnInit {
     }
 
     /**
-     * Reads the form the employee has to answer and builds one answer control
-     * per question.
+     * Reads the active self evaluation form and builds one answer control per
+     * question. Answer options are provided by the backend and ordered according
+     * to their configured position.
      */
     protected loadActiveForm(): void {
         this.isLoading.set(true);
         this.hasLoadError.set(false);
+
         this.formService
             .findActive()
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: (formList) => {
                     const form = formList[0] ?? null;
-                    const questionList = [...(form?.questionList ?? [])].filter((question) => question.active !== false).sort((first, second) => first.questionOrder - second.questionOrder);
+
+                    const questionList = [...(form?.questionList ?? [])]
+                        .filter((question) => question.active !== false)
+                        .sort((first, second) => first.questionOrder - second.questionOrder)
+                        .map((question) => ({
+                            ...question,
+                            optionList: [...(question.optionList ?? [])].sort((first, second) => first.optionOrder - second.optionOrder)
+                        }));
+
                     this.answerList.clear({ emitEvent: false });
-                    questionList.forEach(() => this.answerList.push(this.formBuilder.control<number | null>(null, [Validators.required]), { emitEvent: false }));
+
+                    questionList.forEach(() => {
+                        this.answerList.push(this.formBuilder.control<number | null>(null, [Validators.required]), { emitEvent: false });
+                    });
+
                     this.answerList.updateValueAndValidity();
+
                     // Empty answers are the starting point, not changes to protect.
                     this.unsaved.markSaved();
+
                     this.activeForm.set(form);
                     this.questionList.set(questionList);
                     this.isLoading.set(false);
@@ -170,20 +172,25 @@ export class SelfEvaluationFormComponent implements OnInit {
     }
 
     /**
-     * Sends the answers to the backend and shows the calculated risk level.
-     * When something is missing it scrolls to the first field or question the
-     * employee has to complete.
+     * Sends the identifiers of the selected predefined answers to the backend.
+     * The backend obtains each answer weight from the stored form and calculates
+     * the final risk level and percentage.
      */
     protected submit(): void {
         if (this.isSubmitting()) {
             return;
         }
+
         const form = this.activeForm();
         const value = this.employeeForm.getRawValue();
+
         if (form === null || this.employeeForm.invalid || value.companyId === null) {
             markFormAsDirty(this.employeeForm);
+
             const missing = this.questionList().length - this.answeredCount();
+
             this.errorMessage.set(missing > 0 ? `Falta${missing === 1 ? '' : 'n'} ${missing} pregunta${missing === 1 ? '' : 's'} por responder. Revise también sus datos.` : 'Revise los datos marcados antes de enviar.');
+
             this.focusFirstInvalid();
             return;
         }
@@ -194,14 +201,15 @@ export class SelfEvaluationFormComponent implements OnInit {
             employeeName: value.employeeName.trim(),
             employeeEmail: value.employeeEmail.trim().toLowerCase(),
             employeePosition: value.employeePosition.trim() || undefined,
-            answerList: this.questionList().map((question, index) => {
-                const score = value.answerList[index] ?? 0;
-                return { questionId: question.id, score, selectedOption: ANSWER_OPTIONS.find((option) => option.score === score)?.label ?? '' };
-            })
+            answerList: this.questionList().map((question, index) => ({
+                questionId: question.id,
+                optionId: value.answerList[index]!
+            }))
         };
 
         this.isSubmitting.set(true);
         this.errorMessage.set(null);
+
         this.selfEvaluationService
             .submit(request)
             .pipe(takeUntilDestroyed(this.destroyRef))
@@ -210,7 +218,11 @@ export class SelfEvaluationFormComponent implements OnInit {
                     this.isSubmitting.set(false);
                     this.unsaved.markSaved();
                     this.result.set(selfEvaluation);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                    window.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
                 },
                 error: (error: unknown) => {
                     this.isSubmitting.set(false);
@@ -225,19 +237,31 @@ export class SelfEvaluationFormComponent implements OnInit {
      */
     private focusFirstInvalid(): void {
         const personalFields = ['employeeName', 'employeeEmail', 'employeePosition', 'companyId'] as const;
+
         const invalidField = personalFields.find((field) => this.employeeForm.controls[field].invalid && (field !== 'companyId' || !this.hasCompanyInLink()));
+
         const unansweredIndex = this.answerList.controls.findIndex((control) => control.invalid);
+
         const selector = invalidField ? `#${invalidField}` : unansweredIndex >= 0 ? `#question-${this.questionList()[unansweredIndex].id}` : null;
+
         if (selector === null) {
             return;
         }
+
         requestAnimationFrame(() => {
             const target = this.host.nativeElement.querySelector<HTMLElement>(selector);
+
             if (!target) {
                 return;
             }
-            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            target.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+
             const focusable = target.matches('input') ? target : target.querySelector<HTMLElement>('input');
+
             focusable?.focus({ preventScroll: true });
         });
     }

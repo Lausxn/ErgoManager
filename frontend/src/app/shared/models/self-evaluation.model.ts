@@ -3,8 +3,7 @@ import { RiskLevel } from './risk-level.model';
 /** Answer sent as part of a self evaluation. */
 export interface AnswerRequest {
     questionId: number;
-    selectedOption: string;
-    score: number;
+    optionId: number;
 }
 
 /** Answer returned as part of a self evaluation. */
@@ -12,6 +11,7 @@ export interface AnswerResponse {
     id: number;
     questionId: number;
     statement: string;
+    optionId?: number;
     selectedOption: string;
     score: number;
 }
@@ -35,6 +35,8 @@ export interface SelfEvaluationResponse {
     employeeEmail: string;
     employeePosition?: string;
     totalScore: number;
+    averageScore: number;
+    riskPercentage: number;
     riskLevel: RiskLevel;
     submittedAt: string;
     answerList: AnswerResponse[];
