@@ -86,7 +86,16 @@
                     </td>
                     <td class="text-right">
                         <div class="mgs-row-actions">
-                            <p-button icon="fa-solid fa-pen" [rounded]="true" [text]="true" severity="secondary" [routerLink]="['/companies', row.id]" pTooltip="Editar" tooltipPosition="top" ariaLabel="Editar empresa" />
+                            <p-button
+                                icon="fa-solid fa-pen"
+                                [rounded]="true"
+                                [text]="true"
+                                severity="secondary"
+                                [routerLink]="['/companies', row.id]"
+                                pTooltip="Editar perfil"
+                                tooltipPosition="top"
+                                [ariaLabel]="'Editar perfil de ' + row.businessName"
+                            />
                             @if (row.active) {
                                 <p-button icon="fa-solid fa-ban" [rounded]="true" [text]="true" [loading]="isBusy(row.id)" (onClick)="confirmDeactivate(row)" pTooltip="Desactivar" tooltipPosition="top" ariaLabel="Desactivar empresa" />
                             } @else {

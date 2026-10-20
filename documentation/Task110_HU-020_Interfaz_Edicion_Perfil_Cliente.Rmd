@@ -1,0 +1,82 @@
+---
+title: "Task110 / HU-020 - Interfaz de edición de perfil de Cliente"
+author: "Jocabed Sibaja Castillo"
+output: html_document
+---
+
+# **Información de la tarea**
+
+- **Task:** 110
+- **HU:** HU-020 — Editar perfil de Cliente
+- **Sprint:** 2
+- **Responsable:** Jocabed Sibaja Castillo
+- **Tipo:** Frontend
+
+# **Objetivo**
+
+Implementar la presentación de edición de perfiles de clientes existentes, permitiendo consultar sus datos actuales, modificarlos y guardar los cambios mediante la infraestructura existente, respetando la arquitectura y el diseño de ErgoManager.
+
+# **Funcionamiento de la interfaz**
+
+## Acceso y carga
+
+El administrador entra al listado de **Empresas cliente** y selecciona la acción cuyo tooltip indica **Editar perfil** y cuyo nombre accesible identifica la empresa. La ruta existente **`/companies/:id`** abre **Editar perfil de cliente**. **CompanyService.findById** carga el perfil; mientras espera se mantienen los indicadores de carga existentes.
+
+## Edición y confirmación
+
+Los cinco campos muestran los valores almacenados. El **preview del perfil** refleja lo que se escribe. Si hay cambios, la barra compartida ofrece **Restablecer** y **Guardar cambios**. El aviso de cambios sin guardar impide abandonar el formulario sin resolverlos; **Restablecer** recupera los datos cargados y elimina ese aviso.
+
+**Guardar cambios** utiliza el PUT existente mediante **CompanyService.update**. Durante la petición se conserva el indicador de guardado y se deshabilita Restablecer según el componente compartido. El formulario comunica carga y guardado mediante **`aria-busy`**. Al guardar correctamente se muestra **Empresa actualizada** y se vuelve al listado. Al reabrir el perfil se leen los datos actualizados.
+
+Ante un error de guardado se mantienen los valores y la alerta existente para corregir o reintentar. Si el perfil no puede cargarse, se conserva el comportamiento existente de toast de error y regreso al listado. **Volver a empresas** mantiene la navegación al listado.
+
+# **Campos disponibles**
+
+- **Razón social**
+- **Cédula jurídica**
+- **Correo de contacto**
+- **Teléfono**, opcional
+- **Dirección**, opcional
+
+No se añadieron campos ni se alteró el contrato de Company.
+
+# **Implementación realizada**
+
+Task110 ajusta los **templates** del formulario y del listado: título y ayuda específicos de edición, encabezado **Datos del perfil**, identificación accesible de la acción de edición y del preview, orientación sobre Guardar/Restablecer y comunicación de carga/guardado con `aria-busy`.
+
+La carga por identificador, presentación de datos, modificación de campos, barra de cambios sin guardar, restablecimiento, PUT, toasts y manejo de errores **ya existían y se reutilizaron**. No se modificó el TypeScript de CompanyFormComponent ni se creó un formulario paralelo. Se añadieron diez pruebas propias para comprobar esos estados y la presentación de Task110.
+
+# **Reutilización de HU-003**
+
+Se reutilizan **CompanyFormComponent**, **PageHeaderComponent**, **FormFieldComponent**, **SaveBarComponent**, el **preview lateral**, los **estilos compartidos** y **CompanyService**. También se mantienen el tracker/guard de cambios sin guardar, ToastService y las alertas existentes. Esto conserva la consistencia entre creación y edición y evita duplicar código.
+
+# **Archivos modificados**
+
+Lista obtenida de `git diff --name-only` y `git ls-files --others --exclude-standard` antes de crear la documentación:
+
+- **`frontend/src/app/pages/companies/company-form/company-form.component.html`**: Diferencia la edición de la creación mediante títulos y ayuda; etiqueta el preview y comunica carga/guardado con aria-busy.
+- **`frontend/src/app/pages/companies/company-list/company-list.component.html`**: Identifica la acción accesible de edición por el nombre del perfil y actualiza su tooltip.
+- **`frontend/src/app/pages/companies/company-form/company-edit-interface.spec.ts`**: Añade diez pruebas del acceso a edición y de los estados del formulario reutilizado.
+- **`documentation/Task110_HU-020_Interfaz_Edicion_Perfil_Cliente.Rmd`**: documentación de Task110 incluida en el mismo commit.
+
+# **Decisiones de diseño y arquitectura**
+
+Se mantuvo la arquitectura del módulo **companies** y el formulario compartido de creación/edición. Se conservaron los componentes, estilos, identidad visual de **MGS**, comportamiento responsive y línea del **Sprint 1**, sin cambiar logo, colores, tipografía, header ni sidebar globales. No se modificaron servicios, endpoints, DTOs ni backend. Se respetaron la configuración de formato y los estándares existentes, sin duplicar lógica de otras Tasks.
+
+# **Validaciones realizadas**
+
+- **Prettier:** correcto en los tres archivos frontend de la Task.
+- **Tests frontend de companies:** **10 pruebas aprobadas**. Cubren carga, cinco campos precargados, preview, cambios sin guardar, restablecimiento, PUT y guardado en progreso/éxito, conservación de datos ante error, respuestas 403/404, creación conservada y acceso desde el listado/ruta.
+- **`npm run build`:** correcto.
+- **`git diff --check`:** sin errores.
+- **Revisión funcional:** correcta sobre H2 temporal. Se comprobó el listado, acceso a editar, carga del perfil, modificación de dirección, protección de salida, Restablecer, Guardar cambios, toast **Empresa actualizada** y reapertura con datos actualizados. Revisión visual aprobada por la responsable, sin capturas.
+
+Se conservaron estos resultados porque el código no cambió después de la validación. No se repitió la batería durante el cierre.
+
+# **Trabajo fuera de alcance**
+
+Task110 corresponde al **frontend de edición de perfiles**. Las validaciones adicionales de **Task113**, incluidos formato, nombre único y manejo específico de duplicados, **no se reimplementaron ni se copiaron**. Task113 aún no estaba integrada en la feature al preparar esta interfaz. No se modificaron endpoints ni lógica backend.
+
+# **Resultado**
+
+La interfaz de edición quedó preparada y aprobada visualmente, reutilizando la infraestructura existente y manteniendo la consistencia visual y funcional de ErgoManager. Task110 queda lista para revisión e integración mediante Pull Request hacia **`feature/HU-020-EditarPerfilCliente`**.
