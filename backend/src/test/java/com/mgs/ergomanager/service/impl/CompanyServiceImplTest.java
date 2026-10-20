@@ -11,7 +11,9 @@ import com.mgs.ergomanager.dto.company.CompanyRequestDTO;
 import com.mgs.ergomanager.exception.DuplicateResourceException;
 import com.mgs.ergomanager.model.Company;
 import com.mgs.ergomanager.model.CompanyKeys;
+import com.mgs.ergomanager.repository.CompanyNameChangeRepository;
 import com.mgs.ergomanager.repository.CompanyRepository;
+import com.mgs.ergomanager.security.CurrentUserService;
 import java.lang.reflect.Field;
 import java.sql.SQLException;
 import java.util.Optional;
@@ -31,12 +33,18 @@ class CompanyServiceImplTest {
     @Mock
     private CompanyRepository companyRepository;
 
+    @Mock
+    private CompanyNameChangeRepository nameChangeRepository;
+
+    @Mock
+    private CurrentUserService currentUserService;
+
     private CompanyServiceImpl service;
     private Company stored;
 
     @BeforeEach
     void createService() throws ReflectiveOperationException {
-        service = new CompanyServiceImpl(companyRepository);
+        service = new CompanyServiceImpl(companyRepository, nameChangeRepository, currentUserService);
         stored = new Company();
         stored.setId(7L);
         stored.setBusinessName("Servicios del Valle");
@@ -96,6 +104,8 @@ class CompanyServiceImplTest {
                 .hasMessage("Ya existe una empresa con ese nombre.");
         assertThat(CompanyServiceImpl.conflictOf(violation(ConstraintKind.UNIQUE, "UK_COMPANIES_TAX_ID_KEY_INDEX_6")))
                 .hasMessage("Ya existe una empresa con esa cédula jurídica.");
+        assertThat(CompanyServiceImpl.conflictOf(violation(ConstraintKind.UNIQUE, "company_name_changes.uk_company_name_changes_key")))
+                .hasMessageStartingWith("Ese nombre perteneció a otra empresa");
     }
 
     @Test
