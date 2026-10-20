@@ -18,7 +18,8 @@ public interface ReportService {
      * employee. The texts are compared ignoring case and accents. An ergonomist
      * only receives their own personalized evaluations.
      *
-     * @param companyName   part of the business name of the company, or null for every company
+     * @param companyName   part of the current or a previous business name of the company, or null
+     *                      for every company
      * @param employeeEmail part of the email of the employee, or null for every employee
      * @param type          type of evaluation, or null for both
      * @return matching evaluations

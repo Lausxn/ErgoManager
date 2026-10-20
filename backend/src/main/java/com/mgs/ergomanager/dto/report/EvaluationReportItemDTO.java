@@ -3,6 +3,7 @@ package com.mgs.ergomanager.dto.report;
 import com.mgs.ergomanager.model.enums.FormType;
 import com.mgs.ergomanager.model.enums.RiskLevel;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Row of the evaluation report: a self evaluation or a personalized evaluation
@@ -13,7 +14,9 @@ import java.time.LocalDateTime;
  * @param selfEvaluationId identifier of the self evaluation; for a personalized evaluation,
  *                         the self evaluation that led to the appointment
  * @param companyId        identifier of the company of the employee
- * @param companyName      business name of the company of the employee
+ * @param companyName      current business name of the company of the employee
+ * @param previousCompanyNames names the company used before, the most recent first; the
+ *                         company filter also finds the evaluation by them
  * @param employeeName     full name of the employee
  * @param employeeEmail    email of the employee
  * @param employeePosition job position of the employee
@@ -36,6 +39,7 @@ public record EvaluationReportItemDTO(
         Long selfEvaluationId,
         Long companyId,
         String companyName,
+        List<String> previousCompanyNames,
         String employeeName,
         String employeeEmail,
         String employeePosition,

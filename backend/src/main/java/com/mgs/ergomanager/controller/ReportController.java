@@ -35,9 +35,12 @@ public class ReportController {
 
     /**
      * Returns the evaluations that match the filters, sorted alphabetically by
-     * company, employee name and employee email.
+     * company, employee name and employee email. Each row shows the current name
+     * of the company, and the company filter also finds a client by the names it
+     * used before.
      *
-     * @param companyName   part of the business name of the company; every company when missing
+     * @param companyName   part of the current or a previous business name of the company; every
+     *                      company when missing
      * @param employeeEmail part of the email of the employee; every employee when missing
      * @param type          SELF_EVALUATION or PERSONALIZED_EVALUATION; both when missing
      * @return matching evaluations

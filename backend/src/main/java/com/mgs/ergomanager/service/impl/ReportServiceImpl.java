@@ -4,10 +4,12 @@ import com.mgs.ergomanager.dto.report.EvaluationReportItemDTO;
 import com.mgs.ergomanager.dto.report.ReportCompanyDTO;
 import com.mgs.ergomanager.dto.report.ReportEmployeeDTO;
 import com.mgs.ergomanager.model.Company;
+import com.mgs.ergomanager.model.CompanyNameChange;
 import com.mgs.ergomanager.model.Form;
 import com.mgs.ergomanager.model.PersonalizedEvaluation;
 import com.mgs.ergomanager.model.SelfEvaluation;
 import com.mgs.ergomanager.model.enums.FormType;
+import com.mgs.ergomanager.repository.CompanyNameChangeRepository;
 import com.mgs.ergomanager.repository.PersonalizedEvaluationRepository;
 import com.mgs.ergomanager.repository.SelfEvaluationRepository;
 import com.mgs.ergomanager.security.CurrentUserService;
@@ -21,13 +23,16 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Default implementation of {@link ReportService}. The evaluations are filtered
  * and sorted in memory, so the comparison ignores case and accents in the same
- * way on every database.
+ * way on every database. Every evaluation shows the current name of its
+ * company, and the company filter also matches the names the company used
+ * before, so renaming a client does not hide its older reports.
  */
 @Service
 public class ReportServiceImpl implements ReportService {
@@ -47,6 +52,7 @@ public class ReportServiceImpl implements ReportService {
     private final SelfEvaluationRepository selfEvaluationRepository;
     private final PersonalizedEvaluationRepository personalizedEvaluationRepository;
     private final CurrentUserService currentUserService;
+    private final CompanyNameChangeRepository nameChangeRepository;
 
     /**
      * Builds the service with its collaborators.
@@ -54,22 +60,26 @@ public class ReportServiceImpl implements ReportService {
      * @param selfEvaluationRepository         repository of self evaluations
      * @param personalizedEvaluationRepository repository of personalized evaluations
      * @param currentUserService               access to the signed in user
+     * @param nameChangeRepository             repository of the names the companies used before
      */
     public ReportServiceImpl(SelfEvaluationRepository selfEvaluationRepository,
                              PersonalizedEvaluationRepository personalizedEvaluationRepository,
-                             CurrentUserService currentUserService) {
+                             CurrentUserService currentUserService,
+                             CompanyNameChangeRepository nameChangeRepository) {
         this.selfEvaluationRepository = selfEvaluationRepository;
         this.personalizedEvaluationRepository = personalizedEvaluationRepository;
         this.currentUserService = currentUserService;
+        this.nameChangeRepository = nameChangeRepository;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<EvaluationReportItemDTO> findEvaluations(String companyName, String employeeEmail, FormType type) {
         List<EvaluationReportItemDTO> items = new ArrayList<>();
+        Map<Long, List<String>> previousNames = previousNamesByCompany();
         if (type == null || type == FormType.SELF_EVALUATION) {
             selfEvaluationRepository.findAllForReport().stream()
-                    .map(ReportServiceImpl::toItem)
+                    .map(selfEvaluation -> toItem(selfEvaluation, previousNames))
                     .forEach(items::add);
         }
         if (type == null || type == FormType.PERSONALIZED_EVALUATION) {
@@ -77,10 +87,10 @@ public class ReportServiceImpl implements ReportService {
             Long ownerId = currentUserService.isAdmin() ? null : currentUserService.getCurrentUser().getId();
             personalizedEvaluationRepository.findAllForReport().stream()
                     .filter(evaluation -> ownerId == null || ownerId.equals(evaluation.getUser().getId()))
-                    .map(ReportServiceImpl::toItem)
+                    .map(evaluation -> toItem(evaluation, previousNames))
                     .forEach(items::add);
         }
-        Predicate<EvaluationReportItemDTO> matches = item -> contains(item.companyName(), companyName)
+        Predicate<EvaluationReportItemDTO> matches = item -> matchesCompany(item, companyName)
                 && contains(item.employeeEmail(), employeeEmail);
         return items.stream().filter(matches).sorted(ALPHABETICAL).toList();
     }
@@ -92,10 +102,12 @@ public class ReportServiceImpl implements ReportService {
         for (SelfEvaluation selfEvaluation : selfEvaluationRepository.findAllForReport()) {
             companies.putIfAbsent(selfEvaluation.getCompany().getId(), selfEvaluation.getCompany());
         }
+        Map<Long, List<String>> previousNames = previousNamesByCompany();
         return companies.values().stream()
                 .sorted(Comparator.comparing((Company company) -> comparable(company.getBusinessName()))
                         .thenComparing(Company::getId))
-                .map(company -> new ReportCompanyDTO(company.getId(), company.getBusinessName(), company.isActive()))
+                .map(company -> new ReportCompanyDTO(company.getId(), company.getBusinessName(), company.isActive(),
+                        previousNames.getOrDefault(company.getId(), List.of())))
                 .toList();
     }
 
@@ -138,6 +150,31 @@ public class ReportServiceImpl implements ReportService {
     }
 
     /**
+     * Reads the names every company used before, with a single query.
+     *
+     * @return previous names by company identifier, the most recent first
+     */
+    private Map<Long, List<String>> previousNamesByCompany() {
+        return nameChangeRepository.findAllByOrderByChangedAtDescIdDesc().stream()
+                .collect(Collectors.groupingBy(change -> change.getCompany().getId(),
+                        Collectors.mapping(CompanyNameChange::getBusinessName, Collectors.toList())));
+    }
+
+    /**
+     * Checks whether the current or a previous name of the company of an
+     * evaluation contains the company filter. A blank filter matches every
+     * evaluation.
+     *
+     * @param item   report row
+     * @param filter value typed by the user, or null
+     * @return true when the evaluation passes the company filter
+     */
+    private static boolean matchesCompany(EvaluationReportItemDTO item, String filter) {
+        return contains(item.companyName(), filter)
+                || item.previousCompanyNames().stream().anyMatch(name -> contains(name, filter));
+    }
+
+    /**
      * Checks whether a text contains a filter, ignoring case and accents. A
      * blank filter matches every text.
      *
@@ -172,9 +209,11 @@ public class ReportServiceImpl implements ReportService {
      * Maps a self evaluation to a report row.
      *
      * @param selfEvaluation self evaluation with its company and form loaded
+     * @param previousNames  previous names by company identifier
      * @return report row
      */
-    private static EvaluationReportItemDTO toItem(SelfEvaluation selfEvaluation) {
+    private static EvaluationReportItemDTO toItem(SelfEvaluation selfEvaluation,
+                                                  Map<Long, List<String>> previousNames) {
         Form form = selfEvaluation.getForm();
         return new EvaluationReportItemDTO(
                 FormType.SELF_EVALUATION,
@@ -182,6 +221,7 @@ public class ReportServiceImpl implements ReportService {
                 selfEvaluation.getId(),
                 selfEvaluation.getCompany().getId(),
                 selfEvaluation.getCompany().getBusinessName(),
+                previousNames.getOrDefault(selfEvaluation.getCompany().getId(), List.of()),
                 selfEvaluation.getEmployeeName(),
                 selfEvaluation.getEmployeeEmail(),
                 selfEvaluation.getEmployeePosition(),
@@ -198,10 +238,12 @@ public class ReportServiceImpl implements ReportService {
     /**
      * Maps a personalized evaluation to a report row.
      *
-     * @param evaluation evaluation with its appointment, self evaluation, company, ergonomist and form loaded
+     * @param evaluation    evaluation with its appointment, self evaluation, company, ergonomist and form loaded
+     * @param previousNames previous names by company identifier
      * @return report row
      */
-    private static EvaluationReportItemDTO toItem(PersonalizedEvaluation evaluation) {
+    private static EvaluationReportItemDTO toItem(PersonalizedEvaluation evaluation,
+                                                  Map<Long, List<String>> previousNames) {
         SelfEvaluation selfEvaluation = evaluation.getAppointment().getSelfEvaluation();
         Form form = evaluation.getForm();
         return new EvaluationReportItemDTO(
@@ -210,6 +252,7 @@ public class ReportServiceImpl implements ReportService {
                 selfEvaluation.getId(),
                 selfEvaluation.getCompany().getId(),
                 selfEvaluation.getCompany().getBusinessName(),
+                previousNames.getOrDefault(selfEvaluation.getCompany().getId(), List.of()),
                 selfEvaluation.getEmployeeName(),
                 selfEvaluation.getEmployeeEmail(),
                 selfEvaluation.getEmployeePosition(),
