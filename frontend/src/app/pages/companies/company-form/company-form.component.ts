@@ -39,14 +39,14 @@ const DUPLICATED_BUSINESS_NAME_MESSAGE = 'Ya existe una empresa con esa razón s
 /** Formats checked before saving, so the user learns what to fix without waiting for the server. */
 const FORMATS = {
     businessName: /[\p{L}\p{N}]/u,
-    taxId: /^[0-9]+(-[0-9]+)*$/,
+    taxId: /^[0-9]-[0-9]{3}-[0-9]{6}$/,
     phoneNumber: /^\+?(?:[ ()-]*[0-9]){8,15}[ ()-]*$/
 } as const;
 
 /** Messages of the format errors, each one explains the expected value. */
 const FORMAT_MESSAGES = {
     businessName: 'La razón social debe incluir letras o números.',
-    taxId: 'Use solo números y guiones, por ejemplo 3-101-123456.',
+    taxId: 'Escriba la cédula jurídica con el formato 3-101-123456.',
     phoneNumber: 'Escriba un teléfono válido de 8 a 15 dígitos, por ejemplo 2222-3333.'
 } as const;
 
@@ -63,14 +63,38 @@ const FIELD_LABELS = {
 const REQUIRED_FIELDS = ['businessName', 'taxId', 'contactEmail'] as const;
 
 /**
- * Turns a business name into the form used to compare it with the others:
- * no accents, single spaces and lower case, so "Café  Sol" and "cafe sol" match.
+ * Turns a business name into the form used to compare it with the others,
+ * the same rule as the backend: single spaces and lower case, but accents
+ * count, so "CAFÉ  Sol" repeats "Café Sol" while "Cafe Sol" is another name.
  *
  * @param businessName name typed or stored
  * @returns comparable name
  */
 function comparableBusinessName(businessName: string): string {
-    return businessName.normalize('NFD').replace(/\p{M}/gu, '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('es');
+    return businessName.normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('es');
+}
+
+/**
+ * Turns a tax id into the form used to compare it with the others, the same
+ * rule as the backend: without dashes or spaces, so "3-101-123456" repeats
+ * "3101123456".
+ *
+ * @param taxId tax id typed or stored
+ * @returns comparable tax id
+ */
+function comparableTaxId(taxId: string): string {
+    return taxId.replace(/[\s-]/g, '').toUpperCase();
+}
+
+/**
+ * Writes the digits of a tax id with the dashes of the legal format
+ * "3-101-123456". Only the first ten digits are kept.
+ *
+ * @param digits digits typed so far
+ * @returns digits with their dashes
+ */
+function withTaxIdDashes(digits: string): string {
+    return [digits.slice(0, 1), digits.slice(1, 4), digits.slice(4, 10)].filter(Boolean).join('-');
 }
 
 /**
@@ -170,12 +194,18 @@ export class CompanyFormComponent implements OnInit, HasUnsavedChanges {
     /** Comparable business names of every other registered company, active or not. */
     private readonly takenBusinessNames = signal<ReadonlySet<string>>(new Set());
 
+    /** Comparable tax ids of every other registered company, active or not. */
+    private readonly takenTaxIds = signal<ReadonlySet<string>>(new Set());
+
     /** Rejects a business name already used by another registered company. */
     private readonly uniqueBusinessName: ValidatorFn = (control: AbstractControl): ValidationErrors | null => (this.takenBusinessNames().has(comparableBusinessName(control.value ?? '')) ? { duplicated: true } : null);
 
+    /** Rejects a tax id already used by another registered company. */
+    private readonly uniqueTaxId: ValidatorFn = (control: AbstractControl): ValidationErrors | null => (this.takenTaxIds().has(comparableTaxId(control.value ?? '')) ? { duplicated: true } : null);
+
     protected readonly companyForm = this.formBuilder.nonNullable.group({
         businessName: ['', [Validators.required, notBlank, Validators.maxLength(LIMITS.businessName), this.unlessStored('businessName', matchesFormat(FORMATS.businessName, 'businessNameFormat')), this.uniqueBusinessName]],
-        taxId: ['', [Validators.required, notBlank, Validators.maxLength(LIMITS.taxId), this.unlessStored('taxId', matchesFormat(FORMATS.taxId, 'taxIdFormat'))]],
+        taxId: ['', [Validators.required, notBlank, Validators.maxLength(LIMITS.taxId), this.unlessStored('taxId', matchesFormat(FORMATS.taxId, 'taxIdFormat')), this.uniqueTaxId]],
         contactEmail: ['', [Validators.required, notBlank, Validators.email, Validators.maxLength(LIMITS.contactEmail)]],
         phoneNumber: ['', [Validators.maxLength(LIMITS.phoneNumber), this.unlessStored('phoneNumber', matchesFormat(FORMATS.phoneNumber, 'phoneNumberFormat'))]],
         address: ['', [Validators.maxLength(LIMITS.address)]]
@@ -217,7 +247,7 @@ export class CompanyFormComponent implements OnInit, HasUnsavedChanges {
     protected readonly progress = computed(() => Math.round((this.completedCount() / this.requiredCount) * 100));
 
     ngOnInit(): void {
-        this.loadTakenBusinessNames();
+        this.loadTakenValues();
         this.companyForm.statusChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.refreshInvalidFieldsAlert());
         if (!this.isEditing()) {
             return;
@@ -247,31 +277,57 @@ export class CompanyFormComponent implements OnInit, HasUnsavedChanges {
     }
 
     /**
-     * Reads the names of the other registered companies, so a repeated business
-     * name is flagged while typing instead of after saving.
+     * Reads the names and tax ids of the other registered companies, so a
+     * repeated one is flagged while typing instead of after saving.
      */
-    private loadTakenBusinessNames(): void {
+    private loadTakenValues(): void {
         this.companyService
             .findAll()
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: (companies) => this.rememberOtherCompanies(companies),
-                error: () => this.toastService.error('No se pudo verificar la razón social', 'Confirme que ninguna otra empresa use el mismo nombre.')
+                error: () => this.toastService.error('No se pudo verificar si los datos ya existen', 'Confirme que ninguna otra empresa use la misma razón social o cédula jurídica.')
             });
     }
 
     /**
-     * Keeps the names of the companies other than the one being edited and
-     * checks the business name again against them.
+     * Keeps the names and tax ids of the companies other than the one being
+     * edited and checks both fields again against them.
      *
      * @param companies every registered company
-     * @returns the companies other than the one being edited
      */
-    private rememberOtherCompanies(companies: CompanyResponse[]): CompanyResponse[] {
+    private rememberOtherCompanies(companies: CompanyResponse[]): void {
         const otherCompanies = companies.filter((company) => company.id !== this.id());
         this.takenBusinessNames.set(new Set(otherCompanies.map((company) => comparableBusinessName(company.businessName))));
+        this.takenTaxIds.set(new Set(otherCompanies.map((company) => comparableTaxId(company.taxId))));
         this.companyForm.controls.businessName.updateValueAndValidity();
-        return otherCompanies;
+        this.companyForm.controls.taxId.updateValueAndValidity();
+    }
+
+    /**
+     * Adds the dashes of the legal format while the tax id is typed or pasted,
+     * keeping the cursor after the same digit. Only digits are accepted.
+     *
+     * @param event input event of the tax id field
+     */
+    protected formatTaxId(event: Event): void {
+        const input = event.target as HTMLInputElement;
+        const caret = input.selectionStart ?? input.value.length;
+        const digitsBeforeCaret = input.value.slice(0, caret).replace(/\D/g, '').length;
+        const formatted = withTaxIdDashes(input.value.replace(/\D/g, ''));
+        if (formatted === input.value) {
+            return;
+        }
+        input.value = formatted;
+        this.companyForm.controls.taxId.setValue(formatted);
+        // Place the cursor right after the same number of digits as before.
+        let position = 0;
+        for (let digits = 0; position < formatted.length && digits < digitsBeforeCaret; position++) {
+            if (/\d/.test(formatted[position])) {
+                digits++;
+            }
+        }
+        input.setSelectionRange(position, position);
     }
 
     /**
@@ -338,7 +394,7 @@ export class CompanyFormComponent implements OnInit, HasUnsavedChanges {
             error: (error: unknown) => {
                 this.isSubmitting.set(false);
                 if (isConflict(error)) {
-                    this.showConflict(request, getApiErrorMessage(error, DUPLICATED_DATA_MESSAGE));
+                    this.showConflict(getApiErrorMessage(error, DUPLICATED_DATA_MESSAGE));
                     return;
                 }
                 this.showMessage(applyApiErrors(this.companyForm, error, 'No se pudo guardar. Intente de nuevo.'));
@@ -348,27 +404,22 @@ export class CompanyFormComponent implements OnInit, HasUnsavedChanges {
 
     /**
      * Explains an HTTP 409. The backend only sends a message, so the registered
-     * companies are read again to mark the field that is really taken: the
-     * business name, the tax id or both. When neither can be found, only the
-     * message of the backend is shown.
+     * companies are read again: the live checks then mark the field that is
+     * really taken, the business name, the tax id or both. When neither can be
+     * found, only the message of the backend is shown.
      *
-     * @param request data that was rejected
      * @param message explanation sent by the backend
      */
-    private showConflict(request: CompanyRequest, message: string): void {
+    private showConflict(message: string): void {
         this.showMessage(message);
         this.companyService
             .findAll()
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: (companies) => {
-                    const otherCompanies = this.rememberOtherCompanies(companies);
+                    this.rememberOtherCompanies(companies);
                     this.companyForm.controls.businessName.markAsTouched();
-                    if (otherCompanies.some((company) => company.taxId === request.taxId)) {
-                        const taxId = this.companyForm.controls.taxId;
-                        taxId.setErrors({ ...taxId.errors, duplicated: true });
-                        taxId.markAsTouched();
-                    }
+                    this.companyForm.controls.taxId.markAsTouched();
                 },
                 // Without the list the message of the backend is the only explanation left.
                 error: () => undefined
