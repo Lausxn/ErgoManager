@@ -5,14 +5,20 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.mgs.ergomanager.dto.form.AnswerOptionRequestDTO;
 import com.mgs.ergomanager.dto.form.FormRequestDTO;
 import com.mgs.ergomanager.dto.form.QuestionRequestDTO;
 import com.mgs.ergomanager.exception.BusinessException;
+import com.mgs.ergomanager.model.AnswerOption;
 import com.mgs.ergomanager.model.Form;
+import com.mgs.ergomanager.model.Question;
+import com.mgs.ergomanager.model.enums.FormType;
+import com.mgs.ergomanager.repository.AnswerOptionRepository;
 import com.mgs.ergomanager.repository.CompanyRepository;
 import com.mgs.ergomanager.repository.FormRepository;
 import com.mgs.ergomanager.repository.QuestionRepository;
@@ -27,20 +33,23 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
- * Unit tests for the business rules applied to form activation and
+ * Unit tests for the business rules applied to form creation, activation and
  * deactivation.
  */
 @ExtendWith(MockitoExtension.class)
 class FormServiceBusinessRulesTest {
 
-    private static final String ACTIVE_FORM_EXISTS_MESSAGE =
-            "Ya existe un formulario activo. Desactívelo antes de crear o activar otro formulario.";
+    private static final String ACTIVE_SELF_EVALUATION_EXISTS_MESSAGE =
+            "Ya existe una autoevaluación activa. Desactívela antes de activar otra.";
 
     @Mock
     private FormRepository formRepository;
 
     @Mock
     private QuestionRepository questionRepository;
+
+    @Mock
+    private AnswerOptionRepository answerOptionRepository;
 
     @Mock
     private CompanyRepository companyRepository;
@@ -61,6 +70,7 @@ class FormServiceBusinessRulesTest {
         formService = new FormServiceImpl(
                 formRepository,
                 questionRepository,
+                answerOptionRepository,
                 companyRepository,
                 selfEvaluationRepository,
                 emailService,
@@ -68,41 +78,12 @@ class FormServiceBusinessRulesTest {
     }
 
     /**
-     * Verifies that a new active form cannot be created while another form is
-     * already active.
+     * Verifies that a new form is saved as an inactive draft, even while another
+     * form is active, so the active one keeps being answered.
      */
     @Test
-    void createShouldRejectWhenAnotherActiveFormExists() {
+    void createShouldSaveInactiveDraftEvenWhenAnotherFormIsActive() {
         FormRequestDTO request = buildRequest();
-
-        when(formRepository.existsByActiveTrue())
-                .thenReturn(true);
-
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> formService.create(request));
-
-        assertEquals(
-                ACTIVE_FORM_EXISTS_MESSAGE,
-                exception.getMessage());
-
-        verify(formRepository, never())
-                .save(any(Form.class));
-
-        verify(questionRepository, never())
-                .saveAll(any());
-    }
-
-    /**
-     * Verifies that a new form is created as active when no other active form
-     * exists.
-     */
-    @Test
-    void createShouldSaveActiveFormWhenNoActiveFormExists() {
-        FormRequestDTO request = buildRequest();
-
-        when(formRepository.existsByActiveTrue())
-                .thenReturn(false);
 
         when(formRepository.save(any(Form.class)))
                 .thenAnswer(invocation -> {
@@ -116,7 +97,10 @@ class FormServiceBusinessRulesTest {
 
         var response = formService.create(request);
 
-        assertTrue(response.active());
+        assertFalse(response.active());
+
+        verify(formRepository, never())
+                .findByActiveTrue();
 
         verify(formRepository)
                 .save(any(Form.class));
@@ -126,22 +110,27 @@ class FormServiceBusinessRulesTest {
     }
 
     /**
-     * Verifies that a deactivated form can be activated when there is no other
-     * active form.
+     * Verifies that a complete form can be activated when there is no other
+     * active form of its type.
      */
     @Test
     void activateShouldActivateFormWhenNoOtherActiveFormExists() {
-        Form form = buildForm(1L, false);
+        Form form = buildForm(1L, false, FormType.SELF_EVALUATION);
+        Question question = buildQuestion(10L, form);
 
         when(formRepository.findById(1L))
                 .thenReturn(Optional.of(form));
 
-        when(formRepository.existsByActiveTrueAndIdNot(1L))
-                .thenReturn(false);
+        when(formRepository.findByActiveTrue())
+                .thenReturn(List.of());
 
         when(questionRepository
                 .findByFormIdAndActiveTrueOrderByQuestionOrderAsc(1L))
-                .thenReturn(List.of());
+                .thenReturn(List.of(question));
+
+        when(answerOptionRepository
+                .findByQuestionIdInAndActiveTrueOrderByOptionOrderAsc(anyCollection()))
+                .thenReturn(List.of(buildOption(20L, question)));
 
         var response = formService.activate(1L);
 
@@ -152,25 +141,25 @@ class FormServiceBusinessRulesTest {
     }
 
     /**
-     * Verifies that a form cannot be activated while another active form
-     * already exists.
+     * Verifies that a form cannot be activated while another active form of
+     * the same type already exists.
      */
     @Test
-    void activateShouldRejectWhenAnotherActiveFormExists() {
-        Form form = buildForm(1L, false);
+    void activateShouldRejectWhenAnotherActiveFormOfTheSameTypeExists() {
+        Form form = buildForm(1L, false, FormType.SELF_EVALUATION);
 
         when(formRepository.findById(1L))
                 .thenReturn(Optional.of(form));
 
-        when(formRepository.existsByActiveTrueAndIdNot(1L))
-                .thenReturn(true);
+        when(formRepository.findByActiveTrue())
+                .thenReturn(List.of(buildForm(2L, true, FormType.SELF_EVALUATION)));
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
                 () -> formService.activate(1L));
 
         assertEquals(
-                ACTIVE_FORM_EXISTS_MESSAGE,
+                ACTIVE_SELF_EVALUATION_EXISTS_MESSAGE,
                 exception.getMessage());
 
         assertFalse(form.isActive());
@@ -180,12 +169,67 @@ class FormServiceBusinessRulesTest {
     }
 
     /**
+     * Verifies that an active form of the other type does not block the
+     * activation: a self evaluation and a personalized evaluation can be active
+     * at the same time.
+     */
+    @Test
+    void activateShouldAllowWhenOnlyAFormOfTheOtherTypeIsActive() {
+        Form form = buildForm(1L, false, FormType.PERSONALIZED_EVALUATION);
+
+        when(formRepository.findById(1L))
+                .thenReturn(Optional.of(form));
+
+        when(formRepository.findByActiveTrue())
+                .thenReturn(List.of(buildForm(2L, true, FormType.SELF_EVALUATION)));
+
+        when(questionRepository
+                .findByFormIdAndActiveTrueOrderByQuestionOrderAsc(1L))
+                .thenReturn(List.of(buildQuestion(10L, form)));
+
+        var response = formService.activate(1L);
+
+        assertTrue(response.active());
+
+        verify(formRepository).save(form);
+    }
+
+    /**
+     * Verifies that a self evaluation whose questions have no predefined
+     * answers cannot be activated.
+     */
+    @Test
+    void activateShouldRejectSelfEvaluationWithoutPredefinedAnswers() {
+        Form form = buildForm(1L, false, FormType.SELF_EVALUATION);
+
+        when(formRepository.findById(1L))
+                .thenReturn(Optional.of(form));
+
+        when(formRepository.findByActiveTrue())
+                .thenReturn(List.of());
+
+        when(questionRepository
+                .findByFormIdAndActiveTrueOrderByQuestionOrderAsc(1L))
+                .thenReturn(List.of(buildQuestion(10L, form)));
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> formService.activate(1L));
+
+        assertEquals(
+                "La pregunta 1 no tiene respuestas predefinidas. Agréguelas antes de activar el formulario.",
+                exception.getMessage());
+
+        assertFalse(form.isActive());
+    }
+
+    /**
      * Verifies that activating a form that is already active is idempotent and
      * does not attempt to save it again.
      */
     @Test
     void activateShouldKeepAlreadyActiveFormUnchanged() {
-        Form form = buildForm(1L, true);
+        Form form = buildForm(1L, true, FormType.SELF_EVALUATION);
 
         when(formRepository.findById(1L))
                 .thenReturn(Optional.of(form));
@@ -199,7 +243,7 @@ class FormServiceBusinessRulesTest {
         assertTrue(response.active());
 
         verify(formRepository, never())
-                .existsByActiveTrueAndIdNot(1L);
+                .findByActiveTrue();
 
         verify(formRepository, never())
                 .save(form);
@@ -211,7 +255,7 @@ class FormServiceBusinessRulesTest {
      */
     @Test
     void deactivateShouldKeepFormStoredAndMarkItInactive() {
-        Form form = buildForm(1L, true);
+        Form form = buildForm(1L, true, FormType.SELF_EVALUATION);
 
         when(formRepository.findById(1L))
                 .thenReturn(Optional.of(form));
@@ -241,25 +285,28 @@ class FormServiceBusinessRulesTest {
                         null,
                         "¿Cómo se siente en su puesto de trabajo?",
                         1,
-                        1);
+                        List.of(new AnswerOptionRequestDTO(null, "Bien", 1, 1)));
 
         return new FormRequestDTO(
                 "Formulario ergonómico",
                 "Formulario de autoevaluación",
                 2026,
+                FormType.SELF_EVALUATION,
                 List.of(question));
     }
 
     /**
-     * Creates a form with the requested state.
+     * Creates a form with the requested state and type.
      *
      * @param id     identifier of the form
      * @param active current active state
+     * @param type   type of the form
      * @return form configured for the test
      */
     private static Form buildForm(
             Long id,
-            boolean active) {
+            boolean active,
+            FormType type) {
 
         Form form = new Form();
 
@@ -267,8 +314,52 @@ class FormServiceBusinessRulesTest {
         form.setTitle("Formulario ergonómico");
         form.setDescription("Formulario de autoevaluación");
         form.setPublicationYear(2026);
+        form.setType(type);
         form.setActive(active);
 
         return form;
+    }
+
+    /**
+     * Creates the first active question of a form.
+     *
+     * @param id   identifier of the question
+     * @param form owner form
+     * @return question configured for the test
+     */
+    private static Question buildQuestion(
+            Long id,
+            Form form) {
+
+        Question question = new Question();
+
+        question.setId(id);
+        question.setForm(form);
+        question.setStatement("¿Cómo se siente en su puesto de trabajo?");
+        question.setQuestionOrder(1);
+
+        return question;
+    }
+
+    /**
+     * Creates a predefined answer of a question.
+     *
+     * @param id       identifier of the option
+     * @param question owner question
+     * @return option configured for the test
+     */
+    private static AnswerOption buildOption(
+            Long id,
+            Question question) {
+
+        AnswerOption option = new AnswerOption();
+
+        option.setId(id);
+        option.setQuestion(question);
+        option.setLabel("Bien");
+        option.setWeight(1);
+        option.setOptionOrder(1);
+
+        return option;
     }
 }

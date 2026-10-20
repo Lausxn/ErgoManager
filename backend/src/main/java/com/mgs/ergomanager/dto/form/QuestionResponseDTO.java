@@ -1,18 +1,20 @@
 package com.mgs.ergomanager.dto.form;
 
+import java.util.List;
+
 /**
  * Question exposed by the API.
  *
  * @param id            identifier of the question
- * @param statement     text shown to the employee
+ * @param statement     text of the question
  * @param questionOrder position of the question inside the form
- * @param weight        multiplier applied to the answer score
  * @param active        false when the question was deactivated
+ * @param optionList    active predefined answers, ordered; empty for a personalized evaluation
  */
 public record QuestionResponseDTO(
         Long id,
         String statement,
         Integer questionOrder,
-        Integer weight,
-        boolean active) {
+        boolean active,
+        List<AnswerOptionResponseDTO> optionList) {
 }

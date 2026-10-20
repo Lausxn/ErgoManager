@@ -1,37 +1,26 @@
 package com.mgs.ergomanager.dto.personalizedevaluation;
 
-import com.mgs.ergomanager.model.enums.RiskLevel;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import java.util.List;
 
 /**
- * Evaluation written by the ergonomist after attending an appointment.
+ * Data written by the ergonomist after attending an appointment.
  *
- * @param appointmentId   identifier of the attended appointment
- * @param diagnosis       findings observed during the appointment
- * @param recommendations actions proposed to reduce the ergonomic risk
- * @param riskLevel       risk level confirmed by the ergonomist
+ * @param appointmentId identifier of the attended appointment
+ * @param formId        identifier of the active personalized evaluation form
+ * @param answerList    diagnosis and recommendation of every question of the form
  */
 public record PersonalizedEvaluationRequestDTO(
 
         @NotNull(message = "Este campo es obligatorio.")
         Long appointmentId,
 
-        @NotBlank(message = "Este campo es obligatorio.")
-        @Size(max = 1000, message = "Use un máximo de 1000 caracteres.")
-        String diagnosis,
+        @NotNull(message = "Este campo es obligatorio.")
+        Long formId,
 
-        @NotBlank(message = "Este campo es obligatorio.")
-        @Size(max = 1000, message = "Use un máximo de 1000 caracteres.")
-        String recommendations,
-
-        @NotNull(message = "Seleccione un nivel de riesgo.")
-        RiskLevel riskLevel) {
-
-    /** Trims the texts before validation. */
-    public PersonalizedEvaluationRequestDTO {
-        diagnosis = diagnosis == null ? null : diagnosis.trim();
-        recommendations = recommendations == null ? null : recommendations.trim();
-    }
+        @NotEmpty(message = "Complete el diagnóstico y la recomendación de todas las preguntas.")
+        @Valid
+        List<PersonalizedAnswerRequestDTO> answerList) {
 }

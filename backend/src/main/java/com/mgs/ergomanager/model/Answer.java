@@ -11,7 +11,9 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 /**
- * Answer given by an employee to a single question of a self evaluation.
+ * Answer given by an employee to a single question of a self evaluation. The
+ * text and the weight of the chosen option are copied, so the history does not
+ * change when the form is edited later.
  */
 @Entity
 @Table(name = "answers")
@@ -29,6 +31,11 @@ public class Answer {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "question_id", nullable = false)
     private Question question;
+
+    // Nullable so answers stored before the predefined answers existed keep loading.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "answer_option_id")
+    private AnswerOption option;
 
     @Column(name = "selected_option", nullable = false, length = 100)
     private String selectedOption;
@@ -58,6 +65,14 @@ public class Answer {
 
     public void setQuestion(Question question) {
         this.question = question;
+    }
+
+    public AnswerOption getOption() {
+        return option;
+    }
+
+    public void setOption(AnswerOption option) {
+        this.option = option;
     }
 
     public String getSelectedOption() {

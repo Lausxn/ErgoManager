@@ -3,26 +3,37 @@ package com.mgs.ergomanager.service;
 import com.mgs.ergomanager.dto.form.FormRequestDTO;
 import com.mgs.ergomanager.dto.form.FormResendResponseDTO;
 import com.mgs.ergomanager.dto.form.FormResponseDTO;
+import com.mgs.ergomanager.model.enums.FormType;
 import java.util.List;
 
 /**
- * Management of the self evaluation forms and their annual resend.
+ * Management of the self evaluation and personalized evaluation forms and
+ * their annual resend.
  */
 public interface FormService {
 
     /**
-     * Returns every form, active or not.
+     * Returns every form, active or not, optionally of a single type.
      *
+     * @param type type of the forms to return, or null for every type
      * @return list of forms
      */
-    List<FormResponseDTO> findAll();
+    List<FormResponseDTO> findAll(FormType type);
 
     /**
-     * Returns the forms that can currently be answered.
+     * Returns the active self evaluation forms that the employees answer, without
+     * the weights of the answers.
      *
-     * @return list of active forms
+     * @return list of active self evaluation forms
      */
     List<FormResponseDTO> findActive();
+
+    /**
+     * Returns the active personalized evaluation form filled in by the ergonomist.
+     *
+     * @return the active personalized evaluation form
+     */
+    FormResponseDTO findActivePersonalized();
 
     /**
      * Returns a single form with its questions.
@@ -33,7 +44,7 @@ public interface FormService {
     FormResponseDTO findById(Long id);
 
     /**
-     * Creates a form together with its questions.
+     * Creates a form together with its questions as an inactive draft.
      *
      * @param request data of the form
      * @return the created form
@@ -57,7 +68,8 @@ public interface FormService {
     void deactivate(Long id);
 
     /**
-     * Activates a form that had been deactivated.
+     * Activates a draft or deactivated form, when no other form of the same type
+     * is active and the form is complete.
      *
      * @param id identifier of the form
      * @return the activated form

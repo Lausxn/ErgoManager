@@ -119,6 +119,12 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+            <!-- HTML report of the test results: ./mvnw clean test surefire-report:report -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-report-plugin</artifactId>
+                <version>${maven-surefire-plugin.version}</version>
+            </plugin>
         </plugins>
     </build>
 </project>
