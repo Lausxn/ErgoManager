@@ -33,6 +33,16 @@ class CompanyKeysTest {
     }
 
     @Test
+    void cleansTheTaxIdWithTheDashesOfTheLegalFormat() {
+        assertThat(CompanyKeys.cleanTaxId("3101123456")).isEqualTo("3-101-123456");
+        assertThat(CompanyKeys.cleanTaxId(" 3 101-123456 ")).isEqualTo("3-101-123456");
+        // Anything else is only trimmed, so the format check can reject it.
+        assertThat(CompanyKeys.cleanTaxId(" 3101ABC ")).isEqualTo("3101ABC");
+        assertThat(CompanyKeys.cleanTaxId("31011234567")).isEqualTo("31011234567");
+        assertThat(CompanyKeys.cleanTaxId(null)).isNull();
+    }
+
+    @Test
     void taxIdKeyIgnoresDashesAndSpaces() {
         assertThat(CompanyKeys.taxIdKey("3-101-123456")).isEqualTo("3101123456");
         assertThat(CompanyKeys.taxIdKey(" 3 101 123456 ")).isEqualTo("3101123456");

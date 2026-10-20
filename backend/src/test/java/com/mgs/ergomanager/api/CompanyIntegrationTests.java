@@ -84,10 +84,10 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
 
     @Test
     void rejectsDuplicateNameIgnoringCaseAndSurroundingSpaces() throws Exception {
-        create("Cliente Acme", "106-001");
+        create("Cliente Acme", "3-101-106001");
         mvc.perform(post("/api/companies").with(as(admin))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(body("cliente ACME", "106-002"))))
+                        .content(toJson(body("cliente ACME", "3-101-106002"))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("message").value("Ya existe una empresa con ese nombre."));
         assertEquals(1, companyRepository.count());
@@ -95,20 +95,20 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
 
     @Test
     void inactiveProfileStillReservesItsName() throws Exception {
-        persistCompany("Reservado", "106-003", false);
+        persistCompany("Reservado", "3-101-106003", false);
         mvc.perform(post("/api/companies").with(as(ergonomist))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(body("RESERVADO", "106-004"))))
+                        .content(toJson(body("RESERVADO", "3-101-106004"))))
                 .andExpect(status().isConflict());
     }
 
     @Test
     void rejectsRenameWithoutChangingStoredData() throws Exception {
-        create("Primero", "106-005");
-        long second = create("Segundo", "106-006");
+        create("Primero", "3-101-106005");
+        long second = create("Segundo", "3-101-106006");
         mvc.perform(put("/api/companies/{id}", second).with(as(admin))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(body("PRIMERO", "106-006"))))
+                        .content(toJson(body("PRIMERO", "3-101-106006"))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("message").value("Ya existe una empresa con ese nombre."));
         mvc.perform(get("/api/companies/{id}", second).with(as(admin)))
@@ -118,8 +118,8 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
 
     @Test
     void updatesOwnNameAndPersistsContactDataWithoutReactivatingProfile() throws Exception {
-        Company company = persistCompany("Existente", "106-007", false);
-        Map<String, Object> request = body("EXISTENTE", "106-007");
+        Company company = persistCompany("Existente", "3-101-106007", false);
+        Map<String, Object> request = body("EXISTENTE", "3-101-106007");
         request.put("contactEmail", " CONTACTO@Example.Test ");
         request.put("phoneNumber", " 2222-3333 ");
         mvc.perform(put("/api/companies/{id}", company.getId()).with(as(ergonomist))
@@ -134,9 +134,9 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
 
     @Test
     void databaseRejectsDuplicateNamesEvenWhenServiceIsBypassed() {
-        persistCompany("Nombre único", "106-008", true);
+        persistCompany("Nombre único", "3-101-106008", true);
         assertThrows(DataIntegrityViolationException.class,
-                () -> persistCompany("Nombre único", "106-009", true));
+                () -> persistCompany("Nombre único", "3-101-106009", true));
     }
 
     @Test

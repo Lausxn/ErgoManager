@@ -10,7 +10,7 @@ import java.util.Locale;
  * Data needed to create or update a client company.
  *
  * @param businessName legal name of the company
- * @param taxId        unique tax identifier
+ * @param taxId        unique tax identifier, with the format 3-101-123456
  * @param contactEmail email of the person in charge
  * @param phoneNumber  contact phone number
  * @param address      postal address
@@ -38,11 +38,12 @@ public record CompanyRequestDTO(
 
     /**
      * Trims the values, leaves single spaces between the words of the business
-     * name, lowercases the email and turns blank optional fields into null.
+     * name, adds the dashes of a ten digit tax id, lowercases the email and
+     * turns blank optional fields into null.
      */
     public CompanyRequestDTO {
         businessName = CompanyKeys.cleanBusinessName(businessName);
-        taxId = taxId == null ? null : taxId.trim();
+        taxId = CompanyKeys.cleanTaxId(taxId);
         contactEmail = contactEmail == null ? null : contactEmail.trim().toLowerCase(Locale.ROOT);
         phoneNumber = phoneNumber == null || phoneNumber.isBlank() ? null : phoneNumber.trim();
         address = address == null || address.isBlank() ? null : address.trim();

@@ -3,13 +3,17 @@ package com.mgs.ergomanager.service.impl;
 import com.mgs.ergomanager.dto.company.CompanyRequestDTO;
 import com.mgs.ergomanager.dto.company.CompanyResponseDTO;
 import com.mgs.ergomanager.exception.DuplicateResourceException;
+import com.mgs.ergomanager.exception.FieldValidationException;
 import com.mgs.ergomanager.exception.ResourceNotFoundException;
 import com.mgs.ergomanager.model.Company;
 import com.mgs.ergomanager.model.CompanyKeys;
 import com.mgs.ergomanager.repository.CompanyRepository;
 import com.mgs.ergomanager.service.CompanyService;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.regex.Pattern;
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.ConstraintViolationException.ConstraintKind;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -25,6 +29,13 @@ public class CompanyServiceImpl implements CompanyService {
     private static final String COMPANY_NOT_FOUND_MESSAGE = "No se encontró la empresa.";
     private static final String DUPLICATE_TAX_ID_MESSAGE = "Ya existe una empresa con esa cédula jurídica.";
     private static final String DUPLICATE_NAME_MESSAGE = "Ya existe una empresa con ese nombre.";
+    private static final Pattern BUSINESS_NAME_FORMAT = Pattern.compile("[\\p{L}\\p{N}]");
+    private static final Pattern TAX_ID_FORMAT = Pattern.compile("\\d-\\d{3}-\\d{6}");
+    private static final Pattern PHONE_NUMBER_FORMAT = Pattern.compile("\\+?(?:[ ()-]*\\d){8,15}[ ()-]*");
+    private static final String BUSINESS_NAME_FORMAT_MESSAGE = "La razón social debe incluir letras o números.";
+    private static final String TAX_ID_FORMAT_MESSAGE = "Escriba la cédula jurídica con el formato 3-101-123456.";
+    private static final String PHONE_NUMBER_FORMAT_MESSAGE =
+            "Escriba un teléfono válido de 8 a 15 dígitos, por ejemplo 2222-3333.";
     private final CompanyRepository companyRepository;
 
     /**
@@ -53,6 +64,7 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     @Transactional
     public CompanyResponseDTO create(CompanyRequestDTO request) {
+        checkFormats(request, null);
         checkBusinessNameIsFree(CompanyKeys.businessNameKey(request.businessName()));
         checkTaxIdIsFree(CompanyKeys.taxIdKey(request.taxId()));
         Company company = new Company();
@@ -65,6 +77,7 @@ public class CompanyServiceImpl implements CompanyService {
     @Transactional
     public CompanyResponseDTO update(Long id, CompanyRequestDTO request) {
         Company company = getCompany(id);
+        checkFormats(request, company);
         // Only a value that changes can collide with another company, so an
         // edit that keeps the name and the tax id needs no extra query.
         String businessNameKey = CompanyKeys.businessNameKey(request.businessName());
@@ -92,6 +105,48 @@ public class CompanyServiceImpl implements CompanyService {
         Company company = getCompany(id);
         company.setActive(true);
         return toResponse(company);
+    }
+
+    /**
+     * Checks the formats of the business name, the tax id and the phone number.
+     * When editing, a value that did not change is not checked, so a company
+     * registered before these formats existed can still be edited; it only has
+     * to follow them once that value changes.
+     *
+     * @param request data sent by the client, already normalized
+     * @param stored  company being edited, or null when creating one
+     */
+    private static void checkFormats(CompanyRequestDTO request, Company stored) {
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
+        if (changed(request.businessName(), stored == null ? null : stored.getBusinessName(), stored)
+                && !BUSINESS_NAME_FORMAT.matcher(request.businessName()).find()) {
+            fieldErrors.put("businessName", BUSINESS_NAME_FORMAT_MESSAGE);
+        }
+        if (changed(request.taxId(), stored == null ? null : stored.getTaxId(), stored)
+                && !TAX_ID_FORMAT.matcher(request.taxId()).matches()) {
+            fieldErrors.put("taxId", TAX_ID_FORMAT_MESSAGE);
+        }
+        if (request.phoneNumber() != null
+                && changed(request.phoneNumber(), stored == null ? null : stored.getPhoneNumber(), stored)
+                && !PHONE_NUMBER_FORMAT.matcher(request.phoneNumber()).matches()) {
+            fieldErrors.put("phoneNumber", PHONE_NUMBER_FORMAT_MESSAGE);
+        }
+        if (!fieldErrors.isEmpty()) {
+            throw new FieldValidationException(fieldErrors);
+        }
+    }
+
+    /**
+     * Tells whether a value is new: always when creating, and when editing only
+     * if it differs from the stored one.
+     *
+     * @param value       value sent by the client
+     * @param storedValue value stored in the company
+     * @param stored      company being edited, or null when creating one
+     * @return true when the value must be checked
+     */
+    private static boolean changed(String value, String storedValue, Company stored) {
+        return stored == null || !value.equals(storedValue);
     }
 
     /**

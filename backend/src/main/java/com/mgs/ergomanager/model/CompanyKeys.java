@@ -29,6 +29,7 @@ public final class CompanyKeys {
 
     private static final Pattern SPACES = Pattern.compile("\\s+");
     private static final Pattern TAX_ID_SEPARATORS = Pattern.compile("[\\s-]+");
+    private static final Pattern TEN_DIGITS = Pattern.compile("\\d{10}");
 
     private CompanyKeys() {
     }
@@ -69,6 +70,25 @@ public final class CompanyKeys {
             // Every Java runtime ships SHA-256.
             throw new IllegalStateException("SHA-256 is not available", exception);
         }
+    }
+
+    /**
+     * Cleans a tax id the way it is stored. Ten digits, with or without dashes
+     * or spaces, get the dashes of the legal format "3-101-123456"; any other
+     * value is only trimmed, so the format check can reject it.
+     *
+     * @param taxId tax id typed by the user, may be null
+     * @return clean tax id, or null when the tax id is null
+     */
+    public static String cleanTaxId(String taxId) {
+        if (taxId == null) {
+            return null;
+        }
+        String digits = taxIdKey(taxId);
+        if (TEN_DIGITS.matcher(digits).matches()) {
+            return digits.charAt(0) + "-" + digits.substring(1, 4) + "-" + digits.substring(4);
+        }
+        return taxId.trim();
     }
 
     /**
