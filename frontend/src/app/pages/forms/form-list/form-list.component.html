@@ -9,7 +9,7 @@
         <article class="mgs-card flex flex-col gap-4">
             <span class="mgs-eyebrow">Autoevaluación</span>
             <h2 class="mgs-section-title">Formularios para colaboradores</h2>
-            <p class="mgs-section-lead">Organice las preguntas y sus pesos, consulte los formularios registrados y administre su disponibilidad.</p>
+            <p class="mgs-section-lead">Organice las preguntas, las respuestas y sus pesos, consulte los formularios registrados y administre su disponibilidad.</p>
             <div class="flex flex-wrap gap-2 mt-auto">
                 <p-button label="Ver autoevaluaciones" icon="fa-solid fa-list-check" routerLink="/forms/self-evaluation" severity="secondary" [outlined]="true" />
                 <p-button label="Crear autoevaluación" icon="fa-solid fa-plus" routerLink="/forms/new" />
@@ -20,19 +20,20 @@
             <h2 class="mgs-section-title">Formularios para el ergonomista</h2>
             <p class="mgs-section-lead">Prepare las preguntas para la evaluación individual realizada por el profesional.</p>
             <div class="flex flex-wrap gap-2 mt-auto">
+                <p-button label="Crear evaluación personalizada" icon="fa-solid fa-plus" routerLink="/forms/personalized/new" />
                 <p-button label="Ver formularios personalizados" icon="fa-solid fa-user-check" routerLink="/forms/personalized" severity="secondary" [outlined]="true" />
             </div>
         </article>
     </section>
 }
 
-@if (section() !== 'personalized') {
-    <section class="mgs-stats" aria-label="Resumen de formularios">
-        <app-stat-card label="Autoevaluaciones" icon="fa-solid fa-file-pen" [value]="summary().total" [loading]="isLoading()" [dark]="true" />
-        <app-stat-card label="Activos" icon="fa-solid fa-circle-check" [value]="summary().active" [loading]="isLoading()" [note]="summary().total - summary().active + ' inactivos'" [accent]="true" />
-        <app-stat-card label="Preguntas en uso" icon="fa-solid fa-list-check" [value]="summary().activeQuestions" [loading]="isLoading()" note="En formularios activos" />
-    </section>
-}
+<section class="mgs-stats" aria-label="Resumen de formularios">
+    <app-stat-card [label]="section() === 'overview' ? 'Formularios' : pageTitle()" icon="fa-solid fa-file-pen" [value]="summary().total" [loading]="isLoading()" [dark]="true" />
+    <app-stat-card label="Activos" icon="fa-solid fa-circle-check" [value]="summary().active" [loading]="isLoading()" [note]="summary().total - summary().active + ' inactivos'" [accent]="true" />
+    <app-stat-card label="Preguntas en uso" icon="fa-solid fa-list-check" [value]="summary().activeQuestions" [loading]="isLoading()" note="En formularios activos" />
+</section>
+
+<p class="mgs-section-lead mb-4">Puede mantener una autoevaluación y una evaluación personalizada activas al mismo tiempo. Para activar otra del mismo tipo, desactive primero la actual.</p>
 
 @if (section() === 'overview') {
     @if (loadFailed()) {
@@ -40,18 +41,8 @@
             <p-button label="Reintentar" icon="fa-solid fa-rotate-right" severity="secondary" [outlined]="true" (onClick)="loadForms()" />
         </app-empty-state>
     } @else {
-        <p class="mgs-section-lead">El resumen corresponde a los formularios de autoevaluación. Seleccione un tipo para consultar sus opciones.</p>
+        <p class="mgs-section-lead">El resumen incluye ambos tipos de formulario. Seleccione un tipo para consultar sus opciones.</p>
     }
-} @else if (section() === 'personalized') {
-    <section class="mgs-card" aria-label="Formularios personalizados">
-        <app-empty-state
-            icon="fa-solid fa-user-check"
-            title="Evaluación personalizada"
-            message="Los formularios de evaluación personalizada todavía no están disponibles. Puede preparar sus preguntas; el guardado y la activación estarán disponibles más adelante."
-        >
-            <p-button label="Preparar formulario personalizado" icon="fa-solid fa-plus" routerLink="/forms/personalized/new" />
-        </app-empty-state>
-    </section>
 } @else {
     <div class="mgs-table-card">
         <p-table
@@ -117,11 +108,11 @@
                         <td class="tabular-nums">{{ row.publicationYear }}</td>
                         <td class="tabular-nums">{{ row.questionCount }}</td>
                         <td>
-                            <p-tag [value]="row.active ? 'Activo' : 'Inactivo'" [styleClass]="row.active ? activeTagClasses.active : activeTagClasses.inactive" />
+                            <p-tag [value]="row.active ? 'Activo' : 'Inactivo / borrador'" [styleClass]="row.active ? activeTagClasses.active : activeTagClasses.inactive" />
                         </td>
                         <td class="text-right">
                             <div class="mgs-row-actions">
-                                @if (row.active) {
+                                @if (row.active && row.type === 'SELF_EVALUATION') {
                                     <p-button
                                         icon="fa-solid fa-paper-plane"
                                         [rounded]="true"
@@ -162,8 +153,8 @@
                                 <p-button label="Reintentar" icon="fa-solid fa-rotate-right" severity="secondary" [outlined]="true" (onClick)="loadForms()" />
                             </app-empty-state>
                         } @else if (summary().total === 0) {
-                            <app-empty-state icon="fa-solid fa-file-pen" title="Todavía no hay formularios" message="Cree el primer formulario de autoevaluación con sus preguntas y pesos.">
-                                <p-button label="Crear formulario" icon="fa-solid fa-plus" routerLink="/forms/new" />
+                            <app-empty-state icon="fa-solid fa-file-pen" title="Todavía no hay formularios" message="Cree un formulario de este tipo. Se guardará como borrador inactivo.">
+                                <p-button label="Crear formulario" icon="fa-solid fa-plus" [routerLink]="section() === 'personalized' ? '/forms/personalized/new' : '/forms/new'" />
                             </app-empty-state>
                         } @else {
                             <app-empty-state icon="fa-solid fa-filter-circle-xmark" title="Sin coincidencias" message="Ningún formulario coincide con la búsqueda o el filtro de estado." />

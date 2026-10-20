@@ -1,19 +1,12 @@
 <app-page-header
     [eyebrow]="isPersonalized() ? 'Evaluación personalizada' : 'Formularios de autoevaluación'"
     [title]="isEditing() ? 'Editar formulario' : 'Crear formulario'"
-    [subtitle]="isPersonalized() ? 'Prepare las preguntas para la evaluación realizada por el ergonomista.' : 'Defina el cuestionario y el peso de cada pregunta en el puntaje de riesgo.'"
+    [subtitle]="isPersonalized() ? 'Prepare las preguntas para la evaluación realizada por el ergonomista.' : 'Defina las preguntas, sus respuestas predefinidas y el peso de cada respuesta.'"
 >
     <p-button label="Volver a formularios" icon="fa-solid fa-arrow-left" severity="secondary" [text]="true" [routerLink]="isPersonalized() ? '/forms/personalized' : '/forms/self-evaluation'" />
 </app-page-header>
 
 <app-form-navigation [section]="isPersonalized() ? 'personalized' : 'self-evaluation'" />
-
-@if (isPersonalized()) {
-    <div class="mgs-details-note mb-6" role="status">
-        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-        <span>El guardado de formularios personalizados todavía no está disponible. Puede explorar el editor; las preguntas no se guardarán al salir.</span>
-    </div>
-}
 
 <form [formGroup]="formDetail" (ngSubmit)="submit()" class="mgs-form-layout" novalidate>
     <div class="mgs-stack">
@@ -32,6 +25,9 @@
                 </div>
             } @else {
                 <div class="mgs-form-grid">
+                    <app-form-field label="Tipo de formulario" inputId="form-type" [control]="formDetail.controls.type" [hint]="isEditing() ? 'El tipo se conserva durante la edición.' : 'Seleccione el instrumento que desea crear.'">
+                        <p-select inputId="form-type" formControlName="type" [options]="typeOptions" optionLabel="label" optionValue="value" [fluid]="true" />
+                    </app-form-field>
                     <app-form-field label="Título" inputId="title" [control]="formDetail.controls.title">
                         <input pInputText id="title" formControlName="title" [maxlength]="limits.title" autocomplete="off" placeholder="Ej. Autoevaluación de puesto de trabajo 2026" />
                     </app-form-field>
@@ -49,9 +45,9 @@
             <div class="mgs-card-header">
                 <div>
                     <h2 class="mgs-section-title">Preguntas</h2>
-                    <p class="mgs-section-lead">{{ isPersonalized() ? 'Escriba y ordene las preguntas que utilizará el ergonomista.' : 'Cada respuesta vale de 0 a ' + maxAnswerScore + ' puntos y se multiplica por el peso de la pregunta.' }}</p>
+                    <p class="mgs-section-lead">{{ isPersonalized() ? 'Escriba y ordene las preguntas que utilizará el ergonomista.' : 'Defina de 1 a 10 respuestas por pregunta. Cada respuesta tiene un peso de 1 a 3.' }}</p>
                 </div>
-                <p-button type="button" label="Agregar pregunta" icon="fa-solid fa-plus" severity="secondary" [outlined]="true" [disabled]="isLoading()" (onClick)="addQuestion()" />
+                <p-button type="button" label="Agregar pregunta" icon="fa-solid fa-plus" severity="secondary" [outlined]="true" [disabled]="isLoading() || questionList.length >= limits.questions" (onClick)="addQuestion()" />
             </div>
 
             @if (isLoading()) {
@@ -60,6 +56,11 @@
                     <p-skeleton height="9rem" />
                 </div>
             } @else {
+                <div class="mgs-field mb-4">
+                    <label for="question-quantity">Cantidad de preguntas</label>
+                    <p-select inputId="question-quantity" [options]="questionQuantities" [ngModel]="questionList.length" [ngModelOptions]="{ standalone: true }" (ngModelChange)="resizeQuestions($event)" />
+                    <small class="mgs-field__hint">De 1 a 100. Al reducir la cantidad se quitan las últimas preguntas del editor.</small>
+                </div>
                 <div formArrayName="questionList" class="question-list">
                     @for (question of questionList.controls; track question; let index = $index, first = $first, last = $last) {
                         <div [formGroupName]="index" class="question" [class.question--invalid]="question.invalid && (question.touched || question.dirty)">
@@ -120,23 +121,45 @@
                                     ></textarea>
                                 </app-form-field>
                                 @if (!isPersonalized()) {
-                                    <app-form-field
-                                        label="Peso"
-                                        [inputId]="'weight-' + index"
-                                        [control]="question.controls.weight"
-                                        [errors]="weightErrors"
-                                        [half]="true"
-                                        [hint]="'Aporta hasta ' + maxAnswerScore * (question.controls.weight.value ?? 0) + ' puntos.'"
-                                    >
-                                        <p-inputnumber [inputId]="'weight-' + index" formControlName="weight" [min]="1" [maxFractionDigits]="0" [showButtons]="true" [fluid]="true" />
-                                    </app-form-field>
+                                    <div class="mgs-field col-span-full mb-3">
+                                        <label [attr.for]="'option-quantity-' + index">Cantidad de respuestas</label>
+                                        <p-select
+                                            [inputId]="'option-quantity-' + index"
+                                            [options]="optionQuantities"
+                                            [ngModel]="question.controls.optionList.length"
+                                            [ngModelOptions]="{ standalone: true }"
+                                            (ngModelChange)="resizeOptions(index, $event)"
+                                            placeholder="Seleccione cantidad"
+                                        />
+                                        <small class="mgs-field__hint">De 1 a 10. Al reducir la cantidad se quitan las últimas respuestas del editor.</small>
+                                    </div>
+                                    <div formArrayName="optionList" class="col-span-full flex flex-col gap-4">
+                                        @for (option of question.controls.optionList.controls; track option; let optionIndex = $index) {
+                                            <div [formGroupName]="optionIndex" class="mgs-form-grid border-t border-surface pt-4">
+                                                <app-form-field [label]="'Respuesta ' + (optionIndex + 1)" [inputId]="'option-' + index + '-' + optionIndex" [control]="option.controls.label" [half]="true">
+                                                    <input pInputText [id]="'option-' + index + '-' + optionIndex" formControlName="label" [maxlength]="limits.label" placeholder="Texto de la respuesta" />
+                                                </app-form-field>
+                                                <app-form-field
+                                                    [label]="'Peso de respuesta ' + (optionIndex + 1)"
+                                                    [inputId]="'weight-' + index + '-' + optionIndex"
+                                                    [control]="option.controls.weight"
+                                                    [errors]="weightErrors"
+                                                    [half]="true"
+                                                    hint="1: bajo · 2: medio · 3: alto"
+                                                >
+                                                    <p-inputnumber [inputId]="'weight-' + index + '-' + optionIndex" formControlName="weight" [min]="1" [max]="3" [maxFractionDigits]="0" [showButtons]="true" [fluid]="true" />
+                                                </app-form-field>
+                                            </div>
+                                        }
+                                    </div>
+                                    <app-form-field [control]="question.controls.optionList" [errors]="optionErrors" />
                                 }
                             </div>
                         </div>
                     }
                 </div>
                 <div class="form-add">
-                    <p-button type="button" label="Agregar otra pregunta" icon="fa-solid fa-plus" [text]="true" (onClick)="addQuestion()" />
+                    <p-button type="button" label="Agregar otra pregunta" icon="fa-solid fa-plus" [text]="true" [disabled]="questionList.length >= limits.questions" (onClick)="addQuestion()" />
                 </div>
             }
         </section>
@@ -160,15 +183,17 @@
                 <span class="mgs-eyebrow">Resumen</span>
                 <div class="mgs-section-title !m-0 break-words">{{ summary().title || 'Nuevo formulario' }}</div>
                 @if (storedForm(); as form) {
-                    <div><p-tag [value]="form.active ? 'Activo' : 'Inactivo'" [styleClass]="form.active ? activeTagClasses.active : activeTagClasses.inactive" /></div>
+                    <div><p-tag [value]="form.active ? 'Activo' : 'Inactivo / borrador'" [styleClass]="form.active ? activeTagClasses.active : activeTagClasses.inactive" /></div>
+                } @else {
+                    <p-tag value="Inactivo / borrador" [styleClass]="activeTagClasses.inactive" />
                 }
             </div>
 
             @if (!isPersonalized()) {
                 <div class="form-summary__score" aria-live="polite">
-                    <span class="form-summary__score-label">Puntaje máximo</span>
-                    <span class="form-summary__score-value">{{ summary().maxScore }}</span>
-                    <span class="form-summary__score-note">{{ maxAnswerScore }} puntos × {{ summary().totalWeight }} de peso total</span>
+                    <span class="form-summary__score-label">Respuestas predefinidas</span>
+                    <span class="form-summary__score-value">{{ summary().optionCount }}</span>
+                    <span class="form-summary__score-note">El peso corresponde a cada respuesta.</span>
                 </div>
             }
             <dl class="mgs-details">
@@ -176,12 +201,10 @@
                     <dt>Preguntas</dt>
                     <dd class="tabular-nums">{{ summary().questionCount }}</dd>
                 </div>
-                @if (!isPersonalized()) {
-                    <div>
-                        <dt>Peso total</dt>
-                        <dd class="tabular-nums">{{ summary().totalWeight }}</dd>
-                    </div>
-                }
+                <div>
+                    <dt>Tipo</dt>
+                    <dd>{{ isPersonalized() ? 'Evaluación personalizada' : 'Autoevaluación' }}</dd>
+                </div>
                 <div>
                     <dt>Año</dt>
                     <dd class="tabular-nums">{{ summary().year ?? '—' }}</dd>
@@ -192,17 +215,17 @@
         @if (!isLoading() && summary().incompleteCount > 0) {
             <div class="mgs-details-note">
                 <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-                <span>{{ summary().incompleteCount }} pregunta(s) sin completar: {{ isPersonalized() ? 'escriba el enunciado.' : 'escriba el enunciado y un peso de al menos 1.' }}</span>
+                <span>{{ summary().incompleteCount }} pregunta(s) sin completar: {{ isPersonalized() ? 'escriba el enunciado.' : 'complete el enunciado y las respuestas con pesos de 1 a 3.' }}</span>
             </div>
         } @else if (!isLoading() && isEditing()) {
             <div class="mgs-details-note">
                 <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
                 <span>Las preguntas que quite se desactivan; las respuestas anteriores se conservan en el historial.</span>
             </div>
-        } @else if (!isLoading() && !isPersonalized()) {
+        } @else if (!isLoading()) {
             <div class="mgs-details-note">
                 <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
-                <span>Use pesos mayores en las preguntas que representan más riesgo ergonómico.</span>
+                <span>Los formularios nuevos se guardan como borradores inactivos. Actívelos desde el listado cuando estén listos.</span>
             </div>
         }
     </aside>
@@ -213,19 +236,12 @@
         </div>
     }
 
-    @if (isPersonalized()) {
-        <div class="flex flex-wrap justify-end gap-2 col-span-full">
-            <p-button type="button" label="Vaciar campos" severity="secondary" [text]="true" (onClick)="unsaved.discard()" />
-            <p-button type="button" label="Guardar formulario personalizado" icon="fa-solid fa-check" [disabled]="true" />
-        </div>
-    } @else {
-        <app-save-bar
-            [tracker]="unsaved"
-            [saving]="isSubmitting()"
-            [message]="isEditing() ? 'Cuidado, tiene cambios sin guardar.' : 'Cuidado, el formulario todavía no se ha creado.'"
-            [discardLabel]="isEditing() ? 'Restablecer' : 'Vaciar campos'"
-            [submitLabel]="isEditing() ? 'Guardar cambios' : 'Crear formulario'"
-            (discarded)="clearError()"
-        />
-    }
+    <app-save-bar
+        [tracker]="unsaved"
+        [saving]="isSubmitting()"
+        [message]="isEditing() ? 'Cuidado, tiene cambios sin guardar.' : 'Cuidado, el formulario todavía no se ha creado.'"
+        [discardLabel]="isEditing() ? 'Restablecer' : 'Vaciar campos'"
+        [submitLabel]="isEditing() ? 'Guardar cambios' : 'Crear formulario'"
+        (discarded)="clearError()"
+    />
 </form>

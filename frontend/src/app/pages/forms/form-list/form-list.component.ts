@@ -47,8 +47,7 @@ interface CompanyOption {
 }
 
 /**
- * Main page of the self evaluation forms: summary, table and the dialog that
- * sends a form again to the employees of a company.
+ * Administration of both form types, with a resend dialog for self evaluations.
  */
 @Component({
     selector: 'app-form-list',
@@ -185,21 +184,23 @@ export class FormListComponent implements OnInit {
     protected readonly companiesFailed = signal(false);
 
     protected readonly rows = computed<FormRow[]>(() =>
-        this.formList().map((form) => ({
-            ...form,
-            questionCount: form.questionList.length,
-            searchKey: `${form.title} ${form.description ?? ''} ${form.publicationYear}`.toLowerCase()
-        }))
+        this.formList()
+            .filter((form) => this.section() === 'overview' || form.type === (this.section() === 'personalized' ? 'PERSONALIZED_EVALUATION' : 'SELF_EVALUATION'))
+            .map((form) => ({
+                ...form,
+                questionCount: (form.questionList ?? []).length,
+                searchKey: `${form.title} ${form.description ?? ''} ${form.publicationYear}`.toLowerCase()
+            }))
     );
 
     /** Figures of the summary cards, counted in a single pass. */
     protected readonly summary = computed(() => {
         const summary = { total: 0, active: 0, activeQuestions: 0 };
-        for (const form of this.formList()) {
+        for (const form of this.rows()) {
             summary.total++;
             if (form.active) {
                 summary.active++;
-                summary.activeQuestions += form.questionList.length;
+                summary.activeQuestions += (form.questionList ?? []).length;
             }
         }
         return summary;
@@ -212,11 +213,7 @@ export class FormListComponent implements OnInit {
     });
 
     ngOnInit(): void {
-        if (this.section() !== 'personalized') {
-            this.loadForms();
-        } else {
-            this.isLoading.set(false);
-        }
+        this.loadForms();
     }
 
     /**
@@ -242,8 +239,7 @@ export class FormListComponent implements OnInit {
     }
 
     /**
-     * Asks for confirmation and deactivates the form, which stops being offered
-     * to the employees. Its answers are kept.
+     * Confirms deactivation for either type, preserving previous evaluations.
      *
      * @param row form to deactivate
      */
@@ -253,7 +249,7 @@ export class FormListComponent implements OnInit {
         }
         const confirmed = await this.dialogService.confirm({
             title: 'Desactivar formulario',
-            message: `"${row.title}" dejará de ofrecerse a los colaboradores y no podrá reenviarse. Las autoevaluaciones ya respondidas se conservan, y puede reactivarlo cuando quiera.`,
+            message: `"${row.title}" dejará de estar disponible para nuevas evaluaciones. Las evaluaciones ya realizadas se conservan. Puede activarlo nuevamente desde este listado.`,
             confirmLabel: 'Desactivar',
             destructive: true
         });
@@ -278,7 +274,7 @@ export class FormListComponent implements OnInit {
     }
 
     /**
-     * Activates again a form that was deactivated.
+     * Activates an inactive form. The backend enforces one active form per type.
      *
      * @param row form to activate
      */
@@ -293,12 +289,12 @@ export class FormListComponent implements OnInit {
             .subscribe({
                 next: (form) => {
                     this.setBusy(row.id, false);
-                    this.toastService.success('Formulario reactivado', row.title);
+                    this.toastService.success('Formulario activado', row.title);
                     this.updateForm(row.id, { ...form, active: true });
                 },
                 error: (error: unknown) => {
                     this.setBusy(row.id, false);
-                    this.toastService.error('No se pudo reactivar', getApiErrorMessage(error, 'Intente de nuevo en unos minutos.'));
+                    this.toastService.error('No se pudo activar', getApiErrorMessage(error, 'Intente de nuevo en unos minutos.'));
                 }
             });
     }
@@ -310,7 +306,7 @@ export class FormListComponent implements OnInit {
      * @param row form to send
      */
     protected openResend(row: FormRow): void {
-        if (!row.active) {
+        if (!row.active || row.type !== 'SELF_EVALUATION') {
             return;
         }
         this.resendForm.set(row);

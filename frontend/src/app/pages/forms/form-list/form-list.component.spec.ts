@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { Router, provideRouter } from '@angular/router';
+import { provideRouter } from '@angular/router';
 
 import { environment } from '../../../../environments/environment';
 import { FormListComponent } from './form-list.component';
@@ -47,8 +47,8 @@ describe('Forms workspace', () => {
     it('shows the self evaluation list and actions for both availability states', () => {
         const element = open('self-evaluation');
         http.expectOne(FORMS_URL).flush([
-            { id: 1, title: 'Puesto de trabajo', publicationYear: 2026, active: true, questionList: [] },
-            { id: 2, title: 'Seguimiento', publicationYear: 2025, active: false, questionList: [] }
+            { id: 1, title: 'Puesto de trabajo', publicationYear: 2026, type: 'SELF_EVALUATION', active: true, questionList: [] },
+            { id: 2, title: 'Seguimiento', publicationYear: 2025, type: 'SELF_EVALUATION', active: false, questionList: [] }
         ]);
         fixture.detectChanges();
         expect(element.textContent).toContain('Puesto de trabajo');
@@ -57,16 +57,35 @@ describe('Forms workspace', () => {
         expect(element.querySelector('button[aria-label="Activar formulario"]')).not.toBeNull();
     });
 
-    it('does not present self evaluation records as personalized forms or call their API', () => {
+    it('lists personalized forms separately and never offers resend for them', () => {
         const element = open('personalized');
-        http.expectNone(FORMS_URL);
-        expect(element.textContent).toContain('todavía no están disponibles');
-        expect(element.querySelector('p-table')).toBeNull();
-        const router = TestBed.inject(Router);
-        const navigate = spyOn(router, 'navigateByUrl').and.resolveTo(true);
-        const prepare = Array.from(element.querySelectorAll('button')).find((button) => button.textContent?.includes('Preparar formulario personalizado'))!;
-        prepare.click();
-        expect(router.serializeUrl(navigate.calls.mostRecent().args[0] as import('@angular/router').UrlTree)).toBe('/forms/personalized/new');
+        http.expectOne(FORMS_URL).flush([
+            { id: 1, title: 'Autoevaluación', type: 'SELF_EVALUATION', active: true, questionList: [] },
+            { id: 2, title: 'Evaluación individual', type: 'PERSONALIZED_EVALUATION', active: true, questionList: [] },
+            { id: 3, title: 'Borrador individual', type: 'PERSONALIZED_EVALUATION', active: false, questionList: [] }
+        ]);
+        fixture.detectChanges();
+        expect(element.textContent).toContain('Evaluación individual');
+        expect(element.textContent).toContain('Borrador individual');
+        expect(fixture.componentInstance['filteredRows']().map((row) => row.id)).toEqual([2, 3]);
+        expect(element.querySelector('button[aria-label="Reenviar formulario a una empresa"]')).toBeNull();
+        expect(element.querySelector('button[aria-label="Activar formulario"]')).not.toBeNull();
+        expect(element.querySelector('button[aria-label="Desactivar formulario"]')).not.toBeNull();
+    });
+
+    it('counts two simultaneously active types and surfaces backend activation feedback', () => {
+        open('overview');
+        http.expectOne(FORMS_URL).flush([
+            { id: 1, title: 'Auto', type: 'SELF_EVALUATION', active: true, questionList: [] },
+            { id: 2, title: 'Personal', type: 'PERSONALIZED_EVALUATION', active: true, questionList: [] },
+            { id: 3, title: 'Draft', type: 'SELF_EVALUATION', active: false, questionList: [] }
+        ]);
+        expect(fixture.componentInstance['summary']().active).toBe(2);
+        const toast = spyOn(fixture.componentInstance['toastService'], 'error');
+        fixture.componentInstance['activate'](fixture.componentInstance['rows']()[2]);
+        http.expectOne(`${FORMS_URL}/3/activate`).flush({ message: 'Ya existe una autoevaluación activa. Desactívela antes de activar otra.' }, { status: 400, statusText: 'Business rule' });
+        expect(toast).toHaveBeenCalledWith('No se pudo activar', 'Ya existe una autoevaluación activa. Desactívela antes de activar otra.');
+        expect(fixture.componentInstance['isBusy'](3)).toBeFalse();
     });
 
     it('shows a retry action when the overview request fails', () => {
