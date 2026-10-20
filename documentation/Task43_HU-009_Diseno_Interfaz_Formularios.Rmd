@@ -1,0 +1,78 @@
+---
+title: "Task43 / HU-009 - Diseñar interfaz de formularios"
+author: "Jocabed Sibaja Castillo"
+output: html_document
+---
+
+# Información de la tarea
+
+- Task: 43
+- HU: HU-009 — Crear/Desactivar formularios
+- Sprint: 2
+- Responsable: Jocabed Sibaja Castillo
+- Tipo: Frontend
+- PR: [Task43/HU-009 - Diseñar interfaz de formularios, #55](https://github.com/Lausxn/ErgoManager/pull/55)
+- Base: `feature/HU-009-CrearDesactivarFormularios`
+
+# Objetivo
+
+Diseñar el espacio de Formularios para acceder a los instrumentos de autoevaluación y evaluación personalizada, preparar sus preguntas y administrar su disponibilidad, manteniendo la navegación y presentación de ErgoManager.
+
+# Implementación realizada
+
+## Dashboard y navegación
+
+Se incorporaron el dashboard general y la navegación local entre resumen, **Autoevaluación** y **Evaluación personalizada**. Los listados distinguen los tipos `SELF_EVALUATION` y `PERSONALIZED_EVALUATION`, con búsqueda, filtros y acciones de edición, activación y desactivación mediante los servicios existentes.
+
+## Editor y validaciones
+
+- El selector de cantidad genera de **1 a 100 preguntas**; esta cantidad es solo de interfaz y no se envía como un campo adicional.
+- La **autoevaluación** permite de **1 a 10 respuestas predefinidas por pregunta**. Cada respuesta posee texto y su propio `weight` de **1 a 3**; el peso no pertenece a la pregunta. Las respuestas de una misma pregunta no se pueden repetir, ignorando mayúsculas y espacios externos.
+- La **evaluación personalizada** permite crear y editar enunciados, sin respuestas predefinidas, pesos, diagnóstico ni recomendaciones.
+- Durante la edición se **bloquea el tipo** y se conservan los **IDs de preguntas y opciones existentes**. Los campos opcionales toleran su ausencia en JSON.
+- Los errores anidados, como `questionList[0].optionList[1].weight`, se asocian al control correspondiente y se presentan con mensajes en español mediante los componentes compartidos.
+
+## Estados y acciones
+
+Los formularios nuevos se representan como **borradores inactivos**; crear no equivale a activar. Puede existir **una autoevaluación activa y una evaluación personalizada activa simultáneamente**. El backend de Task44 conserva la regla de una activa por tipo y la interfaz muestra sus mensajes de rechazo. El reenvío a empresas se ofrece únicamente para autoevaluaciones activas.
+
+# Archivos modificados
+
+Rutas relativas a `frontend/src/app/`:
+
+| Archivo | Cambio |
+|---|---|
+| `pages/forms/forms.routes.ts` | Rutas del resumen, categorías y editor personalizado. |
+| `pages/forms/form-navigation/form-navigation.component.ts` | Navegación local reutilizada por listado y editor. |
+| `pages/forms/form-list/form-list.component.html` | Dashboard, listados por tipo, estados y acciones de administración. |
+| `pages/forms/form-list/form-list.component.ts` | Filtrado por tipo, resumen, activación/desactivación y reenvío limitado a autoevaluaciones. |
+| `pages/forms/form-detail/form-detail.component.html` | Selector de tipo, cantidades de preguntas/respuestas, pesos por opción y resumen de borrador. |
+| `pages/forms/form-detail/form-detail.component.ts` | Editor de ambos tipos, validaciones, conservación de IDs y errores anidados. |
+| `pages/forms/form-list/form-list.component.spec.ts` | Pruebas de navegación, separación de tipos, estados y mensajes de activación. |
+| `pages/forms/form-detail/form-detail.component.spec.ts` | Pruebas del contrato, cantidades, pesos, duplicados, edición y errores anidados. |
+| `shared/models/form.model.ts` | Modelos alineados con los tipos y opciones del contrato actual de HU-009. |
+
+Esta documentación se incorpora en `documentation/Task43_HU-009_Diseno_Interfaz_Formularios.Rmd`.
+
+# Decisiones de diseño y arquitectura
+
+Se mantuvo la arquitectura Angular existente y se reutilizaron `FormService`, los modelos, `PageHeaderComponent`, `StatCardComponent`, `EmptyStateComponent`, `FormFieldComponent`, `SaveBarComponent` y los diálogos compartidos. No se creó una implementación paralela; se alinearon los modelos frontend con el contrato vigente del backend de Task44. Se respetaron los estándares de nombres y formato, los estilos y tokens existentes, la identidad de MGS y la línea del Sprint 1. No se modificaron logo, tipografía, colores ni navegación global.
+
+# Validaciones realizadas
+
+- **Prettier:** los siete archivos frontend de la corrección pasan la comprobación de formato.
+- **Tests de formularios:** `npm test -- --watch=false --browsers=ChromeHeadless --include=src/app/pages/forms/**/*.spec.ts`; **19 pruebas aprobadas**.
+- **Build:** `npm run build` finaliza correctamente.
+- **Git:** `git diff --check` y la comprobación del staged sin errores.
+- **Navegador:** revisión del dashboard y navegación; creación de ambos tipos como borradores; generación de varias preguntas y distintas cantidades de respuestas; pesos 1–3; edición de autoevaluación y carga del editor personalizado con tipo bloqueado; activación simultánea de ambos tipos y desactivación de la evaluación personalizada. Sin errores relevantes de consola. La corrección fue revisada y aprobada por la responsable; no se generaron capturas.
+- **Renderizado:** en la preparación inicial se comprobó que R está instalado pero `rmarkdown` no está disponible. No se generó HTML ni se instaló software adicional.
+
+# Dependencias o trabajo fuera de alcance
+
+La gestión de formularios reutiliza el **backend de Task44**, integrado desde la feature, sin modificar sus endpoints, persistencia ni reglas de negocio. Las correcciones propias de Task43 se limitan al frontend y esta documentación.
+
+La respuesta pública completa de autoevaluación, la realización de evaluaciones personalizadas de una cita con diagnóstico/recomendaciones y los reportes/filtros quedan **fuera de alcance** y corresponden a tareas de integración posteriores. No se atribuyen a Task43.
+
+# Resultado
+
+La interfaz de Task43 queda alineada con el contrato actual de HU-009 y aprobada visualmente. El **PR #55** permanece dirigido a `feature/HU-009-CrearDesactivarFormularios`, listo para una nueva revisión e integración posterior; no se realizó merge del PR.
