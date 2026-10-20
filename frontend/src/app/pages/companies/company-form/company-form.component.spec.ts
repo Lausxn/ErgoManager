@@ -131,23 +131,30 @@ describe('CompanyFormComponent (HU-020 validaciones de edición)', () => {
 
         httpTesting.expectNone({ method: 'PUT', url: COMPANY_URL });
         expect(errorOf('businessName')).toBe('La razón social debe incluir letras o números.');
-        expect(errorOf('taxId')).toBe('Use solo números y guiones, por ejemplo 3-101-123456.');
+        expect(errorOf('taxId')).toBe('Escriba la cédula jurídica con el formato 3-101-123456.');
         expect(errorOf('phoneNumber')).toBe('Escriba un teléfono válido de 8 a 15 dígitos, por ejemplo 2222-3333.');
         expect(alertText()).toBe('Revise los campos marcados antes de guardar: Razón social, Cédula jurídica y Teléfono.');
     });
 
-    it('no permite la razón social de otra empresa, sin importar mayúsculas, espacios ni tildes', () => {
+    it('no permite la razón social de otra empresa, sin importar mayúsculas ni espacios', () => {
         for (const name of ['Industrias del Valle', 'INDUSTRIAS  DEL   VALLE', ' industrias del valle ']) {
             type('businessName', name);
             expect(errorOf('businessName')).withContext(name).toBe('Ya existe una empresa con esa razón social.');
         }
         // An inactive company keeps its name reserved.
-        type('businessName', 'cafe sol');
+        type('businessName', 'CAFÉ  sol');
         expect(errorOf('businessName')).toBe('Ya existe una empresa con esa razón social.');
 
         submit();
         httpTesting.expectNone({ method: 'PUT', url: COMPANY_URL });
         expect(alertText()).toBe('Revise los campos marcados antes de guardar: Razón social.');
+    });
+
+    it('considera distinta una razón social que solo cambia las tildes, igual que el backend', () => {
+        type('businessName', 'Cafe Sol');
+        expect(errorOf('businessName')).toBe('');
+        type('businessName', 'Industrías del Valle');
+        expect(errorOf('businessName')).toBe('');
     });
 
     it('permite conservar su propia razón social y envía los datos limpios', () => {
@@ -160,12 +167,46 @@ describe('CompanyFormComponent (HU-020 validaciones de edición)', () => {
         request.flush({ ...STORED_COMPANY, businessName: 'COMERCIAL norte' });
     });
 
-    it('marca la cédula jurídica cuando el servidor indica que ya existe', () => {
-        type('taxId', '3-101-000009');
+    it('agrega los guiones de la cédula jurídica mientras se escribe y solo acepta números', () => {
+        const input = element.querySelector<HTMLInputElement>('#taxId')!;
+        for (const [typed, shown] of [
+            ['3', '3'],
+            ['3101', '3-101'],
+            ['31016', '3-101-6'],
+            ['3101600001', '3-101-600001'],
+            ['3 101-600001', '3-101-600001'],
+            ['3-101-60000199', '3-101-600001'],
+            ['3a1b0c1', '3-101']
+        ]) {
+            type('taxId', typed);
+            expect(input.value).withContext(typed).toBe(shown);
+        }
+        type('taxId', '3101600001');
+        submit();
+        const request = httpTesting.expectOne({ method: 'PUT', url: COMPANY_URL });
+        expect(request.request.body.taxId).toBe('3-101-600001');
+        request.flush(STORED_COMPANY);
+    });
+
+    it('no permite la cédula jurídica de otra empresa mientras se escribe', () => {
+        type('taxId', '3101000009');
+        expect(errorOf('taxId')).toBe('Ya existe una empresa con esa cédula jurídica.');
+        // An inactive company keeps its tax id reserved too.
+        type('taxId', '3-101-000011');
+        expect(errorOf('taxId')).toBe('Ya existe una empresa con esa cédula jurídica.');
+
+        submit();
+        httpTesting.expectNone({ method: 'PUT', url: COMPANY_URL });
+        expect(alertText()).toBe('Revise los campos marcados antes de guardar: Cédula jurídica.');
+    });
+
+    it('marca la cédula jurídica cuando el servidor rechaza una registrada después de abrir el formulario', () => {
+        type('taxId', '3-101-000020');
         submit();
 
         const message = 'Ya existe una empresa con esa cédula jurídica.';
-        rejectAsDuplicate(message, REGISTERED_COMPANIES);
+        const registeredLater = { ...STORED_COMPANY, id: 10, businessName: 'Distribuidora Central', taxId: '3101000020' };
+        rejectAsDuplicate(message, [...REGISTERED_COMPANIES, registeredLater]);
 
         expect(errorOf('taxId')).toBe(message);
         expect(errorOf('businessName')).toBe('');
@@ -177,7 +218,7 @@ describe('CompanyFormComponent (HU-020 validaciones de edición)', () => {
         submit();
 
         const message = 'Ya existe una empresa con ese nombre.';
-        const registeredLater = { ...STORED_COMPANY, id: 10, businessName: 'Distribuidora Central', taxId: '3-101-000020' };
+        const registeredLater = { ...STORED_COMPANY, id: 10, businessName: 'Distribuidora Central', taxId: '3-101-000021' };
         rejectAsDuplicate(message, [...REGISTERED_COMPANIES, registeredLater]);
 
         expect(errorOf('businessName')).toBe('Ya existe una empresa con esa razón social.');

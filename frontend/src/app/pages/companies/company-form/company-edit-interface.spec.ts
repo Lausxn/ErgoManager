@@ -45,6 +45,8 @@ describe('Client profile editing interface', () => {
         fixture = TestBed.createComponent(CompanyFormComponent);
         fixture.componentRef.setInput('id', COMPANY.id);
         fixture.detectChanges();
+        // The form reads every company to check that the business name is unique (Task 113).
+        http.expectOne({ method: 'GET', url: URL }).flush([COMPANY]);
         return fixture.nativeElement;
     }
 
@@ -154,9 +156,10 @@ describe('Client profile editing interface', () => {
     it('preserves the creation interface when no profile id is supplied', () => {
         fixture = TestBed.createComponent(CompanyFormComponent);
         fixture.detectChanges();
-        expect((fixture.nativeElement as HTMLElement).querySelector('h1')?.textContent).toContain('Registro de empresa');
+        http.expectOne({ method: 'GET', url: URL }).flush([COMPANY]);
+        expect((fixture.nativeElement as HTMLElement).querySelector('h1')?.textContent).toContain('Crear perfil de cliente');
         expect((fixture.nativeElement as HTMLElement).querySelector('#businessName')).not.toBeNull();
-        http.expectNone(URL);
+        http.expectNone(`${URL}/${COMPANY.id}`);
     });
 
     it('exposes an accessible edit action from the existing list and route', () => {

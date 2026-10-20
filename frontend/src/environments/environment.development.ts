@@ -9,5 +9,7 @@ export const environment = {
      * Opens every page without signing in, with a demo user, to review the
      * interface without the backend. Keep it false to use the real API.
      */
-    previewMode: false
+    previewMode: false,
+    /** Time without activity (clicks, keys, scroll) before the session is closed: 15 minutes. */
+    inactivityTimeoutMs: 15 * 60 * 1000
 };

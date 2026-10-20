@@ -1,5 +1,9 @@
-<app-page-header eyebrow="Formularios de autoevaluación" [title]="isEditing() ? 'Editar formulario' : 'Creación de formulario'" subtitle="Defina el cuestionario y el peso de cada pregunta en el puntaje de riesgo.">
-    <p-button label="Volver a formularios" icon="fa-solid fa-arrow-left" severity="secondary" [text]="true" routerLink="/forms" />
+<app-page-header
+    eyebrow="Formularios"
+    [title]="isEditing() ? 'Editar formulario' : 'Crear formulario'"
+    [subtitle]="isPersonalized() ? 'Prepare las preguntas para la evaluación realizada por el ergonomista.' : 'Defina las preguntas, sus respuestas predefinidas y el peso de cada respuesta.'"
+>
+    <p-button label="Volver a formularios" icon="fa-solid fa-arrow-left" severity="secondary" [text]="true" [routerLink]="isPersonalized() ? '/forms/personalized' : '/forms/self-evaluation'" />
 </app-page-header>
 
 <form [formGroup]="formDetail" (ngSubmit)="submit()" class="mgs-form-layout" novalidate>
@@ -8,7 +12,7 @@
             <div class="mgs-card-header">
                 <div>
                     <h2 class="mgs-section-title">Información general</h2>
-                    <p class="mgs-section-lead">Así verán los colaboradores el formulario al abrir el enlace de su empresa.</p>
+                    <p class="mgs-section-lead">{{ isPersonalized() ? 'Datos del instrumento que utilizará el ergonomista durante la evaluación.' : 'Así verán los colaboradores el formulario al abrir el enlace de su empresa.' }}</p>
                 </div>
             </div>
             @if (isLoading()) {
@@ -19,6 +23,17 @@
                 </div>
             } @else {
                 <div class="mgs-form-grid">
+                    @if (isEditing()) {
+                        <div class="mgs-field">
+                            <span class="mgs-eyebrow">Tipo de formulario</span>
+                            <strong>{{ isPersonalized() ? 'Evaluación personalizada' : 'Autoevaluación' }}</strong>
+                            <small class="mgs-field__hint">El tipo no se puede cambiar.</small>
+                        </div>
+                    } @else {
+                        <app-form-field label="Tipo de formulario" inputId="form-type" [control]="formDetail.controls.type">
+                            <p-select inputId="form-type" formControlName="type" [options]="typeOptions" optionLabel="label" optionValue="value" [fluid]="true" />
+                        </app-form-field>
+                    }
                     <app-form-field label="Título" inputId="title" [control]="formDetail.controls.title">
                         <input pInputText id="title" formControlName="title" [maxlength]="limits.title" autocomplete="off" placeholder="Ej. Autoevaluación de puesto de trabajo 2026" />
                     </app-form-field>
@@ -36,9 +51,8 @@
             <div class="mgs-card-header">
                 <div>
                     <h2 class="mgs-section-title">Preguntas</h2>
-                    <p class="mgs-section-lead">Cada respuesta vale de 0 a {{ maxAnswerScore }} puntos y se multiplica por el peso de la pregunta.</p>
+                    <p class="mgs-section-lead">{{ isPersonalized() ? 'Escriba y ordene las preguntas que utilizará el ergonomista.' : 'Escriba el enunciado y configure sus respuestas.' }}</p>
                 </div>
-                <p-button type="button" label="Agregar pregunta" icon="fa-solid fa-plus" severity="secondary" [outlined]="true" [disabled]="isLoading()" (onClick)="addQuestion()" />
             </div>
 
             @if (isLoading()) {
@@ -47,6 +61,14 @@
                     <p-skeleton height="9rem" />
                 </div>
             } @else {
+                <details class="editor-quantity mb-4">
+                    <summary>Ajustar cantidad de preguntas</summary>
+                    <div class="mgs-field mt-3">
+                        <label for="question-quantity">Cantidad de preguntas</label>
+                        <p-select inputId="question-quantity" [options]="questionQuantities" [ngModel]="questionList.length" [ngModelOptions]="{ standalone: true }" (ngModelChange)="resizeQuestions($event)" />
+                        <small class="mgs-field__hint">De 1 a 100. Reducir la cantidad quita las últimas preguntas.</small>
+                    </div>
+                </details>
                 <div formArrayName="questionList" class="question-list">
                     @for (question of questionList.controls; track question; let index = $index, first = $first, last = $last) {
                         <div [formGroupName]="index" class="question" [class.question--invalid]="question.invalid && (question.touched || question.dirty)">
@@ -55,44 +77,6 @@
                                     <span class="question__badge">{{ index + 1 }}</span>
                                     Pregunta {{ index + 1 }}
                                 </span>
-                                <div class="question__actions">
-                                    <p-button
-                                        type="button"
-                                        icon="fa-solid fa-arrow-up"
-                                        [rounded]="true"
-                                        [text]="true"
-                                        severity="secondary"
-                                        [disabled]="first"
-                                        (onClick)="moveQuestion(index, -1)"
-                                        pTooltip="Subir"
-                                        tooltipPosition="top"
-                                        [ariaLabel]="'Subir pregunta ' + (index + 1)"
-                                    />
-                                    <p-button
-                                        type="button"
-                                        icon="fa-solid fa-arrow-down"
-                                        [rounded]="true"
-                                        [text]="true"
-                                        severity="secondary"
-                                        [disabled]="last"
-                                        (onClick)="moveQuestion(index, 1)"
-                                        pTooltip="Bajar"
-                                        tooltipPosition="top"
-                                        [ariaLabel]="'Bajar pregunta ' + (index + 1)"
-                                    />
-                                    <p-button
-                                        type="button"
-                                        icon="fa-regular fa-trash-can"
-                                        [rounded]="true"
-                                        [text]="true"
-                                        severity="secondary"
-                                        [disabled]="questionList.length === 1"
-                                        (onClick)="removeQuestion(index)"
-                                        [pTooltip]="questionList.length === 1 ? 'El formulario necesita al menos una pregunta' : 'Quitar pregunta'"
-                                        tooltipPosition="top"
-                                        [ariaLabel]="'Quitar pregunta ' + (index + 1)"
-                                    />
-                                </div>
                             </div>
                             <div class="mgs-form-grid">
                                 <app-form-field label="Enunciado" [inputId]="'statement-' + index" [control]="question.controls.statement" [errors]="statementErrors">
@@ -106,28 +90,116 @@
                                         placeholder="Ej. ¿Su silla le permite apoyar la espalda completamente?"
                                     ></textarea>
                                 </app-form-field>
-                                <app-form-field
-                                    label="Peso"
-                                    [inputId]="'weight-' + index"
-                                    [control]="question.controls.weight"
-                                    [errors]="weightErrors"
-                                    [half]="true"
-                                    [hint]="'Aporta hasta ' + maxAnswerScore * (question.controls.weight.value ?? 0) + ' puntos.'"
-                                >
-                                    <p-inputnumber [inputId]="'weight-' + index" formControlName="weight" [min]="1" [maxFractionDigits]="0" [showButtons]="true" [fluid]="true" />
-                                </app-form-field>
+                                @if (!isPersonalized()) {
+                                    <section class="answer-group col-span-full" [attr.aria-labelledby]="'answers-heading-' + index">
+                                        <div class="answer-group__head">
+                                            <h3 class="mgs-eyebrow !m-0" [id]="'answers-heading-' + index">Respuestas</h3>
+                                            <small class="mgs-field__hint">Peso: 1 bajo · 2 medio · 3 alto</small>
+                                        </div>
+                                        <div class="answer-row answer-row--header" aria-hidden="true"><span>Texto</span><span>Peso</span><span class="sr-only">Acción</span></div>
+                                        <div formArrayName="optionList" class="flex flex-col gap-3">
+                                            @for (option of question.controls.optionList.controls; track option; let optionIndex = $index) {
+                                                <div [formGroupName]="optionIndex" class="answer-row">
+                                                    <app-form-field [control]="option.controls.label" [inputId]="'option-' + index + '-' + optionIndex">
+                                                        <label class="sr-only" [attr.for]="'option-' + index + '-' + optionIndex">Respuesta {{ optionIndex + 1 }} de pregunta {{ index + 1 }}</label>
+                                                        <input pInputText [id]="'option-' + index + '-' + optionIndex" formControlName="label" [maxlength]="limits.label" placeholder="Texto de la respuesta" />
+                                                    </app-form-field>
+                                                    <app-form-field [control]="option.controls.weight" [errors]="weightErrors" [inputId]="'weight-' + index + '-' + optionIndex">
+                                                        <label class="sr-only" [attr.for]="'weight-' + index + '-' + optionIndex">Peso de respuesta {{ optionIndex + 1 }} de pregunta {{ index + 1 }}</label>
+                                                        <p-inputnumber [inputId]="'weight-' + index + '-' + optionIndex" formControlName="weight" [min]="1" [max]="3" [maxFractionDigits]="0" [showButtons]="true" [fluid]="true" />
+                                                    </app-form-field>
+                                                    <p-button
+                                                        type="button"
+                                                        icon="fa-regular fa-trash-can"
+                                                        [rounded]="true"
+                                                        [text]="true"
+                                                        severity="secondary"
+                                                        [disabled]="question.controls.optionList.length <= 1"
+                                                        (onClick)="removeOption(index, optionIndex)"
+                                                        [ariaLabel]="'Quitar respuesta ' + (optionIndex + 1) + ' de pregunta ' + (index + 1)"
+                                                        pTooltip="Quitar respuesta"
+                                                    />
+                                                </div>
+                                            }
+                                        </div>
+                                        <app-form-field [control]="question.controls.optionList" [errors]="optionErrors" />
+                                        <div class="answer-group__footer">
+                                            <p-button
+                                                type="button"
+                                                label="Agregar respuesta"
+                                                icon="fa-solid fa-plus"
+                                                [text]="true"
+                                                severity="secondary"
+                                                [disabled]="question.controls.optionList.length >= limits.options"
+                                                (onClick)="resizeOptions(index, question.controls.optionList.length + 1)"
+                                            />
+                                            <details class="editor-quantity">
+                                                <summary>Ajustar cantidad</summary>
+                                                <div class="mgs-field mt-2">
+                                                    <label class="sr-only" [attr.for]="'option-quantity-' + index">Cantidad de respuestas de pregunta {{ index + 1 }}</label>
+                                                    <p-select
+                                                        [inputId]="'option-quantity-' + index"
+                                                        [options]="optionQuantities"
+                                                        [ngModel]="question.controls.optionList.length"
+                                                        [ngModelOptions]="{ standalone: true }"
+                                                        (ngModelChange)="resizeOptions(index, $event)"
+                                                    />
+                                                    <small class="mgs-field__hint">De 1 a 10. Reducir quita las últimas respuestas.</small>
+                                                </div>
+                                            </details>
+                                        </div>
+                                    </section>
+                                }
+                            </div>
+                            <div class="question__actions">
+                                <p-button
+                                    type="button"
+                                    icon="fa-solid fa-arrow-up"
+                                    [rounded]="true"
+                                    [text]="true"
+                                    severity="secondary"
+                                    [disabled]="first"
+                                    (onClick)="moveQuestion(index, -1)"
+                                    pTooltip="Subir"
+                                    tooltipPosition="top"
+                                    [ariaLabel]="'Subir pregunta ' + (index + 1)"
+                                />
+                                <p-button
+                                    type="button"
+                                    icon="fa-solid fa-arrow-down"
+                                    [rounded]="true"
+                                    [text]="true"
+                                    severity="secondary"
+                                    [disabled]="last"
+                                    (onClick)="moveQuestion(index, 1)"
+                                    pTooltip="Bajar"
+                                    tooltipPosition="top"
+                                    [ariaLabel]="'Bajar pregunta ' + (index + 1)"
+                                />
+                                <p-button
+                                    type="button"
+                                    icon="fa-regular fa-trash-can"
+                                    [rounded]="true"
+                                    [text]="true"
+                                    severity="secondary"
+                                    [disabled]="questionList.length === 1"
+                                    (onClick)="removeQuestion(index)"
+                                    [pTooltip]="questionList.length === 1 ? 'El formulario necesita al menos una pregunta' : 'Quitar pregunta'"
+                                    tooltipPosition="top"
+                                    [ariaLabel]="'Quitar pregunta ' + (index + 1)"
+                                />
                             </div>
                         </div>
                     }
                 </div>
                 <div class="form-add">
-                    <p-button type="button" label="Agregar otra pregunta" icon="fa-solid fa-plus" [text]="true" (onClick)="addQuestion()" />
+                    <p-button type="button" label="Agregar pregunta" icon="fa-solid fa-plus" [text]="true" [disabled]="questionList.length >= limits.questions" (onClick)="addQuestion()" />
                 </div>
             }
         </section>
     </div>
 
-    <aside class="mgs-card mgs-sticky flex flex-col gap-6">
+    <aside class="mgs-card mgs-sticky form-summary flex flex-col gap-6">
         @if (isLoading()) {
             <div class="flex flex-col gap-3" aria-hidden="true">
                 <p-skeleton width="5rem" height="0.75rem" />
@@ -145,14 +217,10 @@
                 <span class="mgs-eyebrow">Resumen</span>
                 <div class="mgs-section-title !m-0 break-words">{{ summary().title || 'Nuevo formulario' }}</div>
                 @if (storedForm(); as form) {
-                    <div><p-tag [value]="form.active ? 'Activo' : 'Inactivo'" [styleClass]="form.active ? activeTagClasses.active : activeTagClasses.inactive" /></div>
+                    <div><p-tag [value]="form.active ? 'Activo' : 'Inactivo / borrador'" [styleClass]="form.active ? activeTagClasses.active : activeTagClasses.inactive" /></div>
+                } @else {
+                    <p-tag value="Inactivo / borrador" [styleClass]="activeTagClasses.inactive" />
                 }
-            </div>
-
-            <div class="form-summary__score" aria-live="polite">
-                <span class="form-summary__score-label">Puntaje máximo</span>
-                <span class="form-summary__score-value">{{ summary().maxScore }}</span>
-                <span class="form-summary__score-note">{{ maxAnswerScore }} puntos × {{ summary().totalWeight }} de peso total</span>
             </div>
 
             <dl class="mgs-details">
@@ -160,10 +228,12 @@
                     <dt>Preguntas</dt>
                     <dd class="tabular-nums">{{ summary().questionCount }}</dd>
                 </div>
-                <div>
-                    <dt>Peso total</dt>
-                    <dd class="tabular-nums">{{ summary().totalWeight }}</dd>
-                </div>
+                @if (!isPersonalized()) {
+                    <div>
+                        <dt>Respuestas</dt>
+                        <dd class="tabular-nums">{{ summary().optionCount }}</dd>
+                    </div>
+                }
                 <div>
                     <dt>Año</dt>
                     <dd class="tabular-nums">{{ summary().year ?? '—' }}</dd>
@@ -174,7 +244,7 @@
         @if (!isLoading() && summary().incompleteCount > 0) {
             <div class="mgs-details-note">
                 <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-                <span>{{ summary().incompleteCount }} pregunta(s) sin completar: escriba el enunciado y un peso de al menos 1.</span>
+                <span>{{ summary().incompleteCount }} pregunta(s) sin completar: {{ isPersonalized() ? 'escriba el enunciado.' : 'complete el enunciado y las respuestas con pesos de 1 a 3.' }}</span>
             </div>
         } @else if (!isLoading() && isEditing()) {
             <div class="mgs-details-note">
@@ -184,7 +254,7 @@
         } @else if (!isLoading()) {
             <div class="mgs-details-note">
                 <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
-                <span>Use pesos mayores en las preguntas que representan más riesgo ergonómico.</span>
+                <span>Los formularios nuevos se guardan como borradores inactivos. Actívelos desde el listado cuando estén listos.</span>
             </div>
         }
     </aside>

@@ -12,7 +12,8 @@ import org.springframework.stereotype.Repository;
 public interface FormRepository extends JpaRepository<Form, Long> {
 
     /**
-     * Returns the forms that can currently be answered.
+     * Returns the active forms of every type, used to keep a single active form
+     * per type.
      *
      * @return list of active forms
      */
