@@ -332,7 +332,7 @@ export class CompanyFormComponent implements OnInit, HasUnsavedChanges {
             next: (company) => {
                 this.isSubmitting.set(false);
                 this.unsaved.markSaved();
-                this.toastService.success(this.isEditing() ? 'Empresa actualizada' : 'Empresa registrada', company.businessName);
+                this.toastService.success(this.isEditing() ? 'Empresa actualizada' : 'Perfil creado', company.businessName);
                 void this.router.navigate(['/companies']);
             },
             error: (error: unknown) => {

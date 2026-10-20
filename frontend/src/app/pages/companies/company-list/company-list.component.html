@@ -1,5 +1,5 @@
 <app-page-header eyebrow="Administración" title="Empresas cliente" subtitle="Organizaciones cuyos colaboradores responden las autoevaluaciones ergonómicas.">
-    <p-button label="Registrar empresa" icon="fa-solid fa-building" routerLink="/companies/new" />
+    <p-button label="Crear perfil" icon="fa-solid fa-building" routerLink="/companies/new" />
 </app-page-header>
 
 <section class="mgs-stats" aria-label="Resumen de empresas">
@@ -124,8 +124,8 @@
                             <p-button label="Reintentar" icon="fa-solid fa-rotate-right" severity="secondary" [outlined]="true" (onClick)="loadCompanies()" />
                         </app-empty-state>
                     } @else if (summary().total === 0) {
-                        <app-empty-state icon="fa-solid fa-building" title="Todavía no hay empresas" message="Registre la primera empresa cliente para enviarle formularios de autoevaluación.">
-                            <p-button label="Registrar empresa" icon="fa-solid fa-building" routerLink="/companies/new" />
+                        <app-empty-state icon="fa-solid fa-building" title="Todavía no hay empresas" message="Cree el primer perfil de empresa cliente para continuar con la gestión.">
+                            <p-button label="Crear perfil" icon="fa-solid fa-building" routerLink="/companies/new" />
                         </app-empty-state>
                     } @else {
                         <app-empty-state icon="fa-solid fa-filter-circle-xmark" title="Sin coincidencias" message="Ninguna empresa coincide con la búsqueda o el filtro de estado." />
