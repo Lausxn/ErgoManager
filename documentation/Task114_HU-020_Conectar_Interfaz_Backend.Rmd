@@ -1,0 +1,84 @@
+---
+title: "Task114 / HU-020 - Conectar interfaz con backend"
+author: "Alejandro Lobo Méndez"
+output: html_document
+---
+
+# **Información de la tarea**
+
+- **Task:** 114
+- **HU:** HU-020 — Editar perfil de Cliente
+- **Sprint:** 2
+- **Responsable:** Alejandro Lobo Méndez
+- **Tipo:** Frontend
+
+# **Objetivo**
+
+Conectar todas las opciones de la interfaz de edición de perfil de cliente con sus funciones del backend, en los dashboards que tienen acceso a **Perfiles de clientes** (Administrador y Ergonomista), y verificar con pruebas que cada opción funcione y esté asignada según su nombre.
+
+# **Opciones conectadas**
+
+| Opción de la interfaz | Función del backend | Resultado esperado |
+|---|---|---|
+| **Editar perfil** (listado) | `GET /api/companies/{id}` | Abre la empresa elegida con sus datos guardados |
+| Aviso en vivo de nombre y cédula | `GET /api/companies` | Marca la razón social o la cédula que ya usa otra empresa |
+| **Nombres anteriores** (panel lateral) | `previousNames` de `GET /api/companies/{id}` | Muestra el historial de nombres del perfil |
+| **Guardar cambios** | `PUT /api/companies/{id}` | Guarda los cambios, muestra *Empresa actualizada* y vuelve al listado |
+| **Restablecer** | Ninguna | Recupera los datos cargados sin llamar al backend |
+| **Volver a empresas** | Navegación a `/companies` | Regresa al listado |
+| **Copiar enlace** | Ninguna | Copia `/self-evaluation?companyId={id}` de esa misma empresa |
+
+# **Implementación realizada**
+
+Al revisar la integración de las Tasks 110, 111, 112 y 113 se encontró que el backend (Task 111 y 112) devuelve los **nombres anteriores** de cada cliente (`previousNames`) y los mantiene **reservados**: rechaza con HTTP 409 un nombre que perteneció a otra empresa ("Ese nombre perteneció a otra empresa y queda reservado para ella…"). El frontend no conocía ese dato, por lo que no avisaba en vivo y, tras el 409, no marcaba ningún campo.
+
+Se conectó de la siguiente forma:
+
+- **`CompanyResponse`** incluye `previousNames`, tal como lo devuelve el backend.
+- La validación en vivo de la razón social reserva los nombres anteriores de las **otras** empresas, con el mismo mensaje del backend. Una empresa **puede recuperar sus propios nombres anteriores**, igual que permite el backend.
+- Tras un 409 por nombre reservado, la nueva consulta de empresas marca la razón social con ese mensaje.
+- El panel lateral de **Editar perfil** muestra la sección **Nombres anteriores** cuando el perfil tiene alguno, para que el usuario entienda por qué esos nombres quedan reservados.
+
+Las demás opciones ya estaban conectadas por las Tasks 110 y 113 y se verificaron sin cambios.
+
+# **Archivos modificados**
+
+- **`frontend/src/app/shared/models/company.model.ts`**: agrega `previousNames` al modelo de respuesta.
+- **`frontend/src/app/pages/companies/company-form/company-form.component.ts`**: reserva los nombres anteriores de otras empresas en la validación en vivo y tras un 409.
+- **`frontend/src/app/pages/companies/company-form/company-form.component.html`**: sección **Nombres anteriores** en el panel lateral.
+- **`frontend/src/app/pages/companies/company-form/company-edit-backend.spec.ts`**: dieciséis pruebas de las opciones con los roles Administrador y Ergonomista.
+- **`documentation/Task114_HU-020_Conectar_Interfaz_Backend.Rmd`**: esta documentación.
+
+# **Decisiones de diseño y arquitectura**
+
+- No se modificó el backend, los endpoints ni los DTOs: el frontend se adapta al contrato existente.
+- Las pruebas recorren la **ruta real** de `app.routes` con su `roleGuard`, de modo que comprueban el acceso desde ambos dashboards y no una copia de la configuración.
+- Se reutilizaron los estilos del panel lateral (`company-link`, `company-contact`) para la sección de nombres anteriores.
+- No se modificaron archivos de otras Tasks.
+
+# **Validaciones realizadas**
+
+- **Pruebas frontend:** 89 aprobadas (73 existentes y 16 nuevas: 8 opciones con cada uno de los dos roles). Cada prueba verifica que la opción **funcione** y que llame a la función que corresponde a su nombre.
+- **`ng build`:** correcto, sin errores.
+- **Prettier:** correcto en los archivos de la Task.
+- **Prueba de punta a punta** con el backend de la feature y MySQL local, con un Administrador y un Ergonomista:
+
+| Verificación | Administrador | Ergonomista |
+|---|---|---|
+| Inicio de sesión con el rol | ✅ | ✅ |
+| `GET /api/companies` (lista y aviso en vivo) | ✅ | ✅ |
+| Editar perfil: `GET /api/companies/{id}` | ✅ | ✅ |
+| Guardar cambios: `PUT` que renombra y guarda el nombre anterior | ✅ | ✅ |
+| Nombre anterior de otra empresa: 409 reservado | ✅ | ✅ |
+| Nombre actual de otra empresa: 409 | ✅ | ✅ |
+| Cédula de otra empresa escrita sin guiones: 409 | ✅ | ✅ |
+| Formatos inválidos: 400 con un mensaje por campo | ✅ | ✅ |
+| Recuperar su propio nombre anterior: 200 | ✅ | ✅ |
+
+# **Trabajo fuera de alcance**
+
+La desactivación y reactivación de perfiles pertenecen a HU-021 y la creación a HU-003, por lo que no se modificaron. Tampoco se modificó lógica del backend.
+
+# **Resultado**
+
+Todas las opciones de **Editar perfil de cliente** quedan conectadas con sus funciones del backend y verificadas para los roles Administrador y Ergonomista. Task114 queda lista para revisión e integración mediante Pull Request hacia **`feature/HU-020-EditarPerfilCliente`**.

@@ -36,6 +36,9 @@ const DUPLICATED_DATA_MESSAGE = 'Ya existe otra empresa con esos datos. Revise l
 /** Message shown under the business name when another company already uses it. */
 const DUPLICATED_BUSINESS_NAME_MESSAGE = 'Ya existe una empresa con esa razón social.';
 
+/** Message shown under the business name when it belonged to another company, the same one the backend sends. */
+const RESERVED_BUSINESS_NAME_MESSAGE = 'Ese nombre perteneció a otra empresa y queda reservado para ella. Agregue un distintivo, por ejemplo un número o la sede.';
+
 /** Formats checked before saving, so the user learns what to fix without waiting for the server. */
 const FORMATS = {
     businessName: /[\p{L}\p{N}]/u,
@@ -110,7 +113,8 @@ function withTaxIdDashes(digits: string): string {
     templateUrl: './company-form.component.html',
     styles: [
         `
-            .company-link {
+            .company-link,
+            .company-history {
                 display: flex;
                 flex-direction: column;
                 gap: 0.6rem;
@@ -183,7 +187,7 @@ export class CompanyFormComponent implements OnInit, HasUnsavedChanges {
     readonly id = input<number | undefined, unknown>(undefined, { transform: numberAttribute });
     protected readonly limits = LIMITS;
     protected readonly activeTagClasses = ACTIVE_TAG_CLASSES;
-    protected readonly businessNameErrors = { duplicated: DUPLICATED_BUSINESS_NAME_MESSAGE, businessNameFormat: FORMAT_MESSAGES.businessName };
+    protected readonly businessNameErrors = { duplicated: DUPLICATED_BUSINESS_NAME_MESSAGE, reserved: RESERVED_BUSINESS_NAME_MESSAGE, businessNameFormat: FORMAT_MESSAGES.businessName };
     protected readonly taxIdErrors = { duplicated: DUPLICATED_TAX_ID_MESSAGE, taxIdFormat: FORMAT_MESSAGES.taxId };
     protected readonly phoneNumberErrors = { phoneNumberFormat: FORMAT_MESSAGES.phoneNumber };
 
@@ -197,8 +201,20 @@ export class CompanyFormComponent implements OnInit, HasUnsavedChanges {
     /** Comparable tax ids of every other registered company, active or not. */
     private readonly takenTaxIds = signal<ReadonlySet<string>>(new Set());
 
-    /** Rejects a business name already used by another registered company. */
-    private readonly uniqueBusinessName: ValidatorFn = (control: AbstractControl): ValidationErrors | null => (this.takenBusinessNames().has(comparableBusinessName(control.value ?? '')) ? { duplicated: true } : null);
+    /** Comparable former names of every other company: the backend keeps them reserved for their owner. */
+    private readonly reservedBusinessNames = signal<ReadonlySet<string>>(new Set());
+
+    /**
+     * Rejects a business name another company uses now or used before. The
+     * company being edited may take back one of its own former names.
+     */
+    private readonly uniqueBusinessName: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+        const name = comparableBusinessName(control.value ?? '');
+        if (this.takenBusinessNames().has(name)) {
+            return { duplicated: true };
+        }
+        return this.reservedBusinessNames().has(name) ? { reserved: true } : null;
+    };
 
     /** Rejects a tax id already used by another registered company. */
     private readonly uniqueTaxId: ValidatorFn = (control: AbstractControl): ValidationErrors | null => (this.takenTaxIds().has(comparableTaxId(control.value ?? '')) ? { duplicated: true } : null);
@@ -291,14 +307,15 @@ export class CompanyFormComponent implements OnInit, HasUnsavedChanges {
     }
 
     /**
-     * Keeps the names and tax ids of the companies other than the one being
-     * edited and checks both fields again against them.
+     * Keeps the names, former names and tax ids of the companies other than the
+     * one being edited and checks both fields again against them.
      *
      * @param companies every registered company
      */
     private rememberOtherCompanies(companies: CompanyResponse[]): void {
         const otherCompanies = companies.filter((company) => company.id !== this.id());
         this.takenBusinessNames.set(new Set(otherCompanies.map((company) => comparableBusinessName(company.businessName))));
+        this.reservedBusinessNames.set(new Set(otherCompanies.flatMap((company) => company.previousNames ?? []).map(comparableBusinessName)));
         this.takenTaxIds.set(new Set(otherCompanies.map((company) => comparableTaxId(company.taxId))));
         this.companyForm.controls.businessName.updateValueAndValidity();
         this.companyForm.controls.taxId.updateValueAndValidity();
