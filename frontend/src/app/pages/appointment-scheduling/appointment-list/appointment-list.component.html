@@ -1,6 +1,6 @@
 <app-page-header eyebrow="Citas" title="Agenda" subtitle="Programe visitas y evaluaciones presenciales con los clientes.">
     @if (selectedErgonomistId() !== null) {
-        <p-button label="Publicar disponibilidad" icon="fa-regular fa-calendar-plus" severity="secondary" [outlined]="true" (onClick)="publishAvailability()" />
+        <p-button label="Gestionar disponibilidad" icon="fa-regular fa-calendar-plus" severity="secondary" [outlined]="true" (onClick)="publishAvailability()" />
         <p-button label="Agendar cita" icon="fa-solid fa-calendar-check" (onClick)="openBooking()" />
     }
 </app-page-header>
@@ -172,7 +172,7 @@
                 <p class="mgs-section-lead">Horarios publicados que todavía nadie ha reservado.</p>
             </div>
             @if (selectedErgonomistId() !== null) {
-                <p-button label="Publicar disponibilidad" icon="fa-regular fa-calendar-plus" [text]="true" severity="secondary" (onClick)="publishAvailability()" />
+                <p-button label="Gestionar disponibilidad" icon="fa-regular fa-calendar-plus" [text]="true" severity="secondary" (onClick)="publishAvailability()" />
             }
         </div>
 

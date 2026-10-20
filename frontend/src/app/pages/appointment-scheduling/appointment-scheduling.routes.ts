@@ -9,10 +9,12 @@ import { AvailabilityFormComponent } from './availability-form/availability-form
 export const appointmentSchedulingRoutes: Routes = [
     { path: '', component: AppointmentListComponent, title: 'ErgoManager - Agenda' },
     {
-        path: 'availabilities/new',
+        path: 'availabilities',
         canActivate: [roleGuard(['ERGONOMIST', 'ADMIN'])],
         canDeactivate: [unsavedChangesGuard],
         component: AvailabilityFormComponent,
-        title: 'ErgoManager - Nueva disponibilidad'
-    }
+        title: 'ErgoManager - Gestionar disponibilidad'
+    },
+    // Former address of the single slot form, kept so old links still work.
+    { path: 'availabilities/new', redirectTo: 'availabilities' }
 ];
