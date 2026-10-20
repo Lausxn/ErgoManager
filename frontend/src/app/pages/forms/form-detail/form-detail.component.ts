@@ -1,12 +1,12 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, input, numberAttribute, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { FormArray, FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators, AbstractControl } from '@angular/forms';
+import { AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { map, merge } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
-import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
@@ -23,7 +23,6 @@ import { applyApiErrors, getApiFieldErrors } from '../../../shared/utils/api-err
 import { markFormAsDirty, notBlank } from '../../../shared/utils/form';
 import { ACTIVE_TAG_CLASSES } from '../../../shared/utils/labels';
 import { FormService } from '../form.service';
-import { FormNavigationComponent } from '../form-navigation/form-navigation.component';
 
 /** Limits of FormRequestDTO and QuestionRequestDTO in the backend. */
 const LIMITS = { title: 150, description: 500, statement: 500, label: 100, questions: 100, options: 10 } as const;
@@ -65,23 +64,7 @@ function uniqueOptions(control: AbstractControl) {
     selector: 'app-form-detail',
     standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [
-        FormsModule,
-        SelectModule,
-        ReactiveFormsModule,
-        RouterLink,
-        ButtonModule,
-        InputNumberModule,
-        InputTextModule,
-        SkeletonModule,
-        TagModule,
-        TextareaModule,
-        TooltipModule,
-        FormNavigationComponent,
-        FormFieldComponent,
-        PageHeaderComponent,
-        SaveBarComponent
-    ],
+    imports: [FormsModule, SelectModule, ReactiveFormsModule, RouterLink, ButtonModule, InputNumberModule, InputTextModule, SkeletonModule, TagModule, TextareaModule, TooltipModule, FormFieldComponent, PageHeaderComponent, SaveBarComponent],
     templateUrl: './form-detail.component.html',
     styles: [
         `
@@ -95,7 +78,7 @@ function uniqueOptions(control: AbstractControl) {
                 padding: 1.1rem 1.25rem 1.25rem;
                 border: 1px solid var(--surface-border);
                 border-radius: var(--mgs-radius-sm);
-                background: var(--surface-card);
+                background: var(--surface-ground);
                 transition:
                     border-color 0.2s var(--mgs-ease),
                     box-shadow 0.2s var(--mgs-ease);
@@ -134,7 +117,7 @@ function uniqueOptions(control: AbstractControl) {
                 padding: 0 0.4rem;
                 border-radius: 999px;
                 background: var(--mgs-black);
-                color: #fff;
+                color: var(--surface-0);
                 font-size: 0.85rem;
                 font-variant-numeric: tabular-nums;
             }
@@ -144,36 +127,75 @@ function uniqueOptions(control: AbstractControl) {
                 gap: 0.15rem;
             }
 
-            .form-summary__score {
-                display: flex;
-                flex-direction: column;
-                gap: 0.35rem;
-                padding: 1.25rem;
+            .answer-group {
+                padding: 1rem;
+                border: 1px solid var(--surface-border);
                 border-radius: var(--mgs-radius-sm);
-                background: var(--mgs-black);
-                color: #fff;
-                border-top: 4px solid var(--mgs-wine);
+                background: var(--surface-card);
             }
 
-            .form-summary__score-label {
-                font-size: 0.75rem;
-                font-weight: 700;
-                letter-spacing: 0.08em;
-                text-transform: uppercase;
-                opacity: 0.75;
+            .answer-group__head,
+            .answer-group__footer {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 0.75rem;
             }
 
-            .form-summary__score-value {
-                font-family: var(--mgs-font-display);
-                font-size: 2.5rem;
-                font-weight: 800;
-                line-height: 1;
-                font-variant-numeric: tabular-nums;
+            .answer-group__head {
+                margin-bottom: 1rem;
+            }
+            .answer-group__footer {
+                margin-top: 0.75rem;
+                align-items: flex-start;
             }
 
-            .form-summary__score-note {
-                font-size: 0.82rem;
-                opacity: 0.75;
+            .answer-row {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) 7rem 2.5rem;
+                align-items: start;
+                gap: 0.5rem;
+            }
+
+            .answer-row > app-form-field {
+                min-width: 0;
+            }
+            .answer-row--header {
+                margin-bottom: 0.5rem;
+                font-size: 0.8rem;
+                font-weight: 600;
+            }
+
+            .question__actions {
+                justify-content: flex-end;
+                margin-top: 1rem;
+                padding-top: 0.75rem;
+                border-top: 1px solid var(--surface-border);
+            }
+
+            .form-summary {
+                background: var(--surface-hover);
+                border-top: 3px solid var(--mgs-wine);
+            }
+
+            .editor-quantity {
+                font-size: 0.85rem;
+            }
+            .editor-quantity summary {
+                cursor: pointer;
+            }
+
+            @media (max-width: 480px) {
+                .question {
+                    padding: 1rem;
+                }
+                .answer-group {
+                    padding: 0.75rem;
+                }
+                .answer-row {
+                    grid-template-columns: minmax(0, 1fr) 5.5rem 2rem;
+                }
             }
 
             .form-add {
@@ -254,8 +276,6 @@ export class FormDetailComponent implements OnInit, HasUnsavedChanges {
         if (!this.isEditing()) {
             this.formDetail.controls.type.setValue(this.category() === 'personalized' ? 'PERSONALIZED_EVALUATION' : 'SELF_EVALUATION');
             this.unsaved.markSaved();
-        }
-        if (!this.isEditing()) {
             return;
         }
         this.isLoading.set(true);
@@ -453,12 +473,18 @@ export class FormDetailComponent implements OnInit, HasUnsavedChanges {
             )
         });
     }
+
+    /** Crea una pregunta vacía para el editor, sin ID persistido. */
     private emptyQuestion(order: number): QuestionValue {
         return { id: null, statement: '', questionOrder: order, optionList: [this.emptyOption(1)] };
     }
+
+    /** Crea una respuesta vacía con peso inicial válido. */
     private emptyOption(order: number): OptionValue {
         return { id: null, label: '', weight: 1, optionOrder: order };
     }
+
+    /** Construye los controles de una respuesta y conserva su ID al editar. */
     private buildOptionGroup(option: OptionValue): OptionGroup {
         return this.formBuilder.group({
             id: this.formBuilder.control<number | null>(option.id),
@@ -467,6 +493,7 @@ export class FormDetailComponent implements OnInit, HasUnsavedChanges {
             optionOrder: this.formBuilder.nonNullable.control(option.optionOrder)
         });
     }
+
     /** Quantity controls only resize the editor; they are never serialized. Existing IDs survive. */
     protected resizeQuestions(count: number): void {
         if (!Number.isInteger(count) || count < 1 || count > LIMITS.questions) return;
@@ -475,6 +502,8 @@ export class FormDetailComponent implements OnInit, HasUnsavedChanges {
         this.updateQuestionMode();
         this.renumber();
     }
+
+    /** Ajusta la cantidad de respuestas conservando los controles existentes. */
     protected resizeOptions(index: number, count: number): void {
         if (!Number.isInteger(count) || count < 1 || count > LIMITS.options) return;
         const options = this.questionList.at(index).controls.optionList;
@@ -482,6 +511,18 @@ export class FormDetailComponent implements OnInit, HasUnsavedChanges {
         while (options.length < count) options.push(this.buildOptionGroup(this.emptyOption(options.length + 1)));
         options.markAsDirty();
     }
+
+    /** Quita una respuesta y renumera las restantes conservando sus IDs. */
+    protected removeOption(questionIndex: number, optionIndex: number): void {
+        const options = this.questionList.at(questionIndex).controls.optionList;
+        if (options.length <= 1) return;
+        options.removeAt(optionIndex);
+        options.controls.forEach((option, index) => option.controls.optionOrder.setValue(index + 1, { emitEvent: false }));
+        options.markAsDirty();
+        options.updateValueAndValidity();
+    }
+
+    /** Desactiva únicamente la validación de respuestas ocultas en el modo personalizado. */
     private updateQuestionMode(): void {
         const personalized = this.formDetail.controls.type.value === 'PERSONALIZED_EVALUATION';
         for (const question of this.questionList.controls) {

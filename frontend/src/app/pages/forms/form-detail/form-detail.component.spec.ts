@@ -9,7 +9,7 @@ import { FormDetailComponent } from './form-detail.component';
 
 const FORMS_URL = `${environment.apiUrl}/forms`;
 
-describe('Form editor categories', () => {
+describe('Editor de formularios', () => {
     let fixture: ComponentFixture<FormDetailComponent>;
     let http: HttpTestingController;
 
@@ -37,7 +37,7 @@ describe('Form editor categories', () => {
         fixture.componentInstance['submit']();
     }
 
-    it('sends the type and option weights, with UI quantities and question weight excluded', () => {
+    it('envía el tipo y los pesos por opción sin cantidades de interfaz ni peso por pregunta', () => {
         const form = ready();
         fixture.componentInstance['resizeQuestions'](2);
         fixture.componentInstance['resizeOptions'](0, 3);
@@ -57,7 +57,7 @@ describe('Form editor categories', () => {
         request.flush({}, { status: 400, statusText: 'Validation' });
     });
 
-    it('creates personalized statements without predefined responses or weights', () => {
+    it('crea enunciados personalizados sin respuestas predefinidas ni pesos', () => {
         ready(true);
         fixture.detectChanges();
         const element: HTMLElement = fixture.nativeElement;
@@ -72,7 +72,7 @@ describe('Form editor categories', () => {
         request.flush({}, { status: 400, statusText: 'Validation' });
     });
 
-    it('switches creation type without letting hidden response validators block personalized forms', () => {
+    it('permite cambiar el tipo al crear sin validar respuestas ocultas del modo personalizado', () => {
         const form = ready();
         form.controls.questionList.at(0).controls.optionList.at(0).controls.label.setValue('');
         expect(form.invalid).toBeTrue();
@@ -82,7 +82,7 @@ describe('Form editor categories', () => {
         expect(form.invalid).toBeTrue();
     });
 
-    it('enforces question/option quantity boundaries and preserves existing entries when resizing', () => {
+    it('respeta los límites de cantidades y conserva controles existentes al ajustar', () => {
         const form = ready();
         const original = form.controls.questionList.at(0);
         fixture.componentInstance['resizeQuestions'](100);
@@ -100,7 +100,7 @@ describe('Form editor categories', () => {
         expect(original.controls.optionList.at(0).controls.label.value).toBe('Respuesta inicial');
     });
 
-    it('rejects duplicate response labels regardless of case and surrounding spaces', () => {
+    it('rechaza respuestas repetidas ignorando mayúsculas y espacios externos', () => {
         const form = ready();
         fixture.componentInstance['resizeOptions'](0, 2);
         const options = form.controls.questionList.at(0).controls.optionList;
@@ -113,7 +113,7 @@ describe('Form editor categories', () => {
     });
 
     for (const weight of [0, 4, 1.5, null]) {
-        it(`rejects invalid response weight ${weight}`, () => {
+        it(`rechaza el peso inválido ${weight}`, () => {
             const form = ready();
             form.controls.questionList.at(0).controls.optionList.at(0).controls.weight.setValue(weight);
             submit();
@@ -122,7 +122,7 @@ describe('Form editor categories', () => {
         });
     }
 
-    it('places nested backend errors on the relevant option and shows its message', () => {
+    it('asocia errores anidados a la opción correspondiente y muestra el mensaje', () => {
         const form = ready();
         submit();
         http.expectOne(FORMS_URL).flush({ message: 'Datos inválidos', fieldErrors: { 'questionList[0].optionList[0].weight': 'El peso máximo es 3.' } }, { status: 400, statusText: 'Validation' });
@@ -133,7 +133,7 @@ describe('Form editor categories', () => {
         expect(fixture.nativeElement.textContent).toContain('El peso máximo es 3.');
     });
 
-    it('preserves stored question/option IDs on PUT and locks the type', () => {
+    it('conserva IDs de preguntas y opciones al actualizar y bloquea el tipo', () => {
         fixture.componentRef.setInput('id', 7);
         fixture.detectChanges();
         http.expectOne(`${FORMS_URL}/7`).flush({
@@ -157,7 +157,7 @@ describe('Form editor categories', () => {
         request.flush({}, { status: 400, statusText: 'Validation' });
     });
 
-    it('loads personalized forms when optional description and option lists are absent', () => {
+    it('carga formularios personalizados sin descripción ni listas opcionales de respuestas', () => {
         fixture.componentRef.setInput('id', 8);
         fixture.detectChanges();
         http.expectOne(`${FORMS_URL}/8`).flush({ id: 8, title: 'Personalizado', publicationYear: 2026, type: 'PERSONALIZED_EVALUATION', active: false, questionList: [{ id: 11, statement: 'Observación', questionOrder: 1 }] });
@@ -172,7 +172,34 @@ describe('Form editor categories', () => {
         request.flush({}, { status: 400, statusText: 'Validation' });
     });
 
-    it('restores generated arrays and the original type when discarding changes', () => {
+    it('presenta una sola acción para agregar preguntas y respuestas compactas con etiquetas accesibles', () => {
+        ready();
+        fixture.detectChanges();
+        const element: HTMLElement = fixture.nativeElement;
+        expect(Array.from(element.querySelectorAll('button')).filter((button) => button.textContent?.trim() === 'Agregar pregunta').length).toBe(1);
+        expect(Array.from(element.querySelectorAll('button')).filter((button) => button.textContent?.trim() === 'Agregar respuesta').length).toBe(1);
+        expect(element.querySelector('app-form-navigation')).toBeNull();
+        expect(element.querySelector('label[for="weight-0-0"]')?.textContent).toContain('Peso de respuesta 1 de pregunta 1');
+        expect(element.querySelector('.question > .question__actions')).not.toBeNull();
+    });
+
+    it('quita una opción específica conservando IDs, orden y al menos una respuesta', () => {
+        const form = ready();
+        fixture.componentInstance['resizeOptions'](0, 3);
+        const options = form.controls.questionList.at(0).controls.optionList;
+        options.controls.forEach((option, index) => option.patchValue({ id: 20 + index, label: `Respuesta ${index}` }));
+        fixture.componentInstance['removeOption'](0, 1);
+        expect(options.getRawValue().map((option) => [option.id, option.optionOrder])).toEqual([
+            [20, 1],
+            [22, 2]
+        ]);
+        fixture.componentInstance['removeOption'](0, 0);
+        fixture.componentInstance['removeOption'](0, 0);
+        expect(options.length).toBe(1);
+        expect(options.at(0).controls.id.value).toBe(22);
+    });
+
+    it('restablece los arreglos y el tipo original al descartar cambios', () => {
         ready(true);
         fixture.componentInstance['resizeQuestions'](3);
         fixture.componentInstance['formDetail'].controls.type.setValue('SELF_EVALUATION');

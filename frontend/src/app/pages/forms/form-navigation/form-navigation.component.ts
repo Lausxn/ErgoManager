@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 
 /** Sections of the forms workspace, shared by the list and editor. */
-export type FormSection = 'overview' | 'self-evaluation' | 'personalized';
+export type FormSection = 'self-evaluation' | 'personalized';
 
 /** Local navigation without changing the application's main menu. */
 @Component({
@@ -23,10 +23,9 @@ export type FormSection = 'overview' | 'self-evaluation' | 'personalized';
     `
 })
 export class FormNavigationComponent {
-    readonly section = input<FormSection>('overview');
+    readonly section = input<FormSection>('self-evaluation');
     protected readonly items = [
-        { section: 'overview', label: 'Resumen', icon: 'fa-solid fa-table-cells-large', route: '/forms' },
-        { section: 'self-evaluation', label: 'Autoevaluación', icon: 'fa-solid fa-list-check', route: '/forms/self-evaluation' },
-        { section: 'personalized', label: 'Evaluación personalizada', icon: 'fa-solid fa-user-check', route: '/forms/personalized' }
+        { section: 'self-evaluation', label: 'Autoevaluaciones', icon: 'fa-solid fa-list-check', route: '/forms/self-evaluation' },
+        { section: 'personalized', label: 'Evaluaciones personalizadas', icon: 'fa-solid fa-user-check', route: '/forms/personalized' }
     ] as const;
 }

@@ -16,7 +16,6 @@ import { TooltipModule } from 'primeng/tooltip';
 
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
-import { StatCardComponent } from '../../../shared/components/stat-card/stat-card.component';
 import { CompanyResponse } from '../../../shared/models/company.model';
 import { FormResponse } from '../../../shared/models/form.model';
 import { DialogService } from '../../../shared/services/dialog.service';
@@ -69,7 +68,6 @@ interface CompanyOption {
         TooltipModule,
         EmptyStateComponent,
         PageHeaderComponent,
-        StatCardComponent,
         FormNavigationComponent
     ],
     templateUrl: './form-list.component.html',
@@ -147,8 +145,7 @@ interface CompanyOption {
     ]
 })
 export class FormListComponent implements OnInit {
-    readonly section = input<FormSection>('overview');
-    protected readonly pageTitle = computed(() => (this.section() === 'overview' ? 'Formularios' : this.section() === 'personalized' ? 'Formularios de evaluación personalizada' : 'Formularios de autoevaluación'));
+    readonly section = input<FormSection>('self-evaluation');
     private readonly formService = inject(FormService);
     private readonly companyService = inject(CompanyService);
     private readonly dialogService = inject(DialogService);
@@ -185,26 +182,13 @@ export class FormListComponent implements OnInit {
 
     protected readonly rows = computed<FormRow[]>(() =>
         this.formList()
-            .filter((form) => this.section() === 'overview' || form.type === (this.section() === 'personalized' ? 'PERSONALIZED_EVALUATION' : 'SELF_EVALUATION'))
+            .filter((form) => form.type === (this.section() === 'personalized' ? 'PERSONALIZED_EVALUATION' : 'SELF_EVALUATION'))
             .map((form) => ({
                 ...form,
                 questionCount: (form.questionList ?? []).length,
                 searchKey: `${form.title} ${form.description ?? ''} ${form.publicationYear}`.toLowerCase()
             }))
     );
-
-    /** Figures of the summary cards, counted in a single pass. */
-    protected readonly summary = computed(() => {
-        const summary = { total: 0, active: 0, activeQuestions: 0 };
-        for (const form of this.rows()) {
-            summary.total++;
-            if (form.active) {
-                summary.active++;
-                summary.activeQuestions += (form.questionList ?? []).length;
-            }
-        }
-        return summary;
-    });
 
     protected readonly filteredRows = computed(() => {
         const search = this.searchText().trim().toLowerCase();
