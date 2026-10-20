@@ -5,11 +5,13 @@ import com.mgs.ergomanager.dto.company.CompanyResponseDTO;
 import com.mgs.ergomanager.exception.DuplicateResourceException;
 import com.mgs.ergomanager.exception.ResourceNotFoundException;
 import com.mgs.ergomanager.model.Company;
+import com.mgs.ergomanager.model.CompanyKeys;
 import com.mgs.ergomanager.repository.CompanyRepository;
 import com.mgs.ergomanager.service.CompanyService;
 import java.util.List;
 import java.util.Locale;
 import org.hibernate.exception.ConstraintViolationException;
+import org.hibernate.exception.ConstraintViolationException.ConstraintKind;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,12 +53,8 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     @Transactional
     public CompanyResponseDTO create(CompanyRequestDTO request) {
-        if (companyRepository.existsByBusinessNameIgnoreCase(request.businessName())) {
-            throw new DuplicateResourceException(DUPLICATE_NAME_MESSAGE);
-        }
-        if (companyRepository.existsByTaxId(request.taxId())) {
-            throw new DuplicateResourceException(DUPLICATE_TAX_ID_MESSAGE);
-        }
+        checkBusinessNameIsFree(CompanyKeys.businessNameKey(request.businessName()));
+        checkTaxIdIsFree(CompanyKeys.taxIdKey(request.taxId()));
         Company company = new Company();
         copy(request, company);
         company.setActive(true);
@@ -67,11 +65,15 @@ public class CompanyServiceImpl implements CompanyService {
     @Transactional
     public CompanyResponseDTO update(Long id, CompanyRequestDTO request) {
         Company company = getCompany(id);
-        if (companyRepository.existsByBusinessNameIgnoreCaseAndIdNot(request.businessName(), id)) {
-            throw new DuplicateResourceException(DUPLICATE_NAME_MESSAGE);
+        // Only a value that changes can collide with another company, so an
+        // edit that keeps the name and the tax id needs no extra query.
+        String businessNameKey = CompanyKeys.businessNameKey(request.businessName());
+        if (!businessNameKey.equals(company.getBusinessNameKey())) {
+            checkBusinessNameIsFree(businessNameKey);
         }
-        if (companyRepository.existsByTaxIdAndIdNot(request.taxId(), id)) {
-            throw new DuplicateResourceException(DUPLICATE_TAX_ID_MESSAGE);
+        String taxIdKey = CompanyKeys.taxIdKey(request.taxId());
+        if (!taxIdKey.equals(company.getTaxIdKey())) {
+            checkTaxIdIsFree(taxIdKey);
         }
         copy(request, company);
         return toResponse(saveAndFlush(company));
@@ -80,9 +82,8 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     @Transactional
     public void deactivate(Long id) {
-        Company company = getCompany(id);
-        company.setActive(false);
-        companyRepository.save(company);
+        // The entity is managed, so the change is written when the transaction ends.
+        getCompany(id).setActive(false);
     }
 
     @Override
@@ -90,7 +91,29 @@ public class CompanyServiceImpl implements CompanyService {
     public CompanyResponseDTO activate(Long id) {
         Company company = getCompany(id);
         company.setActive(true);
-        return toResponse(companyRepository.save(company));
+        return toResponse(company);
+    }
+
+    /**
+     * Fails with HTTP 409 when another company already uses the business name.
+     *
+     * @param businessNameKey comparison key of the name
+     */
+    private void checkBusinessNameIsFree(String businessNameKey) {
+        if (companyRepository.existsByBusinessNameKey(businessNameKey)) {
+            throw new DuplicateResourceException(DUPLICATE_NAME_MESSAGE);
+        }
+    }
+
+    /**
+     * Fails with HTTP 409 when another company already uses the tax id.
+     *
+     * @param taxIdKey comparison key of the tax id
+     */
+    private void checkTaxIdIsFree(String taxIdKey) {
+        if (companyRepository.existsByTaxIdKey(taxIdKey)) {
+            throw new DuplicateResourceException(DUPLICATE_TAX_ID_MESSAGE);
+        }
     }
 
     /**
@@ -105,8 +128,8 @@ public class CompanyServiceImpl implements CompanyService {
     }
 
     /**
-     * Writes the company immediately, so a tax id taken by a concurrent request
-     * is reported as a conflict instead of an unexpected error.
+     * Writes the company immediately, so a name or tax id taken by a concurrent
+     * request after the checks above is still reported as HTTP 409.
      *
      * @param company company to store
      * @return the stored company
@@ -115,18 +138,37 @@ public class CompanyServiceImpl implements CompanyService {
         try {
             return companyRepository.saveAndFlush(company);
         } catch (DataIntegrityViolationException exception) {
-            // A concurrent insert can win after the existence checks above.
-            // Use the named constraint; do not query a failed transaction.
-            for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
-                if (cause instanceof ConstraintViolationException violation
-                        && violation.getConstraintName() != null
-                        && violation.getConstraintName().toLowerCase(Locale.ROOT)
-                                .contains("uk_companies_business_name")) {
-                    throw new DuplicateResourceException(DUPLICATE_NAME_MESSAGE);
+            throw conflictOf(exception);
+        }
+    }
+
+    /**
+     * Translates the violation of a unique business name or tax id into
+     * HTTP 409. Any other violation is not a duplicate, so it is rethrown.
+     * The constraint name is read from the exception because the failed
+     * transaction cannot be queried again.
+     *
+     * @param exception error raised by the database
+     * @return the conflict to throw
+     */
+    static RuntimeException conflictOf(DataIntegrityViolationException exception) {
+        for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+            // A missing value or a broken foreign key is not a duplicate.
+            if (cause instanceof ConstraintViolationException violation
+                    && (violation.getKind() == ConstraintKind.UNIQUE || violation.getKind() == ConstraintKind.OTHER)) {
+                // Some drivers only name the constraint inside the message, so both are read.
+                String text = (violation.getConstraintName() + " " + violation.getMessage()).toLowerCase(Locale.ROOT);
+                // Matches the key constraint and the index of older databases on the plain name.
+                if (text.contains("uk_companies_business_name")) {
+                    return new DuplicateResourceException(DUPLICATE_NAME_MESSAGE);
+                }
+                // Matches the key constraint and the index Hibernate generated on the plain tax id.
+                if (text.contains("tax_id")) {
+                    return new DuplicateResourceException(DUPLICATE_TAX_ID_MESSAGE);
                 }
             }
-            throw new DuplicateResourceException(DUPLICATE_TAX_ID_MESSAGE);
         }
+        return exception;
     }
 
     /**

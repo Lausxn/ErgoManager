@@ -3,12 +3,14 @@ package com.mgs.ergomanager.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.mgs.ergomanager.config.CompanyKeyBackfill;
 import com.mgs.ergomanager.model.Company;
 import com.mgs.ergomanager.model.CompanyKeys;
+import com.mgs.ergomanager.model.User;
 import com.mgs.ergomanager.model.enums.Role;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -17,6 +19,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /** Unique business name and tax id enforced by the comparison keys of the database. */
 class CompanyUniqueKeyIntegrationTests extends ApiIntegrationTestSupport {
@@ -90,6 +94,63 @@ class CompanyUniqueKeyIntegrationTests extends ApiIntegrationTestSupport {
                                 "contactEmail", "grupo@central.test"))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("businessName").value("Grupo Central S.A."));
+    }
+
+    private ResultActions save(MockHttpServletRequestBuilder request, String name, String taxId) throws Exception {
+        User admin = userRepository.findByEmail("admin.api.keys@example.test")
+                .orElseGet(() -> persistUser("admin.api.keys@example.test", Role.ADMIN));
+        return mvc.perform(request.with(as(admin)).contentType(MediaType.APPLICATION_JSON)
+                .content(toJson(Map.of("businessName", name, "taxId", taxId, "contactEmail", "contacto@empresa.test"))));
+    }
+
+    @Test
+    void theApiRejectsANameThatOnlyChangesCaseOrSpacesAndAcceptsOneWithOtherAccents() throws Exception {
+        persistCompany("Nandu S.A.", "3-101-400020", true);
+        save(post("/api/companies"), "  NANDU   s.a. ", "3-101-400021")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("message").value("Ya existe una empresa con ese nombre."));
+        save(post("/api/companies"), "Ñandú S.A.", "3-101-400022")
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void theApiRejectsATaxIdWrittenWithoutDashesOnCreateAndUpdate() throws Exception {
+        persistCompany("Primera", "3-101-400023", true);
+        Company second = persistCompany("Segunda", "3-101-400024", true);
+        save(post("/api/companies"), "Tercera", "3101400023")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("message").value("Ya existe una empresa con esa cédula jurídica."));
+        save(put("/api/companies/{id}", second.getId()), "Segunda", "3 101 400023")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("message").value("Ya existe una empresa con esa cédula jurídica."));
+        assertThat(reload(second).getTaxId()).isEqualTo("3-101-400024");
+    }
+
+    @Test
+    void aRenameToAnotherCompanyNameIsRejectedAndKeepsTheStoredName() throws Exception {
+        persistCompany("Grupo Norte", "3-101-400025", true);
+        Company other = persistCompany("Grupo Sur", "3-101-400026", true);
+        save(put("/api/companies/{id}", other.getId()), "grupo  NORTE", "3-101-400026")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("message").value("Ya existe una empresa con ese nombre."));
+        assertThat(reload(other).getBusinessName()).isEqualTo("Grupo Sur");
+    }
+
+    @Test
+    void aCompanyThatRepeatsAnOlderNameMustBeRenamedWhenItIsEdited() throws Exception {
+        long original = insertWithoutKeys("Repetida S.A.", "3-101-400027");
+        long repeated = insertWithoutKeys("REPETIDA s.a.", "3-101-400028");
+        backfill.run(null);
+        entityManager.clear();
+
+        save(put("/api/companies/{id}", repeated), "REPETIDA s.a.", "3-101-400028")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("message").value("Ya existe una empresa con ese nombre."));
+        save(put("/api/companies/{id}", repeated), "Repetida Dos S.A.", "3-101-400028")
+                .andExpect(status().isOk());
+        // The company that kept the name is edited normally.
+        save(put("/api/companies/{id}", original), "Repetida S.A.", "3-101-400027")
+                .andExpect(status().isOk());
     }
 
     @Test

@@ -59,42 +59,6 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
     void setTaxIdKey(@Param("id") Long id, @Param("key") String key);
 
     /**
-     * Checks whether a company already uses a name, ignoring case. Inactive
-     * companies are included, so their names remain reserved.
-     *
-     * @param businessName name to look for
-     * @return true when a company already uses that name
-     */
-    boolean existsByBusinessNameIgnoreCase(String businessName);
-
-    /**
-     * Checks whether a company other than the given one uses a name, ignoring
-     * case, so a company can keep its own name when it is updated.
-     *
-     * @param businessName name to look for
-     * @param id           identifier of the company being updated
-     * @return true when another company already uses that name
-     */
-    boolean existsByBusinessNameIgnoreCaseAndIdNot(String businessName, Long id);
-
-    /**
-     * Checks whether a company is already registered with the given tax id.
-     *
-     * @param taxId tax id to look for
-     * @return true when another company already uses that tax id
-     */
-    boolean existsByTaxId(String taxId);
-
-    /**
-     * Checks whether a company other than the given one uses a tax id.
-     *
-     * @param taxId tax id to look for
-     * @param id    identifier of the company being updated
-     * @return true when another company already uses that tax id
-     */
-    boolean existsByTaxIdAndIdNot(String taxId, Long id);
-
-    /**
      * Returns every company that has not been deactivated.
      *
      * @return list of active companies
