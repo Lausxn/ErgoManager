@@ -1,0 +1,78 @@
+---
+title: "Task117 / HU-021 - Conectar interfaz con backend"
+author: "Alejandro Lobo Méndez"
+output: html_document
+---
+
+# **Información de la tarea**
+
+- **Task:** 117
+- **HU:** HU-021 — Desactivar perfil de Cliente
+- **Sprint:** 2
+- **Responsable:** Alejandro Lobo Méndez
+- **Tipo:** Frontend
+
+# **Objetivo**
+
+Conectar todas las opciones de la interfaz de desactivación de perfil de cliente (pop-up de la Task 115) con sus funciones del backend (Task 116), en los dashboards que tienen acceso a **Perfiles de clientes** (Administrador y Ergonomista), y verificar con pruebas que cada opción funcione y esté asignada según su nombre.
+
+# **Opciones conectadas**
+
+| Opción de la interfaz | Función del backend | Resultado esperado |
+|---|---|---|
+| **Desactivar empresa** (listado) | Ninguna todavía | Abre el pop-up "¿Está seguro de desactivar este perfil?" con los datos de esa empresa |
+| **Cancelar** (pop-up) | Ninguna | Cierra el pop-up; la empresa sigue activa |
+| **Desactivar** (pop-up) | `DELETE /api/companies/{id}` | La empresa pasa a *Inactiva* y se actualizan las tarjetas de resumen |
+| Error al desactivar | Respuesta de error del backend | Aviso con el mensaje del servidor; la empresa sigue activa |
+| **Reactivar empresa** (listado) | `PATCH /api/companies/{id}/activate` | La empresa vuelve a *Activa* |
+| Perfil de una empresa inactiva | `GET /api/companies/{id}` | Muestra el estado *Inactiva* y avisa que el enlace no acepta respuestas |
+
+# **Implementación realizada**
+
+Al revisar la integración de las Tasks 115 y 116 se comprobó que las opciones ya llamaban a los endpoints correctos. Además se verificó que cada efecto que anuncia el pop-up lo cumple el backend:
+
+- **Dejará de recibir formularios:** el reenvío a una empresa inactiva se rechaza ("La empresa está inactiva. Actívela antes de reenviar el formulario."), y el diálogo de reenvío solo ofrece empresas activas.
+- **Sus colaboradores no podrán responder desde el enlace:** la autoevaluación se rechaza ("La empresa no existe o no está activa.").
+- **Las evaluaciones y el historial se conservan:** el perfil no se borra y sus autoevaluaciones siguen disponibles.
+
+La Task 116 agregó un efecto que el pop-up no informaba: **no se pueden agendar citas ni registrar evaluaciones personalizadas** para un cliente inactivo. Se agregó esa línea al pop-up para que la interfaz refleje lo que hace el backend.
+
+# **Archivos modificados**
+
+- **`frontend/src/app/pages/companies/deactivate-company-dialog/deactivate-company-dialog.component.html`**: informa que no se podrán agendar citas ni registrar evaluaciones personalizadas.
+- **`frontend/src/app/pages/companies/deactivate-company-dialog/company-deactivation-backend.spec.ts`**: catorce pruebas de las opciones con los roles Administrador y Ergonomista.
+- **`documentation/Task117_HU-021_Conectar_Interfaz_Backend.Rmd`**: esta documentación.
+
+# **Decisiones de diseño y arquitectura**
+
+- No se modificó el backend, los endpoints ni los DTOs.
+- Las pruebas recorren la **ruta real** de `app.routes` con su `roleGuard`, de modo que comprueban el acceso desde ambos dashboards.
+- Las pruebas usan los nombres accesibles **Desactivar empresa** y **Reactivar empresa**, que son iguales en las features de HU-003, HU-020 y HU-021, para que sigan siendo válidas al integrarlas.
+- No se modificaron archivos de otras Tasks: el listado y el diálogo de reenvío ya filtraban las empresas activas.
+
+# **Validaciones realizadas**
+
+- **Pruebas frontend:** 33 aprobadas (19 existentes y 14 nuevas: 7 opciones con cada uno de los dos roles).
+- **`ng build`:** correcto, sin errores.
+- **Prettier:** correcto en los archivos de la Task.
+- **Prueba de punta a punta** con el backend de la feature y MySQL local:
+
+| Verificación | Administrador | Ergonomista |
+|---|---|---|
+| Desactivar: `DELETE /api/companies/{id}` responde 204 | ✅ | ✅ |
+| El perfil no se borra y queda inactivo | ✅ | ✅ |
+| Dashboard: el total de empresas activas baja en 1 | ✅ | No aplica (el resumen es del Administrador) |
+| Autoevaluación desde el enlace: rechazada | ✅ | ✅ |
+| Reenvío de formulario: rechazado | ✅ | ✅ |
+| El historial de autoevaluaciones se conserva | ✅ | ✅ |
+| Reactivar: `PATCH /api/companies/{id}/activate` | ✅ | ✅ |
+
+- **Pruebas del backend de la Task 116** (`EvaluationFlowIntegrationTests`, solo ejecutadas): 19 aprobadas, incluidas las que bloquean citas y evaluaciones personalizadas de un cliente inactivo.
+
+# **Trabajo fuera de alcance**
+
+La creación (HU-003) y la edición (HU-020) de perfiles no se modificaron. Tampoco se modificó lógica del backend.
+
+# **Resultado**
+
+Todas las opciones de **Desactivar perfil de cliente** quedan conectadas con sus funciones del backend y verificadas para los roles Administrador y Ergonomista. Task117 queda lista para revisión e integración mediante Pull Request hacia **`feature/HU-021-DesactivarPerfilCliente`**.
