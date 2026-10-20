@@ -3,6 +3,9 @@ package com.mgs.ergomanager.repository;
 import com.mgs.ergomanager.model.Company;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -10,6 +13,50 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface CompanyRepository extends JpaRepository<Company, Long> {
+
+    /**
+     * Checks whether a company already uses a business name key.
+     *
+     * @param businessNameKey key built by {@code CompanyKeys.businessNameKey}
+     * @return true when a company already uses that name
+     */
+    boolean existsByBusinessNameKey(String businessNameKey);
+
+    /**
+     * Checks whether a company already uses a tax id key.
+     *
+     * @param taxIdKey key built by {@code CompanyKeys.taxIdKey}
+     * @return true when a company already uses that tax id
+     */
+    boolean existsByTaxIdKey(String taxIdKey);
+
+    /**
+     * Returns the companies stored before the comparison keys existed.
+     *
+     * @return companies with a missing key, oldest first
+     */
+    List<Company> findByBusinessNameKeyIsNullOrTaxIdKeyIsNullOrderByIdAsc();
+
+    /**
+     * Writes the business name key of a company without running the entity
+     * callbacks, so the other key can stay empty when it is repeated.
+     *
+     * @param id  identifier of the company
+     * @param key business name key
+     */
+    @Modifying
+    @Query("update Company company set company.businessNameKey = :key where company.id = :id")
+    void setBusinessNameKey(@Param("id") Long id, @Param("key") String key);
+
+    /**
+     * Writes the tax id key of a company without running the entity callbacks.
+     *
+     * @param id  identifier of the company
+     * @param key tax id key
+     */
+    @Modifying
+    @Query("update Company company set company.taxIdKey = :key where company.id = :id")
+    void setTaxIdKey(@Param("id") Long id, @Param("key") String key);
 
     /**
      * Checks whether a company already uses a name, ignoring case. Inactive

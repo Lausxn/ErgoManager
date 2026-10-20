@@ -1,5 +1,6 @@
 package com.mgs.ergomanager.dto.company;
 
+import com.mgs.ergomanager.model.CompanyKeys;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -35,9 +36,12 @@ public record CompanyRequestDTO(
         @Size(max = 200, message = "Use un máximo de 200 caracteres.")
         String address) {
 
-    /** Trims the values, lowercases the email and turns blank optional fields into null. */
+    /**
+     * Trims the values, leaves single spaces between the words of the business
+     * name, lowercases the email and turns blank optional fields into null.
+     */
     public CompanyRequestDTO {
-        businessName = businessName == null ? null : businessName.trim();
+        businessName = CompanyKeys.cleanBusinessName(businessName);
         taxId = taxId == null ? null : taxId.trim();
         contactEmail = contactEmail == null ? null : contactEmail.trim().toLowerCase(Locale.ROOT);
         phoneNumber = phoneNumber == null || phoneNumber.isBlank() ? null : phoneNumber.trim();

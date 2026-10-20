@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
@@ -12,10 +14,13 @@ import org.hibernate.annotations.CreationTimestamp;
 
 /**
  * Client company whose employees fill in the ergonomic self evaluation forms.
+ * Two companies can never share a business name or a tax id: the comparison
+ * keys of {@link CompanyKeys} are unique in the database.
  */
 @Entity
-@Table(name = "companies", uniqueConstraints =
-        @UniqueConstraint(name = "uk_companies_business_name", columnNames = "business_name"))
+@Table(name = "companies", uniqueConstraints = {
+        @UniqueConstraint(name = CompanyKeys.BUSINESS_NAME_CONSTRAINT, columnNames = "business_name_key"),
+        @UniqueConstraint(name = CompanyKeys.TAX_ID_CONSTRAINT, columnNames = "tax_id_key")})
 public class Company {
 
     @Id
@@ -44,6 +49,25 @@ public class Company {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    /**
+     * Comparison key of the business name. Nullable only so existing databases
+     * can add the column; it is filled on every insert and update.
+     */
+    @Column(name = "business_name_key", length = 64)
+    private String businessNameKey;
+
+    /** Comparison key of the tax id, filled the same way as the business name key. */
+    @Column(name = "tax_id_key", length = 20)
+    private String taxIdKey;
+
+    /** Recomputes the comparison keys from the current business name and tax id. */
+    @PrePersist
+    @PreUpdate
+    void refreshKeys() {
+        businessNameKey = CompanyKeys.businessNameKey(businessName);
+        taxIdKey = CompanyKeys.taxIdKey(taxId);
+    }
 
     public Long getId() {
         return id;
@@ -107,5 +131,15 @@ public class Company {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    /** The key is derived from the business name, so it has no setter. */
+    public String getBusinessNameKey() {
+        return businessNameKey;
+    }
+
+    /** The key is derived from the tax id, so it has no setter. */
+    public String getTaxIdKey() {
+        return taxIdKey;
     }
 }
