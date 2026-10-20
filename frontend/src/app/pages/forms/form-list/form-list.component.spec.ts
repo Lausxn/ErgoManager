@@ -89,6 +89,121 @@ describe('Gestión de formularios', () => {
         expect(fixture.componentInstance['isBusy'](3)).toBeFalse();
     });
 
+    it('conecta la acción de activar con PATCH y actualiza el estado del formulario', () => {
+        open('self-evaluation');
+        http.expectOne(FORMS_URL).flush([
+            { id: 4, title: 'Autoevaluación borrador', publicationYear: 2026, type: 'SELF_EVALUATION', active: false, questionList: [] }
+        ]);
+
+        const row = fixture.componentInstance['rows']()[0];
+        const toast = spyOn(fixture.componentInstance['toastService'], 'success');
+
+        fixture.componentInstance['activate'](row);
+
+        const request = http.expectOne(`${FORMS_URL}/4/activate`);
+        expect(request.request.method).toBe('PATCH');
+        expect(request.request.body).toEqual({});
+
+        request.flush({
+            id: 4,
+            title: 'Autoevaluación borrador',
+            publicationYear: 2026,
+            type: 'SELF_EVALUATION',
+            active: true,
+            questionList: []
+        });
+
+        expect(fixture.componentInstance['rows']()[0].active).toBeTrue();
+        expect(fixture.componentInstance['isBusy'](4)).toBeFalse();
+        expect(toast).toHaveBeenCalledWith('Formulario activado', 'Autoevaluación borrador');
+    });
+
+    it('conecta la acción de desactivar con DELETE después de la confirmación', async () => {
+        open('self-evaluation');
+        http.expectOne(FORMS_URL).flush([
+            { id: 5, title: 'Autoevaluación activa', publicationYear: 2026, type: 'SELF_EVALUATION', active: true, questionList: [] }
+        ]);
+
+        const row = fixture.componentInstance['rows']()[0];
+        spyOn(fixture.componentInstance['dialogService'], 'confirm').and.resolveTo(true);
+        const toast = spyOn(fixture.componentInstance['toastService'], 'success');
+
+        await fixture.componentInstance['confirmDeactivate'](row);
+
+        const request = http.expectOne(`${FORMS_URL}/5`);
+        expect(request.request.method).toBe('DELETE');
+
+        request.flush(null);
+
+        expect(fixture.componentInstance['rows']()[0].active).toBeFalse();
+        expect(fixture.componentInstance['isBusy'](5)).toBeFalse();
+        expect(toast).toHaveBeenCalledWith('Formulario desactivado', 'Autoevaluación activa');
+    });
+
+    it('no llama al backend cuando se cancela la desactivación', async () => {
+        open('self-evaluation');
+        http.expectOne(FORMS_URL).flush([
+            { id: 6, title: 'Formulario activo', publicationYear: 2026, type: 'SELF_EVALUATION', active: true, questionList: [] }
+        ]);
+
+        const row = fixture.componentInstance['rows']()[0];
+        spyOn(fixture.componentInstance['dialogService'], 'confirm').and.resolveTo(false);
+
+        await fixture.componentInstance['confirmDeactivate'](row);
+
+        http.expectNone(`${FORMS_URL}/6`);
+        expect(fixture.componentInstance['rows']()[0].active).toBeTrue();
+    });
+
+    it('conecta el reenvío con POST y muestra la cantidad de correos enviados', () => {
+        open('self-evaluation');
+        http.expectOne(FORMS_URL).flush([
+            { id: 7, title: 'Autoevaluación anual', publicationYear: 2026, type: 'SELF_EVALUATION', active: true, questionList: [] }
+        ]);
+
+        const row = fixture.componentInstance['rows']()[0];
+        fixture.componentInstance['resendForm'].set(row);
+        fixture.componentInstance['selectedCompanyId'].set(15);
+        fixture.componentInstance['resendVisible'].set(true);
+        const toast = spyOn(fixture.componentInstance['toastService'], 'success');
+
+        fixture.componentInstance['sendResend']();
+
+        const request = http.expectOne(`${FORMS_URL}/7/resend/15`);
+        expect(request.request.method).toBe('POST');
+        expect(request.request.body).toEqual({});
+
+        request.flush({ recipientCount: 3 });
+
+        expect(fixture.componentInstance['isSending']()).toBeFalse();
+        expect(fixture.componentInstance['resendVisible']()).toBeFalse();
+        expect(toast).toHaveBeenCalledWith('Formulario reenviado', 'Se envió a 3 correo(s).');
+    });
+
+    it('mantiene abierto el diálogo y muestra error cuando falla el reenvío', () => {
+        open('self-evaluation');
+        http.expectOne(FORMS_URL).flush([
+            { id: 8, title: 'Autoevaluación anual', publicationYear: 2026, type: 'SELF_EVALUATION', active: true, questionList: [] }
+        ]);
+
+        const row = fixture.componentInstance['rows']()[0];
+        fixture.componentInstance['resendForm'].set(row);
+        fixture.componentInstance['selectedCompanyId'].set(18);
+        fixture.componentInstance['resendVisible'].set(true);
+        const toast = spyOn(fixture.componentInstance['toastService'], 'error');
+
+        fixture.componentInstance['sendResend']();
+
+        http.expectOne(`${FORMS_URL}/8/resend/18`).flush(
+            { message: 'No se pudo realizar el reenvío.' },
+            { status: 500, statusText: 'Server error' }
+        );
+
+        expect(fixture.componentInstance['isSending']()).toBeFalse();
+        expect(fixture.componentInstance['resendVisible']()).toBeTrue();
+        expect(toast).toHaveBeenCalledWith('No se pudo reenviar', 'No se pudo realizar el reenvío.');
+    });
+
     it('permite reintentar cuando falla la carga del listado', () => {
         const element = open('self-evaluation');
         http.expectOne(FORMS_URL).flush({}, { status: 503, statusText: 'Unavailable' });
