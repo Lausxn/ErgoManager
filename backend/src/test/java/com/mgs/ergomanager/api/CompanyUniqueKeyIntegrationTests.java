@@ -2,6 +2,8 @@ package com.mgs.ergomanager.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -151,6 +153,48 @@ class CompanyUniqueKeyIntegrationTests extends ApiIntegrationTestSupport {
         // The company that kept the name is edited normally.
         save(put("/api/companies/{id}", original), "Repetida S.A.", "3-101-400027")
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void aRepeatedOlderCompanyCanBeDeactivatedAndActivatedWithoutRebuildingItsKeys() throws Exception {
+        insertWithoutKeys("Duplicada S.A.", "3-101-400030");
+        long repeatedName = insertWithoutKeys("DUPLICADA  s.a.", "3-101-400031");
+        long repeatedTaxId = insertWithoutKeys("Otra Duplicada", "3101400030");
+        backfill.run(null);
+        entityManager.clear();
+        User admin = persistUser("admin.legacy.state@example.test", Role.ADMIN);
+
+        for (long id : new long[] {repeatedName, repeatedTaxId}) {
+            mvc.perform(delete("/api/companies/{id}", id).with(as(admin))).andExpect(status().isNoContent());
+            Company deactivated = reload(companyRepository.getReferenceById(id));
+            assertThat(deactivated.isActive()).isFalse();
+
+            mvc.perform(patch("/api/companies/{id}/activate", id).with(as(admin))).andExpect(status().isOk());
+            assertThat(reload(companyRepository.getReferenceById(id)).isActive()).isTrue();
+        }
+        // The repeated value keeps its key empty, so the rule still asks to correct it.
+        assertThat(companyRepository.findById(repeatedName).orElseThrow().getBusinessNameKey()).isNull();
+        assertThat(companyRepository.findById(repeatedTaxId).orElseThrow().getTaxIdKey()).isNull();
+        save(put("/api/companies/{id}", repeatedName), "DUPLICADA  s.a.", "3-101-400031")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("message").value("Ya existe una empresa con ese nombre."));
+        save(put("/api/companies/{id}", repeatedTaxId), "Otra Duplicada", "3101400030")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("message").value("Ya existe una empresa con esa cédula jurídica."));
+    }
+
+    @Test
+    void correctingARepeatedOlderCompanyFillsItsKeys() throws Exception {
+        insertWithoutKeys("Corregible S.A.", "3-101-400032");
+        long repeated = insertWithoutKeys("CORREGIBLE s.a.", "3101400032");
+        backfill.run(null);
+        entityManager.clear();
+
+        save(put("/api/companies/{id}", repeated), "Corregible Dos S.A.", "3-101-400033")
+                .andExpect(status().isOk());
+        Company corrected = reload(companyRepository.getReferenceById(repeated));
+        assertThat(corrected.getBusinessNameKey()).isEqualTo(CompanyKeys.businessNameKey("Corregible Dos S.A."));
+        assertThat(corrected.getTaxIdKey()).isEqualTo("3101400033");
     }
 
     @Test
