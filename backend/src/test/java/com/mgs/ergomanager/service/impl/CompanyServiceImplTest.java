@@ -73,7 +73,7 @@ class CompanyServiceImplTest {
 
     @Test
     void anEditThatKeepsNameAndTaxIdMakesNoDuplicateQuery() {
-        when(companyRepository.findById(7L)).thenReturn(Optional.of(stored));
+        when(companyRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(stored));
         when(companyRepository.saveAndFlush(any(Company.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Same name and tax id, written with other case, spaces and without dashes.
@@ -85,7 +85,7 @@ class CompanyServiceImplTest {
 
     @Test
     void anEditOnlyChecksTheValueThatChanges() {
-        when(companyRepository.findById(7L)).thenReturn(Optional.of(stored));
+        when(companyRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(stored));
         when(companyRepository.saveAndFlush(any(Company.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         service.update(7L, request("Valle Renovado", "3-101-500001"));

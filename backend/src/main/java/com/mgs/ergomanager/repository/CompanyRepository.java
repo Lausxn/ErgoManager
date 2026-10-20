@@ -1,8 +1,11 @@
 package com.mgs.ergomanager.repository;
 
 import com.mgs.ergomanager.model.Company;
+import jakarta.persistence.LockModeType;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,6 +16,18 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface CompanyRepository extends JpaRepository<Company, Long> {
+
+    /**
+     * Reads a company and locks its row until the transaction ends, so two
+     * changes of the same company are applied one after the other and none
+     * overwrites the other.
+     *
+     * @param id identifier of the company
+     * @return the locked company
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select company from Company company where company.id = :id")
+    Optional<Company> findByIdForUpdate(@Param("id") Long id);
 
     /**
      * Checks whether a company already uses a business name key.

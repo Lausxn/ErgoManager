@@ -94,7 +94,7 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     @Transactional
     public CompanyResponseDTO update(Long id, CompanyRequestDTO request) {
-        Company company = getCompany(id);
+        Company company = getCompanyForUpdate(id);
         checkFormats(request, company);
         // Only a value that changes can collide with another company, so an
         // edit that keeps the name and the tax id needs no extra query.
@@ -123,13 +123,13 @@ public class CompanyServiceImpl implements CompanyService {
     @Transactional
     public void deactivate(Long id) {
         // The entity is managed, so the change is written when the transaction ends.
-        getCompany(id).setActive(false);
+        getCompanyForUpdate(id).setActive(false);
     }
 
     @Override
     @Transactional
     public CompanyResponseDTO activate(Long id) {
-        Company company = getCompany(id);
+        Company company = getCompanyForUpdate(id);
         company.setActive(true);
         return toResponse(company);
     }
@@ -244,6 +244,21 @@ public class CompanyServiceImpl implements CompanyService {
      */
     private Company getCompany(Long id) {
         return companyRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(COMPANY_NOT_FOUND_MESSAGE));
+    }
+
+    /**
+     * Reads a company to change it, locking its row until the transaction
+     * ends, or fails with HTTP 404. Every change writes the whole row, so
+     * without the lock two simultaneous changes would start from the same
+     * data: the last one would undo the first, and a rename would record the
+     * wrong previous name.
+     *
+     * @param id identifier of the company
+     * @return the locked company
+     */
+    private Company getCompanyForUpdate(Long id) {
+        return companyRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException(COMPANY_NOT_FOUND_MESSAGE));
     }
 
