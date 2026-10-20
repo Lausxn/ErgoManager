@@ -6,10 +6,10 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import org.hibernate.annotations.CreationTimestamp;
 
 /**
@@ -51,8 +51,10 @@ public class Company {
     private LocalDateTime createdAt;
 
     /**
-     * Comparison key of the business name. Nullable only so existing databases
-     * can add the column; it is filled on every insert and update.
+     * Comparison key of the business name. It is filled on every insert and
+     * every time the name changes. Nullable so existing databases can add the
+     * column, and so an older company that repeats another name keeps it
+     * empty until that name is corrected.
      */
     @Column(name = "business_name_key", length = 64)
     private String businessNameKey;
@@ -61,9 +63,13 @@ public class Company {
     @Column(name = "tax_id_key", length = 20)
     private String taxIdKey;
 
-    /** Recomputes the comparison keys from the current business name and tax id. */
+    /**
+     * Computes the comparison keys of a new company. On updates the keys only
+     * change with the name or the tax id (see their setters): a change of state
+     * must not rebuild the empty key of an older repeated company, or the
+     * unique constraint would reject it.
+     */
     @PrePersist
-    @PreUpdate
     void refreshKeys() {
         businessNameKey = CompanyKeys.businessNameKey(businessName);
         taxIdKey = CompanyKeys.taxIdKey(taxId);
@@ -81,16 +87,32 @@ public class Company {
         return businessName;
     }
 
+    /**
+     * Sets the business name and, when it really changes, its comparison key.
+     *
+     * @param businessName new business name
+     */
     public void setBusinessName(String businessName) {
-        this.businessName = businessName;
+        if (!Objects.equals(this.businessName, businessName)) {
+            this.businessName = businessName;
+            this.businessNameKey = CompanyKeys.businessNameKey(businessName);
+        }
     }
 
     public String getTaxId() {
         return taxId;
     }
 
+    /**
+     * Sets the tax id and, when it really changes, its comparison key.
+     *
+     * @param taxId new tax id
+     */
     public void setTaxId(String taxId) {
-        this.taxId = taxId;
+        if (!Objects.equals(this.taxId, taxId)) {
+            this.taxId = taxId;
+            this.taxIdKey = CompanyKeys.taxIdKey(taxId);
+        }
     }
 
     public String getContactEmail() {
