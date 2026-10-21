@@ -21,7 +21,7 @@ import { trackUnsavedChanges } from '../../../shared/forms/unsaved-changes';
 import { AppointmentResponse, AvailabilityResponse } from '../../../shared/models/appointment.model';
 import { DialogService } from '../../../shared/services/dialog.service';
 import { ToastService } from '../../../shared/services/toast.service';
-import { getApiErrorMessage } from '../../../shared/utils/api-error';
+import { getApiErrorMessage, isConflict } from '../../../shared/utils/api-error';
 import { toLocalDateTime } from '../../../shared/utils/date-time';
 import { markFormAsDirty } from '../../../shared/utils/form';
 import { APPOINTMENT_STATUS_LABELS } from '../../../shared/utils/labels';
@@ -29,6 +29,7 @@ import { UserService } from '../../users/user.service';
 import { AppointmentService } from '../appointment.service';
 import { combineDayAndTime, dayKey, formatDuration, minutesBetween, rangesOverlap, timeOfDay } from '../appointment-utils';
 
+/** Shown for every HTTP 409, whatever the server sends, so a technical text never reaches the user. */
 const OVERLAP_MESSAGE = 'El horario seleccionado se cruza con una disponibilidad existente. Seleccione otro rango de fecha y hora.';
 
 /** Ergonomist offered in the selector of the administrator. */
@@ -312,6 +313,15 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
         return summary;
     });
 
+    protected readonly previewLead = computed(() => {
+        const { valid, blocked } = this.plannedSummary();
+        const published = valid === 1 ? '1 espacio se publicará.' : `${valid} espacios se publicarán.`;
+        if (blocked === 0) {
+            return published;
+        }
+        return `${published} ${blocked === 1 ? '1 no se puede habilitar porque ya pasó o se cruza' : `${blocked} no se pueden habilitar porque ya pasaron o se cruzan`} con otro horario.`;
+    });
+
     protected readonly publishLabel = computed(() => {
         const valid = this.plannedSummary().valid;
         return valid === 0 ? 'Publicar' : valid === 1 ? 'Publicar 1 espacio' : `Publicar ${valid} espacios`;
@@ -501,18 +511,23 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
                     this.freeSlots.update((slots) => [...slots, ...created]);
                 }
                 if (failed.length === 0) {
-                    this.toastService.success(created.length === 1 ? 'Espacio publicado' : `${created.length} espacios publicados`, skipped > 0 ? `Se omitieron ${skipped} que no se podían publicar.` : 'Ya están disponibles para agendar citas.');
+                    const omitted = skipped === 1 ? 'Se omitió 1 que no se podía publicar.' : `Se omitieron ${skipped} que no se podían publicar.`;
+                    this.toastService.success(created.length === 1 ? 'Espacio publicado' : `${created.length} espacios publicados`, skipped > 0 ? omitted : 'Ya están disponibles para agendar citas.');
                     this.resetSelection();
                     return;
                 }
                 // The published ones now show as overlaps, so a retry only sends the failed ones.
                 const times = failed.map((result) => formatSlot(result.slot)).join(', ');
-                this.errorMessage.set(`No se pudieron publicar ${failed.length} espacio(s): ${times}. ${getApiErrorMessage(failed[0].error, 'Intente de nuevo.')}`);
+                const reason = failureReason(failed[0].error);
+                this.errorMessage.set(`${failed.length === 1 ? 'No se pudo publicar 1 espacio' : `No se pudieron publicar ${failed.length} espacios`}: ${times}. ${reason}`);
                 if (created.length > 0) {
-                    this.toastService.success(`${created.length} espacio(s) publicados`, `${failed.length} no se pudieron publicar.`);
+                    this.toastService.success(created.length === 1 ? '1 espacio publicado' : `${created.length} espacios publicados`, failed.length === 1 ? '1 no se pudo publicar.' : `${failed.length} no se pudieron publicar.`);
                 } else {
-                    this.toastService.error('No se publicó ningún espacio', getApiErrorMessage(failed[0].error, 'Intente de nuevo.'));
+                    this.toastService.error('No se publicó ningún espacio', reason);
                 }
+                // A slot published meanwhile by someone else explains a conflict: read the calendar again so the preview shows it.
+                this.loadedMonths.clear();
+                this.loadMonth(true);
             });
     }
 
@@ -577,13 +592,13 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
             .subscribe({
                 next: ({ slots, appointments }) => {
                     this.loadedMonths.add(key);
-                    this.freeSlots.update((current) =>
-                        mergeById(
-                            current,
-                            slots.filter((slot) => !slot.taken)
-                        )
-                    );
-                    this.appointments.update((current) => mergeById(current, appointments));
+                    // What was read replaces the month, so slots booked or removed meanwhile do not stay behind.
+                    const inMonth = (item: { startDateTime: string }) => {
+                        const start = new Date(item.startDateTime);
+                        return start >= first && start <= last;
+                    };
+                    this.freeSlots.update((current) => [...current.filter((slot) => !inMonth(slot)), ...slots.filter((slot) => !slot.taken)]);
+                    this.appointments.update((current) => [...current.filter((appointment) => !inMonth(appointment)), ...appointments]);
                     this.isLoadingMonth.set(false);
                 },
                 error: (error: unknown) => {
@@ -626,7 +641,8 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
                     this.toastService.success(removed.size === 1 ? 'Espacio eliminado' : `${removed.size} espacios eliminados`, 'Ya no están disponibles para agendar citas.');
                     return;
                 }
-                this.toastService.error(removed.size > 0 ? `Se eliminaron ${removed.size}; ${failed.length} no se pudieron eliminar` : 'No se pudo eliminar', getApiErrorMessage(failed[0].error, 'Puede que ya tenga una cita agendada.'));
+                const partial = `${removed.size === 1 ? 'Se eliminó 1' : `Se eliminaron ${removed.size}`}; ${failed.length === 1 ? '1 no se pudo eliminar' : `${failed.length} no se pudieron eliminar`}`;
+                this.toastService.error(removed.size > 0 ? partial : 'No se pudo eliminar', getApiErrorMessage(failed[0].error, 'Puede que ya tenga una cita agendada.'));
                 // A slot that could not be removed may have been booked meanwhile: read the month again.
                 this.loadMonth(true);
             });
@@ -721,11 +737,12 @@ function rangeMinutes(start: Date | null, end: Date | null): number | null {
     return minutes > 0 ? minutes : null;
 }
 
-/** Adds the new items to a list, replacing the ones already there. */
-function mergeById<T extends { id: number }>(current: readonly T[], incoming: readonly T[]): T[] {
-    const merged = new Map(current.map((item) => [item.id, item]));
-    incoming.forEach((item) => merged.set(item.id, item));
-    return [...merged.values()];
+/**
+ * Explains why the backend rejected a slot. A conflict always gets the fixed
+ * overlap message; any other error keeps the message of the backend.
+ */
+function failureReason(error: unknown): string {
+    return isConflict(error) ? OVERLAP_MESSAGE : getApiErrorMessage(error, 'Intente de nuevo.');
 }
 
 /** "lun 3 nov, 9:00 – 10:00", to name a slot in a message. */
