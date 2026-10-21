@@ -289,10 +289,10 @@ export class AppointmentListComponent implements OnInit {
             });
     }
 
-    /** Opens the availability form, for the selected ergonomist when an administrator asks. */
+    /** Opens the availability management, for the selected ergonomist when an administrator asks. */
     protected publishAvailability(): void {
         const userId = this.selectedErgonomistId();
-        void this.router.navigate(['/appointments/availabilities/new'], this.isAdmin() && userId !== null ? { queryParams: { userId } } : {});
+        void this.router.navigate(['/appointments/availabilities'], this.isAdmin() && userId !== null ? { queryParams: { userId } } : {});
     }
 
     protected openBooking(): void {

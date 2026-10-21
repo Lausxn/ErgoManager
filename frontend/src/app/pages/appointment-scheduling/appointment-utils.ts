@@ -77,3 +77,58 @@ export function formatDuration(minutes: number): string {
 export function minutesBetween(start: string, end: string): number {
     return Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000);
 }
+
+/**
+ * Tells whether two time ranges share at least one minute. Ranges that only
+ * touch, one ending when the other starts, do not overlap; this is the rule
+ * the backend applies to the slots of an ergonomist.
+ *
+ * @param startA start of the first range
+ * @param endA   end of the first range
+ * @param startB start of the second range
+ * @param endB   end of the second range
+ * @returns true when they overlap
+ */
+export function rangesOverlap(startA: Date, endA: Date, startB: Date, endB: Date): boolean {
+    return startA < endB && startB < endA;
+}
+
+/**
+ * Key of a calendar day, the same for a Date and for a backend date-time.
+ *
+ * @param date date of the day
+ * @returns yyyy-MM-dd
+ */
+export function dayKey(date: Date): string {
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/**
+ * Joins a calendar day and the hours and minutes of a time picked apart.
+ *
+ * @param day  date picked in the calendar
+ * @param time date whose hours and minutes are used
+ * @returns the combined date, or null when a part is missing
+ */
+export function combineDayAndTime(day: Date | null, time: Date | null): Date | null {
+    if (!day || !time) {
+        return null;
+    }
+    const result = new Date(day);
+    result.setHours(time.getHours(), time.getMinutes(), 0, 0);
+    return result;
+}
+
+/**
+ * Builds a time of today, used as the value of the time-only pickers.
+ *
+ * @param hours   hour of the day, 0 to 23
+ * @param minutes minutes of the hour
+ * @returns the time as a date
+ */
+export function timeOfDay(hours: number, minutes = 0): Date {
+    const time = new Date();
+    time.setHours(hours, minutes, 0, 0);
+    return time;
+}

@@ -20,6 +20,7 @@ const EXPECTED_LINKS: Record<string, string> = {
     Formularios: '/forms',
     'Perfiles de clientes': '/companies',
     Agenda: '/appointments',
+    Disponibilidad: '/appointments/availabilities',
     'Evaluación personalizada': '/personalized-evaluations',
     Historial: '/history',
     'Cambiar contraseña': '/account/password'
@@ -100,5 +101,10 @@ describe('AppMenu', () => {
     it('muestra Evaluación personalizada solo al ergonomista', () => {
         expect(visibleEntries('ADMIN').map((entry) => entry.label)).not.toContain('Evaluación personalizada');
         expect(visibleEntries('ERGONOMIST').map((entry) => entry.label)).toContain('Evaluación personalizada');
+    });
+
+    it('muestra Disponibilidad a ambos roles', () => {
+        expect(visibleEntries('ADMIN').map((entry) => entry.label)).toContain('Disponibilidad');
+        expect(visibleEntries('ERGONOMIST').map((entry) => entry.label)).toContain('Disponibilidad');
     });
 });

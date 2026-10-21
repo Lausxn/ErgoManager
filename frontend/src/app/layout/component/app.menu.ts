@@ -51,6 +51,7 @@ export class AppMenu {
                 label: 'Evaluación',
                 items: [
                     { label: 'Agenda', icon: 'fa-regular fa-calendar-days fa-fw', routerLink: ['/appointments'] },
+                    { label: 'Disponibilidad', icon: 'fa-regular fa-calendar-plus fa-fw', routerLink: ['/appointments/availabilities'] },
                     { label: 'Evaluación personalizada', icon: 'fa-solid fa-clipboard-user fa-fw', routerLink: ['/personalized-evaluations'], visible: isErgonomist },
                     { label: 'Historial', icon: 'fa-solid fa-chart-line fa-fw', routerLink: ['/history'] }
                 ]
