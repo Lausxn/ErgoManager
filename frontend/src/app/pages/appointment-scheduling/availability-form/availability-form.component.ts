@@ -29,6 +29,8 @@ import { UserService } from '../../users/user.service';
 import { AppointmentService } from '../appointment.service';
 import { combineDayAndTime, dayKey, formatDuration, minutesBetween, rangesOverlap, timeOfDay } from '../appointment-utils';
 
+const OVERLAP_MESSAGE = 'El horario seleccionado se cruza con una disponibilidad existente. Seleccione otro rango de fecha y hora.';
+
 /** Ergonomist offered in the selector of the administrator. */
 interface ErgonomistOption {
     id: number;

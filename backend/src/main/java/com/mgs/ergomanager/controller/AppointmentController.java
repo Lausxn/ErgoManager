@@ -1,6 +1,7 @@
 package com.mgs.ergomanager.controller;
 
 import com.mgs.ergomanager.dto.appointment.AppointmentRequestDTO;
+import com.mgs.ergomanager.dto.appointment.AppointmentRescheduleRequestDTO;
 import com.mgs.ergomanager.dto.appointment.AppointmentResponseDTO;
 import com.mgs.ergomanager.dto.appointment.AvailabilityRequestDTO;
 import com.mgs.ergomanager.dto.appointment.AvailabilityResponseDTO;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -53,6 +55,19 @@ public class AppointmentController {
             @Valid @RequestBody AvailabilityRequestDTO request) {
         AvailabilityResponseDTO created = appointmentService.createAvailability(request);
         return ResponseEntity.created(URI.create("/api/appointments/availabilities/" + created.id())).body(created);
+    }
+
+    /** Returns the slot used to populate the edit form. */
+    @GetMapping("/availabilities/{id}")
+    public ResponseEntity<AvailabilityResponseDTO> findAvailabilityById(@PathVariable Long id) {
+        return ResponseEntity.ok(appointmentService.findAvailabilityById(id));
+    }
+
+    /** Updates a free slot; booked appointments are managed separately. */
+    @PutMapping("/availabilities/{id}")
+    public ResponseEntity<AvailabilityResponseDTO> updateAvailability(
+            @PathVariable Long id, @Valid @RequestBody AvailabilityRequestDTO request) {
+        return ResponseEntity.ok(appointmentService.updateAvailability(id, request));
     }
 
     /**
@@ -120,5 +135,19 @@ public class AppointmentController {
     @PatchMapping("/{id}/cancel")
     public ResponseEntity<AppointmentResponseDTO> cancel(@PathVariable Long id) {
         return ResponseEntity.ok(appointmentService.cancel(id));
+    }
+
+    /**
+     * Moves an appointment to another free slot of the same ergonomist.
+     *
+     * @param id      identifier of the appointment
+     * @param request new slot selected for the appointment
+     * @return the rescheduled appointment
+     */
+    @PatchMapping("/{id}/reschedule")
+    public ResponseEntity<AppointmentResponseDTO> reschedule(
+            @PathVariable Long id,
+            @Valid @RequestBody AppointmentRescheduleRequestDTO request) {
+        return ResponseEntity.ok(appointmentService.reschedule(id, request));
     }
 }
