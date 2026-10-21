@@ -6,6 +6,7 @@ import { RouterLink } from '@angular/router';
 import { Observable, Subscription, catchError, concatMap, forkJoin, from, map, merge, of, toArray } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
+import { DialogModule } from 'primeng/dialog';
 import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
@@ -79,6 +80,9 @@ interface ConfiguredDay {
 /** Time range typed in the form, before being split into slots. */
 type RangeGroup = FormGroup<{ startTime: FormControl<Date | null>; endTime: FormControl<Date | null> }>;
 
+/** New day and hours of a free slot, typed in the edit dialog. */
+type EditGroup = FormGroup<{ date: FormControl<Date | null>; startTime: FormControl<Date | null>; endTime: FormControl<Date | null> }>;
+
 const PROBLEM_LABELS: Record<Exclude<SlotProblem, null>, string> = {
     past: 'Ya pasó',
     overlapsSlot: 'Se cruza con un espacio publicado',
@@ -142,7 +146,7 @@ function requireDates(control: AbstractControl): ValidationErrors | null {
     selector: 'app-availability-form',
     standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [DatePipe, ReactiveFormsModule, RouterLink, ButtonModule, DatePickerModule, SelectModule, SkeletonModule, TooltipModule, EmptyStateComponent, FormFieldComponent, PageHeaderComponent, SaveBarComponent, StatCardComponent],
+    imports: [DatePipe, ReactiveFormsModule, RouterLink, ButtonModule, DatePickerModule, DialogModule, SelectModule, SkeletonModule, TooltipModule, EmptyStateComponent, FormFieldComponent, PageHeaderComponent, SaveBarComponent, StatCardComponent],
     templateUrl: './availability-form.component.html',
     styleUrl: './availability-form.component.scss'
 })
@@ -197,6 +201,20 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
     protected readonly monthError = signal<string | null>(null);
     protected readonly deletingKeys = signal<ReadonlySet<string>>(new Set());
     private monthRequest?: Subscription;
+
+    /** Free slot the edit dialog changes. */
+    protected readonly editingSlot = signal<AvailabilityResponse | null>(null);
+    protected readonly isEditOpen = signal(false);
+    protected readonly isSavingEdit = signal(false);
+    protected readonly editError = signal<string | null>(null);
+    protected readonly editForm: EditGroup = this.formBuilder.group(
+        {
+            date: this.formBuilder.control<Date | null>(null, [Validators.required]),
+            startTime: this.formBuilder.control<Date | null>(null, [Validators.required]),
+            endTime: this.formBuilder.control<Date | null>(null, [Validators.required])
+        },
+        { validators: validateRange }
+    );
 
     protected readonly formValue = toSignal(merge(this.availabilityForm.valueChanges, this.availabilityForm.statusChanges).pipe(map(() => this.availabilityForm.getRawValue())), {
         initialValue: this.availabilityForm.getRawValue()
@@ -569,6 +587,79 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
 
     protected isDeleting(key: string): boolean {
         return this.deletingKeys().has(key);
+    }
+
+    /**
+     * Opens the dialog that changes the day and hours of a free slot.
+     *
+     * @param slot slot to change
+     */
+    protected openEdit(slot: AvailabilityResponse): void {
+        const start = new Date(slot.startDateTime);
+        const end = new Date(slot.endDateTime);
+        const day = new Date(start);
+        day.setHours(0, 0, 0, 0);
+        this.editForm.reset({ date: day, startTime: timeOfDay(start.getHours(), start.getMinutes()), endTime: timeOfDay(end.getHours(), end.getMinutes()) });
+        this.editingSlot.set(slot);
+        this.editError.set(null);
+        this.isEditOpen.set(true);
+    }
+
+    /**
+     * Tells whether the edit dialog has to show its "end after start" message.
+     */
+    protected isEditRangeInvalid(): boolean {
+        return this.editForm.hasError('invalidRange') && (this.editForm.dirty || this.editForm.touched);
+    }
+
+    /**
+     * Saves the new day and hours of the slot. The same checks as the preview
+     * run first, so a slot that already passed or overlaps another one is not
+     * sent; the backend checks them again.
+     */
+    protected saveEdit(): void {
+        const slot = this.editingSlot();
+        if (slot === null || this.isSavingEdit()) {
+            return;
+        }
+        if (this.editForm.invalid) {
+            markFormAsDirty(this.editForm);
+            this.editError.set('Revise el día y las horas del espacio.');
+            return;
+        }
+        const { date, startTime, endTime } = this.editForm.getRawValue();
+        const start = combineDayAndTime(date, startTime)!;
+        const end = combineDayAndTime(date, endTime)!;
+        if (start.getTime() <= Date.now()) {
+            this.editError.set('El nuevo horario ya pasó. Elija una hora futura.');
+            return;
+        }
+        const others = [...this.freeSlots().filter((other) => other.id !== slot.id), ...this.bookedAppointments()];
+        if (others.some((other) => rangesOverlap(start, end, new Date(other.startDateTime), new Date(other.endDateTime)))) {
+            this.editError.set(OVERLAP_MESSAGE);
+            return;
+        }
+
+        this.editError.set(null);
+        this.isSavingEdit.set(true);
+        this.appointmentService
+            .updateAvailability(slot.id, { userId: slot.userId, startDateTime: toLocalDateTime(start), endDateTime: toLocalDateTime(end) })
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: (updated) => {
+                    this.isSavingEdit.set(false);
+                    this.freeSlots.update((slots) => slots.map((item) => (item.id === updated.id ? updated : item)));
+                    this.toastService.success('Espacio actualizado', formatTimes(updated.startDateTime, updated.endDateTime));
+                    this.isEditOpen.set(false);
+                },
+                error: (error: unknown) => {
+                    this.isSavingEdit.set(false);
+                    this.editError.set(failureReason(error));
+                    // The slot may have been booked, or another one published, meanwhile.
+                    this.loadedMonths.clear();
+                    this.loadMonth(true);
+                }
+            });
     }
 
     /** Reads the calendar data of the visible month, unless it is already loaded. */

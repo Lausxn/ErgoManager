@@ -83,6 +83,17 @@ export class AppointmentService {
     }
 
     /**
+     * Changes the day and hours of a slot that nobody booked yet.
+     *
+     * @param id      identifier of the slot
+     * @param request owner of the slot and its new start and end
+     * @returns the updated slot
+     */
+    updateAvailability(id: number, request: AvailabilityRequest): Observable<AvailabilityResponse> {
+        return this.http.put<AvailabilityResponse>(`${this.baseUrl}/availabilities/${id}`, request);
+    }
+
+    /**
      * Removes a published slot that nobody booked yet.
      *
      * @param id identifier of the slot
