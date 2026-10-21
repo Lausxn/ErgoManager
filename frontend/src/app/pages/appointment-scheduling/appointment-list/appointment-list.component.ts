@@ -28,6 +28,7 @@ import { UserService } from '../../users/user.service';
 import { AppointmentService } from '../appointment.service';
 import { addDays, formatDuration, groupSlotsByDay, isPendingStatus, minutesBetween } from '../appointment-utils';
 import { BookingDialogComponent } from '../booking-dialog/booking-dialog.component';
+import { RescheduleDialogComponent } from '../reschedule-dialog/reschedule-dialog.component';
 
 /** Placeholder rows drawn as skeletons while the agenda loads. */
 const SKELETON_ROWS = Array.from({ length: 5 }, (_, index) => ({ id: -index - 1 }));
@@ -76,6 +77,7 @@ interface AppointmentRow extends AppointmentResponse {
         BookingDialogComponent,
         EmptyStateComponent,
         PageHeaderComponent,
+        RescheduleDialogComponent,
         StatCardComponent
     ],
     templateUrl: './appointment-list.component.html',
@@ -118,6 +120,10 @@ export class AppointmentListComponent implements OnInit {
     protected readonly deletingSlotId = signal<number | null>(null);
     protected readonly cancellingId = signal<number | null>(null);
     protected readonly isBookingOpen = signal(false);
+    protected readonly isRescheduleOpen = signal(false);
+
+    /** Appointment the reschedule dialog moves. */
+    protected readonly rescheduling = signal<AppointmentResponse | null>(null);
 
     /** Range of the last load, used to decide whether a booked appointment belongs to it. */
     private range = { from: new Date(), to: new Date() };
@@ -319,6 +325,33 @@ export class AppointmentListComponent implements OnInit {
      */
     protected evaluate(row: AppointmentRow): void {
         void this.router.navigate(['/personalized-evaluations'], { queryParams: { appointmentId: row.id } });
+    }
+
+    /**
+     * Opens the dialog that moves a pending appointment to another free slot.
+     *
+     * @param row appointment to reschedule
+     */
+    protected openReschedule(row: AppointmentRow): void {
+        if (!row.isPending) {
+            return;
+        }
+        this.rescheduling.set(row);
+        this.isRescheduleOpen.set(true);
+    }
+
+    /**
+     * Shows the appointment at its new time, or takes it out of the table when
+     * it moved outside the period, and reads the free slots again: the old one
+     * is free and the new one is taken.
+     *
+     * @param appointment appointment returned by the backend
+     */
+    protected onRescheduled(appointment: AppointmentResponse): void {
+        const start = new Date(appointment.startDateTime);
+        const inRange = start >= this.range.from && start <= this.range.to;
+        this.appointments.update((appointments) => (inRange ? appointments.map((item) => (item.id === appointment.id ? { ...item, ...appointment } : item)) : appointments.filter((item) => item.id !== appointment.id)));
+        this.loadSlots();
     }
 
     /**
