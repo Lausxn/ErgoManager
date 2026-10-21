@@ -107,6 +107,21 @@
                     <span>{{ preview().address || 'Sin dirección' }}</span>
                 </li>
             </ul>
+
+            @if (storedCompany()?.previousNames?.length) {
+                <div class="company-history">
+                    <span class="mgs-eyebrow">Nombres anteriores</span>
+                    <p class="company-link__lead">Quedan reservados para este perfil: ninguna otra empresa puede usarlos.</p>
+                    <ul class="company-contact" aria-label="Nombres anteriores del perfil">
+                        @for (name of storedCompany()!.previousNames; track name) {
+                            <li>
+                                <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+                                <span>{{ name }}</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
         }
 
         <div class="flex flex-col gap-2">

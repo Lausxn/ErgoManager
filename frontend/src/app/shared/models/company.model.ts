@@ -17,4 +17,6 @@ export interface CompanyResponse {
     address?: string;
     active: boolean;
     createdAt: string;
+    /** Names the company used before, newest first. They stay reserved for it. */
+    previousNames?: string[];
 }
