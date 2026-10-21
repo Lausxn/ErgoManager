@@ -57,11 +57,26 @@
 
             <div class="availability-planner">
                 <div class="availability-calendar">
-                    <p-datepicker formControlName="dates" [inline]="true" selectionMode="multiple" [minDate]="today" [showOtherMonths]="false" (onMonthChange)="changeMonth($event)" ariaLabel="Días a habilitar">
+                    <p-datepicker
+                        #calendar
+                        formControlName="dates"
+                        [inline]="true"
+                        selectionMode="multiple"
+                        [minDate]="today"
+                        [disabledDays]="disabledWeekDays()"
+                        [disabledDates]="fullDays()"
+                        [showOtherMonths]="false"
+                        (onMonthChange)="changeMonth($event)"
+                        ariaLabel="Días a habilitar"
+                    >
                         <ng-template #date let-date>
                             @let marker = markerOf(date);
-                            <span class="availability-calendar__day">
+                            @let full = isFullDay(date);
+                            <span class="availability-calendar__day" [class.availability-calendar__day--full]="full" [attr.title]="full ? 'Sin horas libres con estos horarios' : null">
                                 {{ date.day }}
+                                @if (full) {
+                                    <i class="fa-solid fa-lock availability-calendar__lock" aria-hidden="true"></i>
+                                }
                                 @if (marker) {
                                     <span class="availability-calendar__dots" aria-hidden="true">
                                         @if (marker.free) {
@@ -78,7 +93,15 @@
                     <div class="availability-legend" aria-hidden="true">
                         <span><span class="availability-calendar__dot availability-calendar__dot--free"></span>Espacios libres</span>
                         <span><span class="availability-calendar__dot availability-calendar__dot--booked"></span>Citas reservadas</span>
+                        <span><i class="fa-solid fa-lock availability-legend__lock"></i>Sin horas libres</span>
                     </div>
+                    <label class="availability-weekends" for="allowWeekends">
+                        <span class="availability-weekends__text">
+                            <span class="availability-weekends__title">Atender fines de semana</span>
+                            <span class="availability-weekends__hint">{{ weekendsControl.value ? 'Sábados y domingos se pueden elegir.' : 'Sábados y domingos están bloqueados.' }}</span>
+                        </span>
+                        <p-toggleswitch inputId="allowWeekends" [formControl]="weekendsControl" />
+                    </label>
                     @if (formValue().dates.length > 0) {
                         <div class="availability-selected">
                             <span>{{ formValue().dates.length === 1 ? '1 día elegido' : formValue().dates.length + ' días elegidos' }}</span>

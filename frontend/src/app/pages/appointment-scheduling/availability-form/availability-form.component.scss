@@ -26,6 +26,19 @@
         width: 100%;
         height: 100%;
         font-variant-numeric: tabular-nums;
+
+        /* Closed because nothing is left to publish: struck through, like a blocked slot. */
+        &--full {
+            text-decoration: line-through;
+        }
+    }
+
+    &__lock {
+        position: absolute;
+        top: 0.15rem;
+        right: 0.1rem;
+        font-size: 0.5rem;
+        color: var(--mgs-accent-text);
     }
 
     &__dots {
@@ -81,6 +94,41 @@
         display: inline-flex;
         align-items: center;
         gap: 0.4rem;
+    }
+}
+
+.availability-legend__lock {
+    font-size: 0.65rem;
+    color: var(--mgs-accent-text);
+}
+
+.availability-weekends {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.7rem 0.85rem;
+    border: 1px solid var(--surface-border);
+    border-radius: var(--mgs-radius-sm);
+    background: var(--surface-ground);
+    cursor: pointer;
+
+    &__text {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+        min-width: 0;
+    }
+
+    &__title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--heading-color);
+    }
+
+    &__hint {
+        font-size: 0.78rem;
+        color: var(--text-color-secondary);
     }
 }
 

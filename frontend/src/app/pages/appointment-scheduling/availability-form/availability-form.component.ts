@@ -1,13 +1,14 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, input, numberAttribute, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, input, numberAttribute, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Observable, Subscription, catchError, concatMap, forkJoin, from, map, merge, of, toArray } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
-import { DatePickerModule } from 'primeng/datepicker';
+import { DatePicker, DatePickerModule } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { TooltipModule } from 'primeng/tooltip';
 
 import { AuthService } from '../../../core/services/auth.service';
@@ -73,6 +74,26 @@ interface ConfiguredDay {
     freeSlots: AvailabilityResponse[];
 }
 
+/** Published slot or booked appointment that a new slot cannot overlap. */
+interface TakenInterval {
+    start: Date;
+    end: Date;
+    kind: 'overlapsSlot' | 'overlapsAppointment';
+}
+
+/** Time range as read from the form. */
+interface RangeValue {
+    startTime: Date | null;
+    endTime: Date | null;
+}
+
+/** Day of the PrimeNG calendar template, month from 0. */
+interface CalendarDate {
+    day: number;
+    month: number;
+    year: number;
+}
+
 /** Time range typed in the form, before being split into slots. */
 type RangeGroup = FormGroup<{ startTime: FormControl<Date | null>; endTime: FormControl<Date | null> }>;
 
@@ -104,6 +125,10 @@ const SLOT_LENGTH_OPTIONS: { label: string; value: number | null }[] = [
     { label: 'Citas de 1 hora', value: 60 },
     { label: 'Citas de 1 h 30 min', value: 90 }
 ];
+
+/** Sunday and Saturday, closed in the calendar unless they are opened. */
+const WEEKEND_DAYS = [0, 6];
+const NO_DAYS: number[] = [];
 
 /** Status of an appointment whose slot became free again; every other status keeps it taken. */
 const CANCELLED_STATUS = 'CANCELLED';
@@ -139,7 +164,22 @@ function requireDates(control: AbstractControl): ValidationErrors | null {
     selector: 'app-availability-form',
     standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [DatePipe, ReactiveFormsModule, RouterLink, ButtonModule, DatePickerModule, SelectModule, SkeletonModule, TooltipModule, EmptyStateComponent, FormFieldComponent, PageHeaderComponent, SaveBarComponent, StatCardComponent],
+    imports: [
+        DatePipe,
+        ReactiveFormsModule,
+        RouterLink,
+        ButtonModule,
+        DatePickerModule,
+        SelectModule,
+        SkeletonModule,
+        ToggleSwitchModule,
+        TooltipModule,
+        EmptyStateComponent,
+        FormFieldComponent,
+        PageHeaderComponent,
+        SaveBarComponent,
+        StatCardComponent
+    ],
     templateUrl: './availability-form.component.html',
     styleUrl: './availability-form.component.scss'
 })
@@ -170,6 +210,11 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
         ranges: this.formBuilder.array<RangeGroup>([this.buildRange(8, 12)])
     });
 
+    /** Opens Saturday and Sunday in the calendar; not part of what is published. */
+    protected readonly weekendsControl = new FormControl(false, { nonNullable: true });
+    private readonly allowWeekends = toSignal(this.weekendsControl.valueChanges, { initialValue: this.weekendsControl.value });
+    protected readonly disabledWeekDays = computed(() => (this.allowWeekends() ? NO_DAYS : WEEKEND_DAYS));
+
     protected readonly unsaved = trackUnsavedChanges(this.availabilityForm, {
         restore: (snapshot) => {
             this.ranges.clear({ emitEvent: false });
@@ -179,6 +224,8 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
             this.availabilityForm.reset(snapshot);
         }
     });
+
+    private readonly calendar = viewChild<DatePicker>('calendar');
 
     protected readonly ergonomists = signal<ErgonomistOption[]>([]);
     protected readonly isLoadingErgonomists = signal(false);
@@ -195,8 +242,9 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
     protected readonly deletingKeys = signal<ReadonlySet<string>>(new Set());
     private monthRequest?: Subscription;
 
-    protected readonly formValue = toSignal(merge(this.availabilityForm.valueChanges, this.availabilityForm.statusChanges).pipe(map(() => this.availabilityForm.getRawValue())), {
-        initialValue: this.availabilityForm.getRawValue()
+    /** Raw form value; the calendar empties its selection to null, read here as no days. */
+    protected readonly formValue = toSignal(merge(this.availabilityForm.valueChanges, this.availabilityForm.statusChanges).pipe(map(() => this.readForm())), {
+        initialValue: this.readForm()
     });
 
     /** First day of the visible month, for its title. */
@@ -207,8 +255,8 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
      * so each planned slot is only compared with the ones of its own day.
      */
     private readonly takenByDay = computed(() => {
-        const index = new Map<string, { start: Date; end: Date; kind: 'overlapsSlot' | 'overlapsAppointment' }[]>();
-        const add = (startText: string, endText: string, kind: 'overlapsSlot' | 'overlapsAppointment') => {
+        const index = new Map<string, TakenInterval[]>();
+        const add = (startText: string, endText: string, kind: TakenInterval['kind']) => {
             const start = new Date(startText);
             const end = new Date(endText);
             for (const key of new Set([dayKey(start), dayKey(end)])) {
@@ -265,36 +313,37 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
             .sort((a, b) => a.getTime() - b.getTime())
             .map((date) => {
                 const key = dayKey(date);
-                const takenToday = taken.get(key) ?? [];
-                const accepted: { start: Date; end: Date }[] = [];
-                const slots: PlannedSlot[] = [];
-                for (const range of ranges) {
-                    const rangeStart = combineDayAndTime(date, range.startTime);
-                    const rangeEnd = combineDayAndTime(date, range.endTime);
-                    if (!rangeStart || !rangeEnd || rangeEnd <= rangeStart) {
-                        continue;
-                    }
-                    for (const { start, end } of splitRange(rangeStart, rangeEnd, slotMinutes)) {
-                        let problem: SlotProblem = null;
-                        if (start.getTime() <= now) {
-                            problem = 'past';
-                        } else {
-                            // A booked appointment explains the conflict better than its slot.
-                            const clashes = takenToday.filter((other) => rangesOverlap(start, end, other.start, other.end));
-                            if (clashes.length > 0) {
-                                problem = clashes.some((other) => other.kind === 'overlapsAppointment') ? 'overlapsAppointment' : 'overlapsSlot';
-                            } else if (accepted.some((other) => rangesOverlap(start, end, other.start, other.end))) {
-                                problem = 'repeated';
-                            } else {
-                                accepted.push({ start, end });
-                            }
-                        }
-                        slots.push({ key: `${start.getTime()}-${end.getTime()}`, start, end, problem });
-                    }
-                }
-                return { key, date, slots: slots.sort((a, b) => a.start.getTime() - b.start.getTime()) };
+                return { key, date, slots: planDay(date, ranges, slotMinutes, taken.get(key) ?? [], now) };
             });
     });
+
+    /**
+     * Days of the visible month where the current ranges leave nothing to
+     * publish, because every slot already passed or is taken. They are closed in
+     * the calendar; a day already picked stays open so it can be unpicked.
+     */
+    protected readonly fullDays = computed<Date[]>(() => {
+        const { dates, ranges, slotMinutes } = this.formValue();
+        const { year, month } = this.visibleMonth();
+        const picked = new Set(dates.map(dayKey));
+        const taken = this.takenByDay();
+        const now = Date.now();
+        const full: Date[] = [];
+        for (let day = 1, last = new Date(year, month, 0).getDate(); day <= last; day++) {
+            const date = new Date(year, month - 1, day);
+            const key = dayKey(date);
+            if (date < this.today || picked.has(key)) {
+                continue;
+            }
+            const slots = planDay(date, ranges, slotMinutes, taken.get(key) ?? [], now);
+            if (slots.length > 0 && slots.every((slot) => slot.problem !== null)) {
+                full.push(date);
+            }
+        }
+        return full;
+    });
+
+    private readonly fullDayKeys = computed(() => new Set(this.fullDays().map(dayKey)));
 
     protected readonly plannedSummary = computed(() => {
         const summary = { valid: 0, blocked: 0 };
@@ -377,6 +426,7 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
     });
 
     ngOnInit(): void {
+        this.keepDatesConsistent();
         if (!this.isAdmin()) {
             this.availabilityForm.controls.userId.setValue(this.authService.session()?.userId ?? null);
             this.unsaved.markSaved();
@@ -404,7 +454,8 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
      * @param event month (1 to 12) and year shown
      */
     protected changeMonth(event: { month?: number; year?: number }): void {
-        if (event.month === undefined || event.year === undefined) {
+        const visible = this.visibleMonth();
+        if (event.month === undefined || event.year === undefined || (event.month === visible.month && event.year === visible.year)) {
             return;
         }
         this.visibleMonth.set({ year: event.year, month: event.month });
@@ -417,8 +468,17 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
      * @param date day as described by the PrimeNG calendar (month from 0)
      * @returns the counts, or undefined when the day is empty
      */
-    protected markerOf(date: { day: number; month: number; year: number }): { free: number; booked: number } | undefined {
-        return this.dayMarkers().get(`${date.year}-${String(date.month + 1).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`);
+    protected markerOf(date: CalendarDate): { free: number; booked: number } | undefined {
+        return this.dayMarkers().get(calendarKey(date));
+    }
+
+    /**
+     * Tells whether a calendar day is closed because nothing is left to publish.
+     *
+     * @param date day as described by the PrimeNG calendar (month from 0)
+     */
+    protected isFullDay(date: CalendarDate): boolean {
+        return this.fullDayKeys().has(calendarKey(date));
     }
 
     protected addRange(): void {
@@ -630,6 +690,39 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
             });
     }
 
+    private readForm() {
+        const value = this.availabilityForm.getRawValue();
+        return { ...value, dates: value.dates ?? [] };
+    }
+
+    /**
+     * Keeps the picked days a list: the calendar empties its selection to null,
+     * which the unsaved changes would tell apart from the initial empty list.
+     * A value written by code (clear, discard, publish) makes the calendar jump
+     * to another month without telling, so the visible month follows it. Also
+     * unpicks Saturdays and Sundays when the weekends are closed again.
+     */
+    private keepDatesConsistent(): void {
+        const dates = this.availabilityForm.controls.dates;
+        dates.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((value) => {
+            if (value === null) {
+                dates.setValue([], { emitModelToViewChange: false });
+                return;
+            }
+            const calendar = this.calendar();
+            if (calendar) {
+                this.changeMonth({ month: calendar.currentMonth + 1, year: calendar.currentYear });
+            }
+        });
+        this.weekendsControl.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((allow) => {
+            const picked = dates.value ?? [];
+            const open = allow ? picked : picked.filter((date) => !WEEKEND_DAYS.includes(date.getDay()));
+            if (open.length !== picked.length) {
+                dates.setValue(open);
+            }
+        });
+    }
+
     /** Empties the picked days and puts back the default range after publishing. */
     private resetSelection(): void {
         this.ranges.clear({ emitEvent: false });
@@ -692,6 +785,51 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
             { validators: validateRange }
         );
     }
+}
+
+/**
+ * Slots that the ranges produce on one day, each one checked against what is
+ * already taken that day and against the slots accepted before it.
+ *
+ * @param date        day to plan
+ * @param ranges      time ranges of the form
+ * @param slotMinutes length of each slot, or null for one slot per range
+ * @param takenToday  published slots and booked appointments of the day
+ * @param now         current time, in milliseconds
+ */
+function planDay(date: Date, ranges: readonly RangeValue[], slotMinutes: number | null, takenToday: readonly TakenInterval[], now: number): PlannedSlot[] {
+    const accepted: { start: Date; end: Date }[] = [];
+    const slots: PlannedSlot[] = [];
+    for (const range of ranges) {
+        const rangeStart = combineDayAndTime(date, range.startTime);
+        const rangeEnd = combineDayAndTime(date, range.endTime);
+        if (!rangeStart || !rangeEnd || rangeEnd <= rangeStart) {
+            continue;
+        }
+        for (const { start, end } of splitRange(rangeStart, rangeEnd, slotMinutes)) {
+            let problem: SlotProblem = null;
+            if (start.getTime() <= now) {
+                problem = 'past';
+            } else {
+                // A booked appointment explains the conflict better than its slot.
+                const clashes = takenToday.filter((other) => rangesOverlap(start, end, other.start, other.end));
+                if (clashes.length > 0) {
+                    problem = clashes.some((other) => other.kind === 'overlapsAppointment') ? 'overlapsAppointment' : 'overlapsSlot';
+                } else if (accepted.some((other) => rangesOverlap(start, end, other.start, other.end))) {
+                    problem = 'repeated';
+                } else {
+                    accepted.push({ start, end });
+                }
+            }
+            slots.push({ key: `${start.getTime()}-${end.getTime()}`, start, end, problem });
+        }
+    }
+    return slots.sort((a, b) => a.start.getTime() - b.start.getTime());
+}
+
+/** yyyy-MM-dd of a day of the PrimeNG calendar, whose month starts at 0. */
+function calendarKey(date: CalendarDate): string {
+    return `${date.year}-${String(date.month + 1).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
 }
 
 /**
