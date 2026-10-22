@@ -35,9 +35,12 @@ public record CompanyRequestDTO(
         @Size(max = 200, message = "Use un máximo de 200 caracteres.")
         String address) {
 
-    /** Trims the values, lowercases the email and turns blank optional fields into null. */
+    /**
+     * Trims the values, collapses the inner spaces of the name, lowercases the
+     * email and turns blank optional fields into null.
+     */
     public CompanyRequestDTO {
-        businessName = businessName == null ? null : businessName.trim();
+        businessName = businessName == null ? null : businessName.trim().replaceAll("\\s+", " ");
         taxId = taxId == null ? null : taxId.trim();
         contactEmail = contactEmail == null ? null : contactEmail.trim().toLowerCase(Locale.ROOT);
         phoneNumber = phoneNumber == null || phoneNumber.isBlank() ? null : phoneNumber.trim();

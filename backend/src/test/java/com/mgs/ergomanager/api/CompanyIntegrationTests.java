@@ -86,7 +86,8 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
         mvc.perform(post("/api/companies").with(as(admin))
                         .contentType(MediaType.APPLICATION_JSON).content(toJson(body("Otra", "3-101-000004"))))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("message").value("Ya existe una empresa con esa cédula jurídica."));
+                .andExpect(jsonPath("message").value("Ya existe una empresa con esa cédula jurídica."))
+                .andExpect(jsonPath("fieldErrors.taxId").value("Ya existe una empresa con esa cédula jurídica."));
         mvc.perform(put("/api/companies/{id}", second).with(as(admin))
                         .contentType(MediaType.APPLICATION_JSON).content(toJson(body("Segunda", "3-101-000004"))))
                 .andExpect(status().isConflict());
@@ -95,6 +96,26 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
                         .contentType(MediaType.APPLICATION_JSON).content(toJson(body("Segunda S.A.", "3-101-000005"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("businessName").value("Segunda S.A."));
+    }
+
+    @Test
+    void rejectsDuplicatedNameIgnoringCaseAndSpaces() throws Exception {
+        create("Servicios del Valle", "3-101-000010");
+        long other = create("Otra Empresa", "3-101-000011");
+        mvc.perform(post("/api/companies").with(as(admin))
+                        .contentType(MediaType.APPLICATION_JSON).content(toJson(body("SERVICIOS   del valle", "3-101-000012"))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("message").value("Ya existe una empresa con ese nombre."))
+                .andExpect(jsonPath("fieldErrors.businessName").value("Ya existe una empresa con ese nombre."));
+        mvc.perform(put("/api/companies/{id}", other).with(as(admin))
+                        .contentType(MediaType.APPLICATION_JSON).content(toJson(body("servicios del valle", "3-101-000011"))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("fieldErrors.businessName").exists());
+        // Keeping its own name, even with another case, is not a conflict.
+        mvc.perform(put("/api/companies/{id}", other).with(as(admin))
+                        .contentType(MediaType.APPLICATION_JSON).content(toJson(body("OTRA EMPRESA", "3-101-000011"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("businessName").value("OTRA EMPRESA"));
     }
 
     @Test
@@ -129,7 +150,7 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
                         .contentType(MediaType.APPLICATION_JSON).content(toJson(body("X", "3-101-000008"))))
                 .andExpect(status().isCreated());
         mvc.perform(put("/api/companies/{id}", company.getId()).with(as(ergonomist))
-                        .contentType(MediaType.APPLICATION_JSON).content(toJson(body("X", "3-101-000007"))))
+                        .contentType(MediaType.APPLICATION_JSON).content(toJson(body("Lectura S.A.", "3-101-000007"))))
                 .andExpect(status().isOk());
         mvc.perform(delete("/api/companies/{id}", company.getId()).with(as(ergonomist)))
                 .andExpect(status().isNoContent());

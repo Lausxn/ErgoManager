@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class CompanyServiceImpl implements CompanyService {
 
     private static final String COMPANY_NOT_FOUND_MESSAGE = "No se encontró la empresa.";
+    private static final String DUPLICATE_NAME_MESSAGE = "Ya existe una empresa con ese nombre.";
     private static final String DUPLICATE_TAX_ID_MESSAGE = "Ya existe una empresa con esa cédula jurídica.";
     private final CompanyRepository companyRepository;
 
@@ -48,8 +49,11 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     @Transactional
     public CompanyResponseDTO create(CompanyRequestDTO request) {
+        if (companyRepository.existsByBusinessNameIgnoreCase(request.businessName())) {
+            throw new DuplicateResourceException(DUPLICATE_NAME_MESSAGE, "businessName");
+        }
         if (companyRepository.existsByTaxId(request.taxId())) {
-            throw new DuplicateResourceException(DUPLICATE_TAX_ID_MESSAGE);
+            throw new DuplicateResourceException(DUPLICATE_TAX_ID_MESSAGE, "taxId");
         }
         Company company = new Company();
         copy(request, company);
@@ -61,8 +65,11 @@ public class CompanyServiceImpl implements CompanyService {
     @Transactional
     public CompanyResponseDTO update(Long id, CompanyRequestDTO request) {
         Company company = getCompany(id);
+        if (companyRepository.existsByBusinessNameIgnoreCaseAndIdNot(request.businessName(), id)) {
+            throw new DuplicateResourceException(DUPLICATE_NAME_MESSAGE, "businessName");
+        }
         if (companyRepository.existsByTaxIdAndIdNot(request.taxId(), id)) {
-            throw new DuplicateResourceException(DUPLICATE_TAX_ID_MESSAGE);
+            throw new DuplicateResourceException(DUPLICATE_TAX_ID_MESSAGE, "taxId");
         }
         copy(request, company);
         return toResponse(saveAndFlush(company));
@@ -106,7 +113,7 @@ public class CompanyServiceImpl implements CompanyService {
         try {
             return companyRepository.saveAndFlush(company);
         } catch (DataIntegrityViolationException exception) {
-            throw new DuplicateResourceException(DUPLICATE_TAX_ID_MESSAGE);
+            throw new DuplicateResourceException(DUPLICATE_TAX_ID_MESSAGE, "taxId");
         }
     }
 

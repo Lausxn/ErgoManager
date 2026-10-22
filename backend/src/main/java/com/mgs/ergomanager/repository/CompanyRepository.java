@@ -29,6 +29,25 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
     boolean existsByTaxIdAndIdNot(String taxId, Long id);
 
     /**
+     * Checks whether a company is already registered with the given name,
+     * ignoring upper and lower case.
+     *
+     * @param businessName name to look for
+     * @return true when another company already uses that name
+     */
+    boolean existsByBusinessNameIgnoreCase(String businessName);
+
+    /**
+     * Checks whether a company other than the given one uses a name, ignoring
+     * upper and lower case.
+     *
+     * @param businessName name to look for
+     * @param id           identifier of the company being updated
+     * @return true when another company already uses that name
+     */
+    boolean existsByBusinessNameIgnoreCaseAndIdNot(String businessName, Long id);
+
+    /**
      * Returns every company that has not been deactivated.
      *
      * @return list of active companies

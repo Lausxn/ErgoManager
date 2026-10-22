@@ -62,7 +62,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<ErrorResponse> handleDuplicateResource(DuplicateResourceException exception,
                                                                 HttpServletRequest request) {
-        return buildResponse(HttpStatus.CONFLICT, exception.getMessage(), request, null);
+        Map<String, String> fieldErrors = exception.getField() == null
+                ? null
+                : Map.of(exception.getField(), exception.getMessage());
+        return buildResponse(HttpStatus.CONFLICT, exception.getMessage(), request, fieldErrors);
     }
 
     /**

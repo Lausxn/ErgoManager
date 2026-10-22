@@ -8,7 +8,7 @@
             <div class="mgs-card-header">
                 <div>
                     <h2 class="mgs-section-title">Identificación</h2>
-                    <p class="mgs-section-lead">Tal como aparece en los registros legales. La cédula jurídica no se puede repetir.</p>
+                    <p class="mgs-section-lead">Tal como aparece en los registros legales. El nombre y la cédula jurídica no se pueden repetir.</p>
                 </div>
             </div>
             @if (isLoading()) {
@@ -18,7 +18,7 @@
                 </div>
             } @else {
                 <div class="mgs-form-grid">
-                    <app-form-field label="Razón social" inputId="businessName" [control]="companyForm.controls.businessName">
+                    <app-form-field label="Razón social" inputId="businessName" [control]="companyForm.controls.businessName" [errors]="businessNameErrors" hint="No puede repetirse con otra empresa.">
                         <input pInputText id="businessName" formControlName="businessName" [maxlength]="limits.businessName" autocomplete="organization" placeholder="Ej. Servicios Industriales del Valle S.A." />
                     </app-form-field>
                     <app-form-field label="Cédula jurídica" inputId="taxId" [control]="companyForm.controls.taxId" [errors]="taxIdErrors" [half]="true" hint="Identificador único de la empresa.">

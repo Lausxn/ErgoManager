@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, input, numberAttribute, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { map, merge } from 'rxjs';
 import { AvatarModule } from 'primeng/avatar';
@@ -18,7 +18,7 @@ import { SaveBarComponent } from '../../../shared/components/save-bar/save-bar.c
 import { trackUnsavedChanges } from '../../../shared/forms/unsaved-changes';
 import { CompanyRequest, CompanyResponse } from '../../../shared/models/company.model';
 import { ToastService } from '../../../shared/services/toast.service';
-import { applyApiErrors, isConflict } from '../../../shared/utils/api-error';
+import { applyApiErrors } from '../../../shared/utils/api-error';
 import { markFormAsDirty, notBlank } from '../../../shared/utils/form';
 import { ACTIVE_TAG_CLASSES } from '../../../shared/utils/labels';
 import { companyInitials } from '../company-initials';
@@ -27,11 +27,23 @@ import { CompanyService } from '../company.service';
 /** Limits of CompanyRequestDTO in the backend. */
 const LIMITS = { businessName: 150, taxId: 20, contactEmail: 120, phoneNumber: 30, address: 200 } as const;
 
-/** Message shown under the tax id when the backend answers HTTP 409. */
+/** Messages shown under the fields whose value another company already uses. */
+const DUPLICATED_NAME_MESSAGE = 'Ya existe una empresa con ese nombre.';
 const DUPLICATED_TAX_ID_MESSAGE = 'Ya existe una empresa con esa cédula jurídica.';
 
 /** Fields that must hold a valid value before saving. */
 const REQUIRED_FIELDS = ['businessName', 'taxId', 'contactEmail'] as const;
+
+/** Values already used by the other companies, in the form the backend compares them. */
+interface TakenValues {
+    names: ReadonlySet<string>;
+    taxIds: ReadonlySet<string>;
+}
+
+/** Name as the backend compares it: trimmed, with single spaces and ignoring case. */
+function nameKey(value: string): string {
+    return value.trim().replace(/\s+/g, ' ').toLowerCase();
+}
 
 /**
  * Form used to register a client company or to edit one. When editing, the
@@ -119,11 +131,18 @@ export class CompanyFormComponent implements OnInit, HasUnsavedChanges {
     readonly id = input<number | undefined, unknown>(undefined, { transform: numberAttribute });
     protected readonly limits = LIMITS;
     protected readonly activeTagClasses = ACTIVE_TAG_CLASSES;
+    protected readonly businessNameErrors = { duplicated: DUPLICATED_NAME_MESSAGE };
     protected readonly taxIdErrors = { duplicated: DUPLICATED_TAX_ID_MESSAGE };
 
+    /**
+     * Names and tax ids of the other companies, read once to warn about a
+     * duplicate while typing. The backend checks them again when saving.
+     */
+    private readonly takenValues = signal<TakenValues>({ names: new Set(), taxIds: new Set() });
+
     protected readonly companyForm = this.formBuilder.nonNullable.group({
-        businessName: ['', [Validators.required, notBlank, Validators.maxLength(LIMITS.businessName)]],
-        taxId: ['', [Validators.required, notBlank, Validators.maxLength(LIMITS.taxId)]],
+        businessName: ['', [Validators.required, notBlank, Validators.maxLength(LIMITS.businessName), (control: AbstractControl) => this.rejectTaken(control, 'names', nameKey)]],
+        taxId: ['', [Validators.required, notBlank, Validators.maxLength(LIMITS.taxId), (control: AbstractControl) => this.rejectTaken(control, 'taxIds', (value) => value.trim())]],
         contactEmail: ['', [Validators.required, notBlank, Validators.email, Validators.maxLength(LIMITS.contactEmail)]],
         phoneNumber: ['', [Validators.maxLength(LIMITS.phoneNumber)]],
         address: ['', [Validators.maxLength(LIMITS.address)]]
@@ -166,6 +185,7 @@ export class CompanyFormComponent implements OnInit, HasUnsavedChanges {
     protected readonly progress = computed(() => Math.round((this.completedCount() / this.requiredCount) * 100));
 
     ngOnInit(): void {
+        this.loadTakenValues();
         if (!this.isEditing()) {
             return;
         }
@@ -239,26 +259,54 @@ export class CompanyFormComponent implements OnInit, HasUnsavedChanges {
             },
             error: (error: unknown) => {
                 this.isSubmitting.set(false);
-                if (isConflict(error)) {
-                    const taxId = this.companyForm.controls.taxId;
-                    taxId.setErrors({ ...taxId.errors, duplicated: true });
-                    taxId.markAsTouched();
-                    this.errorMessage.set(DUPLICATED_TAX_ID_MESSAGE);
-                    return;
-                }
+                // A duplicated name or tax id (HTTP 409) comes with the field it belongs to.
                 this.errorMessage.set(applyApiErrors(this.companyForm, error, 'No se pudo guardar. Intente de nuevo.'));
             }
         });
     }
 
     /**
-     * Builds the body of the request with clean values: trimmed text, email in
-     * lower case and no blank optional fields.
+     * Reads the names and tax ids of the other companies and checks the fields
+     * again. Without them the backend still rejects a duplicate when saving.
+     */
+    private loadTakenValues(): void {
+        this.companyService
+            .findAll()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: (companies) => {
+                    const others = companies.filter((company) => company.id !== this.id());
+                    this.takenValues.set({
+                        names: new Set(others.map((company) => nameKey(company.businessName))),
+                        taxIds: new Set(others.map((company) => company.taxId.trim()))
+                    });
+                    this.companyForm.controls.businessName.updateValueAndValidity();
+                    this.companyForm.controls.taxId.updateValueAndValidity();
+                },
+                error: () => undefined
+            });
+    }
+
+    /**
+     * Fails when another company already uses the value of a control.
+     *
+     * @param control   control to check
+     * @param kind      list of values to compare with
+     * @param normalize turns the value into the form it is compared in
+     */
+    private rejectTaken(control: AbstractControl, kind: keyof TakenValues, normalize: (value: string) => string): ValidationErrors | null {
+        const value = typeof control.value === 'string' ? normalize(control.value) : '';
+        return value !== '' && this.takenValues()[kind].has(value) ? { duplicated: true } : null;
+    }
+
+    /**
+     * Builds the body of the request with clean values: trimmed text, single
+     * spaces in the name, email in lower case and no blank optional fields.
      */
     private buildRequest(): CompanyRequest {
         const { businessName, taxId, contactEmail, phoneNumber, address } = this.companyForm.getRawValue();
         return {
-            businessName: businessName.trim(),
+            businessName: businessName.trim().replace(/\s+/g, ' '),
             taxId: taxId.trim(),
             contactEmail: contactEmail.trim().toLowerCase(),
             phoneNumber: phoneNumber.trim() || undefined,
