@@ -485,6 +485,35 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    void inactiveCompanyCannotBeUsedButKeepsItsHistory() throws Exception {
+        long selfEvaluationId = submitSelfEvaluation(3, 3, 3);
+        Availability slot = persistAvailability(ergonomist, futureAt(10, 8), futureAt(10, 9));
+        Availability otherSlot = persistAvailability(ergonomist, futureAt(10, 10), futureAt(10, 11));
+        long appointmentId = idOf(mvc.perform(bookingRequest(selfEvaluationId, slot.getId()).with(as(admin)))
+                .andExpect(status().isCreated()).andReturn());
+
+        mvc.perform(delete("/api/companies/{id}", company.getId()).with(as(admin)))
+                .andExpect(status().isNoContent());
+
+        mvc.perform(evaluationRequest(appointmentId).with(as(ergonomist)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("message").value("La empresa está inactiva. No se pueden registrar evaluaciones."));
+        mvc.perform(patch("/api/appointments/{id}/cancel", appointmentId).with(as(admin)))
+                .andExpect(status().isOk());
+        mvc.perform(bookingRequest(selfEvaluationId, otherSlot.getId()).with(as(admin)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("message").value("La empresa está inactiva. No se pueden agendar citas."));
+
+        // The profile is not deleted: it is still listed and its history can be read.
+        mvc.perform(get("/api/companies/{id}", company.getId()).with(as(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("active").value(false));
+        mvc.perform(get("/api/histories").param("companyId", String.valueOf(company.getId())).with(as(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3));
+    }
+
+    @Test
     void agendaIsRestrictedToItsOwner() throws Exception {
         long selfEvaluationId = submitSelfEvaluation(1, 2, 3);
         Availability slot = persistAvailability(ergonomist, futureAt(10, 8), futureAt(10, 9));

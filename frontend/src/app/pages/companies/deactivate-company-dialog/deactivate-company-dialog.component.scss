@@ -1,0 +1,117 @@
+/* Same look as the brand confirmation dialog (.mgs-swal-dialog--destructive in _mgs-components.scss). */
+:host ::ng-deep .deactivate-company-dialog {
+    overflow: hidden;
+    border: 1px solid var(--surface-border);
+    border-top: 4px solid var(--mgs-wine);
+    border-radius: var(--mgs-radius);
+    background: var(--surface-card);
+    box-shadow: var(--mgs-shadow-md);
+    font-family: var(--mgs-font-body);
+
+    .p-dialog-content {
+        padding: 2rem 1.75rem 1.5rem;
+    }
+}
+
+.deactivate-company {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: center;
+}
+
+.deactivate-company__icon {
+    display: grid;
+    width: 3.25rem;
+    height: 3.25rem;
+    margin-bottom: 0.5rem;
+    border-radius: 50%;
+    font-size: 1.35rem;
+    color: var(--mgs-accent-text);
+    background: color-mix(in srgb, var(--mgs-wine), transparent 88%);
+    place-items: center;
+}
+
+.deactivate-company__title {
+    margin: 0;
+    font-family: var(--mgs-font-display);
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--heading-color);
+}
+
+.deactivate-company__profile {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    width: 100%;
+    margin-top: 1rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--surface-border);
+    border-radius: var(--mgs-radius-sm);
+    background: var(--surface-ground);
+    text-align: left;
+}
+
+.deactivate-company__identity {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.deactivate-company__name {
+    overflow-wrap: anywhere;
+    color: var(--heading-color);
+}
+
+.deactivate-company__meta {
+    font-size: 0.85rem;
+    color: var(--text-color-secondary);
+}
+
+.deactivate-company__effects {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    width: 100%;
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.92rem;
+    line-height: 1.45;
+    text-align: left;
+    color: var(--text-color-secondary);
+
+    li {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.65rem;
+    }
+
+    i {
+        width: 1rem;
+        margin-top: 0.2rem;
+        color: var(--mgs-accent-text);
+    }
+}
+
+.deactivate-company__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    width: 100%;
+    margin-top: 1.5rem;
+}
+
+@media (max-width: 480px) {
+    .deactivate-company__actions {
+        flex-direction: column-reverse;
+    }
+
+    .deactivate-company__actions ::ng-deep .p-button {
+        width: 100%;
+    }
+}
