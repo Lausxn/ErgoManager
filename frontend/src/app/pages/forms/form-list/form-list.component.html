@@ -1,12 +1,8 @@
-<app-page-header eyebrow="Administración" title="Formularios de autoevaluación" subtitle="Cuestionarios que responden los colaboradores de las empresas cliente.">
-    <p-button label="Crear formulario" icon="fa-solid fa-plus" routerLink="/forms/new" />
+<app-page-header eyebrow="Administración" title="Formularios" subtitle="Consulte y administre los instrumentos de evaluación ergonómica.">
+    <p-button label="Crear formulario" icon="fa-solid fa-plus" [routerLink]="section() === 'personalized' ? '/forms/personalized/new' : '/forms/new'" />
 </app-page-header>
 
-<section class="mgs-stats" aria-label="Resumen de formularios">
-    <app-stat-card label="Formularios" icon="fa-solid fa-file-pen" [value]="summary().total" [loading]="isLoading()" [dark]="true" />
-    <app-stat-card label="Activos" icon="fa-solid fa-circle-check" [value]="summary().active" [loading]="isLoading()" [note]="summary().total - summary().active + ' inactivos'" [accent]="true" />
-    <app-stat-card label="Preguntas en uso" icon="fa-solid fa-list-check" [value]="summary().activeQuestions" [loading]="isLoading()" note="En formularios activos" />
-</section>
+<app-form-navigation [section]="section()" />
 
 <div class="mgs-table-card">
     <p-table [value]="isLoading() ? skeletonRows : filteredRows()" [paginator]="!isLoading() && filteredRows().length > 10" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [rowHover]="true" dataKey="id" sortField="publicationYear" [sortOrder]="-1">
@@ -17,7 +13,7 @@
                     @if (isLoading()) {
                         <p-skeleton width="7rem" height="0.75rem" />
                     } @else {
-                        <span>{{ filteredRows().length }} de {{ summary().total }} formularios</span>
+                        <span>{{ filteredRows().length }} de {{ rows().length }} formularios</span>
                     }
                 </div>
                 <p-iconfield>
@@ -63,11 +59,11 @@
                     <td class="tabular-nums">{{ row.publicationYear }}</td>
                     <td class="tabular-nums">{{ row.questionCount }}</td>
                     <td>
-                        <p-tag [value]="row.active ? 'Activo' : 'Inactivo'" [styleClass]="row.active ? activeTagClasses.active : activeTagClasses.inactive" />
+                        <p-tag [value]="row.active ? 'Activo' : 'Inactivo / borrador'" [styleClass]="row.active ? activeTagClasses.active : activeTagClasses.inactive" />
                     </td>
                     <td class="text-right">
                         <div class="mgs-row-actions">
-                            @if (row.active) {
+                            @if (row.active && row.type === 'SELF_EVALUATION') {
                                 <p-button
                                     icon="fa-solid fa-paper-plane"
                                     [rounded]="true"
@@ -90,9 +86,9 @@
                                     severity="secondary"
                                     [loading]="isBusy(row.id)"
                                     (onClick)="activate(row)"
-                                    pTooltip="Reactivar"
+                                    pTooltip="Activar"
                                     tooltipPosition="top"
-                                    ariaLabel="Reactivar formulario"
+                                    ariaLabel="Activar formulario"
                                 />
                             }
                         </div>
@@ -107,10 +103,8 @@
                         <app-empty-state icon="fa-solid fa-circle-exclamation" title="No se pudieron cargar los formularios" message="Revise su conexión e intente de nuevo.">
                             <p-button label="Reintentar" icon="fa-solid fa-rotate-right" severity="secondary" [outlined]="true" (onClick)="loadForms()" />
                         </app-empty-state>
-                    } @else if (summary().total === 0) {
-                        <app-empty-state icon="fa-solid fa-file-pen" title="Todavía no hay formularios" message="Cree el primer formulario de autoevaluación con sus preguntas y pesos.">
-                            <p-button label="Crear formulario" icon="fa-solid fa-plus" routerLink="/forms/new" />
-                        </app-empty-state>
+                    } @else if (rows().length === 0) {
+                        <app-empty-state icon="fa-solid fa-file-pen" title="Todavía no hay formularios" message="Cree un formulario de este tipo. Se guardará como borrador inactivo."> </app-empty-state>
                     } @else {
                         <app-empty-state icon="fa-solid fa-filter-circle-xmark" title="Sin coincidencias" message="Ningún formulario coincide con la búsqueda o el filtro de estado." />
                     }

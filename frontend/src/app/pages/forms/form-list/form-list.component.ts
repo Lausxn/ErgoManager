@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -16,7 +16,6 @@ import { TooltipModule } from 'primeng/tooltip';
 
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
-import { StatCardComponent } from '../../../shared/components/stat-card/stat-card.component';
 import { CompanyResponse } from '../../../shared/models/company.model';
 import { FormResponse } from '../../../shared/models/form.model';
 import { DialogService } from '../../../shared/services/dialog.service';
@@ -25,6 +24,7 @@ import { getApiErrorMessage } from '../../../shared/utils/api-error';
 import { ACTIVE_TAG_CLASSES } from '../../../shared/utils/labels';
 import { CompanyService } from '../../companies/company.service';
 import { FormService } from '../form.service';
+import { FormNavigationComponent, FormSection } from '../form-navigation/form-navigation.component';
 
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
 
@@ -46,8 +46,7 @@ interface CompanyOption {
 }
 
 /**
- * Main page of the self evaluation forms: summary, table and the dialog that
- * sends a form again to the employees of a company.
+ * Administration of both form types, with a resend dialog for self evaluations.
  */
 @Component({
     selector: 'app-form-list',
@@ -69,7 +68,7 @@ interface CompanyOption {
         TooltipModule,
         EmptyStateComponent,
         PageHeaderComponent,
-        StatCardComponent
+        FormNavigationComponent
     ],
     templateUrl: './form-list.component.html',
     styles: [
@@ -145,7 +144,8 @@ interface CompanyOption {
         `
     ]
 })
-export class FormListComponent {
+export class FormListComponent implements OnInit {
+    readonly section = input<FormSection>('self-evaluation');
     private readonly formService = inject(FormService);
     private readonly companyService = inject(CompanyService);
     private readonly dialogService = inject(DialogService);
@@ -181,25 +181,14 @@ export class FormListComponent {
     protected readonly companiesFailed = signal(false);
 
     protected readonly rows = computed<FormRow[]>(() =>
-        this.formList().map((form) => ({
-            ...form,
-            questionCount: form.questionList.length,
-            searchKey: `${form.title} ${form.description ?? ''} ${form.publicationYear}`.toLowerCase()
-        }))
+        this.formList()
+            .filter((form) => form.type === (this.section() === 'personalized' ? 'PERSONALIZED_EVALUATION' : 'SELF_EVALUATION'))
+            .map((form) => ({
+                ...form,
+                questionCount: (form.questionList ?? []).length,
+                searchKey: `${form.title} ${form.description ?? ''} ${form.publicationYear}`.toLowerCase()
+            }))
     );
-
-    /** Figures of the summary cards, counted in a single pass. */
-    protected readonly summary = computed(() => {
-        const summary = { total: 0, active: 0, activeQuestions: 0 };
-        for (const form of this.formList()) {
-            summary.total++;
-            if (form.active) {
-                summary.active++;
-                summary.activeQuestions += form.questionList.length;
-            }
-        }
-        return summary;
-    });
 
     protected readonly filteredRows = computed(() => {
         const search = this.searchText().trim().toLowerCase();
@@ -207,7 +196,7 @@ export class FormListComponent {
         return this.rows().filter((row) => (status === 'ALL' || row.active === (status === 'ACTIVE')) && (search === '' || row.searchKey.includes(search)));
     });
 
-    constructor() {
+    ngOnInit(): void {
         this.loadForms();
     }
 
@@ -234,8 +223,7 @@ export class FormListComponent {
     }
 
     /**
-     * Asks for confirmation and deactivates the form, which stops being offered
-     * to the employees. Its answers are kept.
+     * Confirms deactivation for either type, preserving previous evaluations.
      *
      * @param row form to deactivate
      */
@@ -245,7 +233,7 @@ export class FormListComponent {
         }
         const confirmed = await this.dialogService.confirm({
             title: 'Desactivar formulario',
-            message: `"${row.title}" dejará de ofrecerse a los colaboradores y no podrá reenviarse. Las autoevaluaciones ya respondidas se conservan, y puede reactivarlo cuando quiera.`,
+            message: `"${row.title}" dejará de estar disponible para nuevas evaluaciones. Las evaluaciones ya realizadas se conservan. Puede activarlo nuevamente desde este listado.`,
             confirmLabel: 'Desactivar',
             destructive: true
         });
@@ -270,7 +258,7 @@ export class FormListComponent {
     }
 
     /**
-     * Activates again a form that was deactivated.
+     * Activates an inactive form. The backend enforces one active form per type.
      *
      * @param row form to activate
      */
@@ -285,12 +273,12 @@ export class FormListComponent {
             .subscribe({
                 next: (form) => {
                     this.setBusy(row.id, false);
-                    this.toastService.success('Formulario reactivado', row.title);
+                    this.toastService.success('Formulario activado', row.title);
                     this.updateForm(row.id, { ...form, active: true });
                 },
                 error: (error: unknown) => {
                     this.setBusy(row.id, false);
-                    this.toastService.error('No se pudo reactivar', getApiErrorMessage(error, 'Intente de nuevo en unos minutos.'));
+                    this.toastService.error('No se pudo activar', getApiErrorMessage(error, 'Intente de nuevo en unos minutos.'));
                 }
             });
     }
@@ -302,7 +290,7 @@ export class FormListComponent {
      * @param row form to send
      */
     protected openResend(row: FormRow): void {
-        if (!row.active) {
+        if (!row.active || row.type !== 'SELF_EVALUATION') {
             return;
         }
         this.resendForm.set(row);

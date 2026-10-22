@@ -1,26 +1,18 @@
 <app-page-header
     eyebrow="Empresas cliente"
-    [title]="isEditing() ? 'Editar empresa' : 'Crear perfil de cliente'"
-    [subtitle]="isEditing() ? 'Datos legales y de contacto de la organización que recibe los formularios.' : 'Registre una empresa cliente para incorporarla a la gestión ergonómica de ErgoManager.'"
+    [title]="isEditing() ? 'Editar perfil de cliente' : 'Crear perfil de cliente'"
+    [subtitle]="isEditing() ? 'Actualice los datos del perfil. Los cambios se aplicarán cuando seleccione Guardar cambios.' : 'Registre una empresa cliente para incorporarla a la gestión ergonómica de ErgoManager.'"
 >
     <p-button label="Volver a empresas" icon="fa-solid fa-arrow-left" severity="secondary" [text]="true" routerLink="/companies" />
 </app-page-header>
 
-<form [formGroup]="companyForm" (ngSubmit)="submit()" class="mgs-form-layout" novalidate>
+<form [formGroup]="companyForm" (ngSubmit)="submit()" class="mgs-form-layout" [attr.aria-busy]="isLoading() || isSubmitting()" novalidate>
     <div class="mgs-stack">
         <section class="mgs-card">
             <div class="mgs-card-header">
                 <div>
-                    <h2 class="mgs-section-title">
-                        {{ isEditing() ? 'Identificación' : 'Datos de la empresa' }}
-                    </h2>
-                    <p class="mgs-section-lead">
-                        @if (isEditing()) {
-                            Tal como aparece en los registros legales. La cédula jurídica no se puede repetir.
-                        } @else {
-                            Ingrese los datos con los que se identificará el perfil de la empresa en el sistema.
-                        }
-                    </p>
+                    <h2 class="mgs-section-title">{{ isEditing() ? 'Datos del perfil' : 'Datos de la empresa' }}</h2>
+                    <p class="mgs-section-lead">{{ isEditing() ? 'Revise la razón social y la cédula jurídica de la empresa que está editando.' : 'Ingrese los datos con los que se identificará el perfil de la empresa en el sistema.' }}</p>
                 </div>
             </div>
             @if (isLoading()) {
@@ -33,8 +25,8 @@
                     <app-form-field label="Razón social" inputId="businessName" [control]="companyForm.controls.businessName" [errors]="businessNameErrors" hint="El nombre del perfil debe ser único en el sistema.">
                         <input pInputText id="businessName" formControlName="businessName" [maxlength]="limits.businessName" autocomplete="organization" placeholder="Ej. Servicios Industriales del Valle S.A." />
                     </app-form-field>
-                    <app-form-field label="Cédula jurídica" inputId="taxId" [control]="companyForm.controls.taxId" [errors]="taxIdErrors" [half]="true" hint="Identificador único de la empresa.">
-                        <input pInputText id="taxId" formControlName="taxId" [maxlength]="limits.taxId" autocomplete="off" placeholder="Ej. 3-101-123456" />
+                    <app-form-field label="Cédula jurídica" inputId="taxId" [control]="companyForm.controls.taxId" [errors]="taxIdErrors" [half]="true" hint="Única por empresa. Escriba solo los números: los guiones se agregan solos.">
+                        <input pInputText id="taxId" formControlName="taxId" [maxlength]="limits.taxId" inputmode="numeric" autocomplete="off" placeholder="Ej. 3-101-123456" (input)="formatTaxId($event)" />
                     </app-form-field>
                 </div>
             }
@@ -58,7 +50,7 @@
                     <app-form-field label="Correo de contacto" inputId="contactEmail" [control]="companyForm.controls.contactEmail">
                         <input pInputText id="contactEmail" type="email" formControlName="contactEmail" [maxlength]="limits.contactEmail" autocomplete="email" placeholder="contacto@empresa.com" />
                     </app-form-field>
-                    <app-form-field label="Teléfono" inputId="phoneNumber" [control]="companyForm.controls.phoneNumber" [half]="true" [optional]="true">
+                    <app-form-field label="Teléfono" inputId="phoneNumber" [control]="companyForm.controls.phoneNumber" [errors]="phoneNumberErrors" [half]="true" [optional]="true">
                         <input pInputText id="phoneNumber" type="tel" formControlName="phoneNumber" [maxlength]="limits.phoneNumber" autocomplete="tel" placeholder="Ej. 2222-3333" />
                     </app-form-field>
                     <app-form-field label="Dirección" inputId="address" [control]="companyForm.controls.address" [half]="true" [optional]="true">
@@ -69,7 +61,10 @@
         </section>
     </div>
 
-    <aside class="mgs-card mgs-sticky flex flex-col gap-6">
+    <aside class="mgs-card mgs-sticky flex flex-col gap-6" [attr.aria-label]="isEditing() ? 'Vista previa del perfil' : 'Resumen de empresa'">
+        @if (isEditing()) {
+            <span class="mgs-eyebrow">Vista previa del perfil</span>
+        }
         @if (isLoading()) {
             <div class="flex flex-col items-center gap-3" aria-hidden="true">
                 <p-skeleton shape="circle" size="4rem" />
@@ -112,6 +107,21 @@
                     <span>{{ preview().address || 'Sin dirección' }}</span>
                 </li>
             </ul>
+
+            @if (storedCompany()?.previousNames?.length) {
+                <div class="company-history">
+                    <span class="mgs-eyebrow">Nombres anteriores</span>
+                    <p class="company-link__lead">Quedan reservados para este perfil: ninguna otra empresa puede usarlos.</p>
+                    <ul class="company-contact" aria-label="Nombres anteriores del perfil">
+                        @for (name of storedCompany()!.previousNames; track name) {
+                            <li>
+                                <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+                                <span>{{ name }}</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
         }
 
         <div class="flex flex-col gap-2">
@@ -123,6 +133,10 @@
         </div>
 
         @if (isEditing()) {
+            <div class="mgs-details-note">
+                <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+                <span>La vista previa refleja los datos del formulario. Use Guardar cambios para actualizarlos o Restablecer para recuperar los datos cargados.</span>
+            </div>
             <div class="company-link">
                 <span class="mgs-eyebrow">Enlace de autoevaluación</span>
                 <p class="company-link__lead">Los colaboradores de la empresa responden el formulario desde este enlace, sin iniciar sesión.</p>

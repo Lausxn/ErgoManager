@@ -1,8 +1,14 @@
 package com.mgs.ergomanager.repository;
 
 import com.mgs.ergomanager.model.Company;
+import jakarta.persistence.LockModeType;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -12,40 +18,60 @@ import org.springframework.stereotype.Repository;
 public interface CompanyRepository extends JpaRepository<Company, Long> {
 
     /**
-     * Checks whether a company already uses a name, ignoring case. Inactive
-     * companies are included, so their names remain reserved.
+     * Reads a company and locks its row until the transaction ends, so two
+     * changes of the same company are applied one after the other and none
+     * overwrites the other.
      *
-     * @param businessName name to look for
+     * @param id identifier of the company
+     * @return the locked company
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select company from Company company where company.id = :id")
+    Optional<Company> findByIdForUpdate(@Param("id") Long id);
+
+    /**
+     * Checks whether a company already uses a business name key.
+     *
+     * @param businessNameKey key built by {@code CompanyKeys.businessNameKey}
      * @return true when a company already uses that name
      */
-    boolean existsByBusinessNameIgnoreCase(String businessName);
+    boolean existsByBusinessNameKey(String businessNameKey);
 
     /**
-     * Checks whether a company other than the given one uses a name, ignoring
-     * case, so a company can keep its own name when it is updated.
+     * Checks whether a company already uses a tax id key.
      *
-     * @param businessName name to look for
-     * @param id           identifier of the company being updated
-     * @return true when another company already uses that name
+     * @param taxIdKey key built by {@code CompanyKeys.taxIdKey}
+     * @return true when a company already uses that tax id
      */
-    boolean existsByBusinessNameIgnoreCaseAndIdNot(String businessName, Long id);
+    boolean existsByTaxIdKey(String taxIdKey);
 
     /**
-     * Checks whether a company is already registered with the given tax id.
+     * Returns the companies stored before the comparison keys existed.
      *
-     * @param taxId tax id to look for
-     * @return true when another company already uses that tax id
+     * @return companies with a missing key, oldest first
      */
-    boolean existsByTaxId(String taxId);
+    List<Company> findByBusinessNameKeyIsNullOrTaxIdKeyIsNullOrderByIdAsc();
 
     /**
-     * Checks whether a company other than the given one uses a tax id.
+     * Writes the business name key of a company without running the entity
+     * callbacks, so the other key can stay empty when it is repeated.
      *
-     * @param taxId tax id to look for
-     * @param id    identifier of the company being updated
-     * @return true when another company already uses that tax id
+     * @param id  identifier of the company
+     * @param key business name key
      */
-    boolean existsByTaxIdAndIdNot(String taxId, Long id);
+    @Modifying
+    @Query("update Company company set company.businessNameKey = :key where company.id = :id")
+    void setBusinessNameKey(@Param("id") Long id, @Param("key") String key);
+
+    /**
+     * Writes the tax id key of a company without running the entity callbacks.
+     *
+     * @param id  identifier of the company
+     * @param key tax id key
+     */
+    @Modifying
+    @Query("update Company company set company.taxIdKey = :key where company.id = :id")
+    void setTaxIdKey(@Param("id") Long id, @Param("key") String key);
 
     /**
      * Returns every company that has not been deactivated.
