@@ -18,7 +18,7 @@ import { SaveBarComponent } from '../../../shared/components/save-bar/save-bar.c
 import { trackUnsavedChanges } from '../../../shared/forms/unsaved-changes';
 import { CompanyRequest, CompanyResponse } from '../../../shared/models/company.model';
 import { ToastService } from '../../../shared/services/toast.service';
-import { applyApiErrors, isConflict } from '../../../shared/utils/api-error';
+import { applyApiErrors, getApiErrorMessage, isConflict } from '../../../shared/utils/api-error';
 import { markFormAsDirty, notBlank } from '../../../shared/utils/form';
 import { ACTIVE_TAG_CLASSES } from '../../../shared/utils/labels';
 import { companyInitials } from '../company-initials';
@@ -27,8 +27,12 @@ import { CompanyService } from '../company.service';
 /** Limits of CompanyRequestDTO in the backend. */
 const LIMITS = { businessName: 150, taxId: 20, contactEmail: 120, phoneNumber: 30, address: 200 } as const;
 
-/** Message shown under the tax id when the backend answers HTTP 409. */
+/** Messages of the backend for each repeated value, shown under the field they are about. */
+const DUPLICATED_BUSINESS_NAME_MESSAGE = 'Ya existe una empresa con ese nombre.';
 const DUPLICATED_TAX_ID_MESSAGE = 'Ya existe una empresa con esa cédula jurídica.';
+
+/** Message shown when the backend answers HTTP 409 without an explanation. */
+const DUPLICATED_DATA_MESSAGE = 'Ya existe otra empresa con esos datos. Revise la razón social y la cédula jurídica.';
 
 /** Fields that must hold a valid value before saving. */
 const REQUIRED_FIELDS = ['businessName', 'taxId', 'contactEmail'] as const;
@@ -119,6 +123,7 @@ export class CompanyFormComponent implements OnInit, HasUnsavedChanges {
     readonly id = input<number | undefined, unknown>(undefined, { transform: numberAttribute });
     protected readonly limits = LIMITS;
     protected readonly activeTagClasses = ACTIVE_TAG_CLASSES;
+    protected readonly businessNameErrors = { duplicated: DUPLICATED_BUSINESS_NAME_MESSAGE };
     protected readonly taxIdErrors = { duplicated: DUPLICATED_TAX_ID_MESSAGE };
 
     protected readonly companyForm = this.formBuilder.nonNullable.group({
@@ -240,15 +245,29 @@ export class CompanyFormComponent implements OnInit, HasUnsavedChanges {
             error: (error: unknown) => {
                 this.isSubmitting.set(false);
                 if (isConflict(error)) {
-                    const taxId = this.companyForm.controls.taxId;
-                    taxId.setErrors({ ...taxId.errors, duplicated: true });
-                    taxId.markAsTouched();
-                    this.errorMessage.set(DUPLICATED_TAX_ID_MESSAGE);
+                    this.showConflict(getApiErrorMessage(error, DUPLICATED_DATA_MESSAGE));
                     return;
                 }
                 this.errorMessage.set(applyApiErrors(this.companyForm, error, 'No se pudo guardar. Intente de nuevo.'));
             }
         });
+    }
+
+    /**
+     * Explains an HTTP 409. The backend only sends a message, so the field it
+     * is about, the business name or the tax id, is found by that message; any
+     * other conflict only shows it above the actions.
+     *
+     * @param message explanation sent by the backend
+     */
+    private showConflict(message: string): void {
+        const field = message === DUPLICATED_BUSINESS_NAME_MESSAGE ? 'businessName' : message === DUPLICATED_TAX_ID_MESSAGE ? 'taxId' : null;
+        if (field !== null) {
+            const control = this.companyForm.controls[field];
+            control.setErrors({ ...control.errors, duplicated: true });
+            control.markAsTouched();
+        }
+        this.errorMessage.set(message);
     }
 
     /**
