@@ -71,6 +71,29 @@ export class AppointmentService {
     }
 
     /**
+     * Moves an appointment to another free slot of the same ergonomist; the
+     * previous slot becomes free again.
+     *
+     * @param id             identifier of the appointment
+     * @param availabilityId identifier of the new slot
+     * @returns the rescheduled appointment
+     */
+    reschedule(id: number, availabilityId: number): Observable<AppointmentResponse> {
+        return this.http.patch<AppointmentResponse>(`${this.baseUrl}/${id}/reschedule`, { availabilityId });
+    }
+
+    /**
+     * Changes the day and hours of a slot that nobody booked yet.
+     *
+     * @param id      identifier of the slot
+     * @param request owner of the slot and its new start and end
+     * @returns the updated slot
+     */
+    updateAvailability(id: number, request: AvailabilityRequest): Observable<AvailabilityResponse> {
+        return this.http.put<AvailabilityResponse>(`${this.baseUrl}/availabilities/${id}`, request);
+    }
+
+    /**
      * Removes a published slot that nobody booked yet.
      *
      * @param id identifier of the slot

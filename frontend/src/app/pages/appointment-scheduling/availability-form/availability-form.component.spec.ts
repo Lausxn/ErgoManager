@@ -332,4 +332,120 @@ describe('AvailabilityFormComponent', () => {
             expect(page().textContent).toContain('Ana Mora');
         });
     });
+
+    describe('editar espacio', () => {
+        /** Tomorrow, shown in the configured list: when it falls in the next month, the calendar moves there. */
+        function setupTomorrow(slots: (day: Date) => AvailabilityResponse[], appointments: (day: Date) => AppointmentResponse[] = () => []): Date {
+            const day = daysFromToday(1);
+            const sameMonth = day.getMonth() === new Date().getMonth();
+            setup(sameMonth ? slots(day) : [], sameMonth ? appointments(day) : []);
+            if (!sameMonth) {
+                fixture.componentInstance['changeMonth']({ month: day.getMonth() + 1, year: day.getFullYear() });
+                flushMonth(slots(day), appointments(day));
+            }
+            return day;
+        }
+
+        function editButtons(): HTMLButtonElement[] {
+            return Array.from(page().querySelectorAll<HTMLButtonElement>('button[aria-label="Editar espacio"]'));
+        }
+
+        function editForm() {
+            return fixture.componentInstance['editForm'];
+        }
+
+        /** Opens the dialog of the first free slot. */
+        async function openFirst(): Promise<void> {
+            editButtons()[0].click();
+            fixture.detectChanges();
+            await fixture.whenStable();
+            fixture.detectChanges();
+        }
+
+        function save(): void {
+            Array.from(document.querySelectorAll<HTMLButtonElement>('.availability-edit-dialog button'))
+                .find((button) => button.textContent?.trim() === 'Guardar cambios')!
+                .click();
+            fixture.detectChanges();
+        }
+
+        function dialogAlert(): string {
+            return document.querySelector('.availability-edit-dialog .mgs-alert[role="alert"]')?.textContent?.trim() ?? '';
+        }
+
+        it('se ofrece en los espacios libres futuros y no en las citas reservadas', () => {
+            setupTomorrow(
+                (day) => [slotOf(1, at(day, 8), at(day, 9)), slotOf(2, at(daysFromToday(-1), 8), at(daysFromToday(-1), 9))],
+                (day) => [appointmentOf(5, at(day, 10), at(day, 11))]
+            );
+
+            // Yesterday's slot, if it is in the list at all, belongs to a past day.
+            expect(editButtons().length).toBe(1);
+        });
+
+        it('carga el espacio, envía PUT /availabilities/{id} con las horas nuevas y actualiza la lista', async () => {
+            const day = setupTomorrow((tomorrow) => [slotOf(1, at(tomorrow, 8), at(tomorrow, 9))]);
+            await openFirst();
+
+            expect(editForm().controls.date.value?.getDate()).toBe(day.getDate());
+            expect(editForm().controls.startTime.value?.getHours()).toBe(8);
+            expect(editForm().controls.endTime.value?.getHours()).toBe(9);
+
+            editForm().controls.startTime.setValue(timeOfDay(14));
+            editForm().controls.endTime.setValue(timeOfDay(15, 30));
+            save();
+
+            const request = http.expectOne((candidate) => candidate.method === 'PUT' && candidate.url === `${URL}/1`);
+            expect(request.request.body).toEqual({ userId: USER_ID, startDateTime: toLocalDateTime(at(day, 14)), endDateTime: toLocalDateTime(at(day, 15, 30)) });
+            request.flush(slotOf(1, at(day, 14), at(day, 15, 30)));
+            fixture.detectChanges();
+
+            expect(toast.success).toHaveBeenCalledWith('Espacio actualizado', jasmine.any(String));
+            expect(fixture.componentInstance['isEditOpen']()).toBeFalse();
+            expect(page().textContent).toContain('Libre · 1 h 30 min');
+        });
+
+        it('no envía un horario que se cruza con otro espacio o que termina antes de empezar', async () => {
+            setupTomorrow((day) => [slotOf(1, at(day, 8), at(day, 9)), slotOf(2, at(day, 10), at(day, 11))]);
+            await openFirst();
+
+            editForm().controls.endTime.setValue(timeOfDay(10, 30));
+            save();
+            expect(dialogAlert()).toContain(MESSAGE);
+
+            editForm().controls.endTime.setValue(timeOfDay(7));
+            save();
+            expect(document.querySelector('.availability-edit-dialog')!.textContent).toContain('La hora final debe ser posterior a la inicial.');
+
+            http.expectNone((request) => request.method === 'PUT');
+        });
+
+        it('ante un 409 muestra el mensaje fijo de cruce y vuelve a leer el calendario', async () => {
+            const day = setupTomorrow((tomorrow) => [slotOf(1, at(tomorrow, 8), at(tomorrow, 9))]);
+            await openFirst();
+            editForm().controls.endTime.setValue(timeOfDay(10));
+            save();
+
+            http.expectOne((request) => request.method === 'PUT' && request.url === `${URL}/1`).flush({ message: 'SQL constraint exception' }, { status: 409, statusText: 'Conflict' });
+            flushMonth([slotOf(1, at(day, 8), at(day, 9)), slotOf(3, at(day, 9), at(day, 10))]);
+
+            expect(dialogAlert()).toContain(MESSAGE);
+            expect(document.body.textContent).not.toContain('SQL constraint exception');
+            expect(fixture.componentInstance['isEditOpen']()).toBeTrue();
+        });
+
+        it('si el espacio ya tiene una cita, muestra el mensaje del backend y la cita en la lista', async () => {
+            const day = setupTomorrow((tomorrow) => [slotOf(1, at(tomorrow, 8), at(tomorrow, 9))]);
+            await openFirst();
+            editForm().controls.endTime.setValue(timeOfDay(10));
+            save();
+
+            http.expectOne((request) => request.method === 'PUT' && request.url === `${URL}/1`).flush({ message: 'No se puede editar un espacio que ya tiene una cita.' }, { status: 400, statusText: 'Bad Request' });
+            flushMonth([], [appointmentOf(5, at(day, 8), at(day, 9))]);
+
+            expect(dialogAlert()).toContain('No se puede editar un espacio que ya tiene una cita.');
+            expect(editButtons().length).toBe(0);
+            expect(page().textContent).toContain('Ana Mora');
+        });
+    });
 });

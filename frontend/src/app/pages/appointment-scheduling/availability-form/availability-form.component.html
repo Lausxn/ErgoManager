@@ -235,6 +235,21 @@
                                                 }
                                             </span>
                                             @if (entry.slot; as slot) {
+                                                @if (!day.isPast) {
+                                                    <p-button
+                                                        type="button"
+                                                        icon="fa-regular fa-pen-to-square"
+                                                        [rounded]="true"
+                                                        [text]="true"
+                                                        size="small"
+                                                        severity="secondary"
+                                                        [disabled]="isDeleting('slot-' + slot.id) || isDeleting('day-' + day.key)"
+                                                        (onClick)="openEdit(slot)"
+                                                        pTooltip="Editar espacio"
+                                                        tooltipPosition="top"
+                                                        ariaLabel="Editar espacio"
+                                                    />
+                                                }
                                                 <p-button
                                                     type="button"
                                                     icon="fa-regular fa-trash-can"
@@ -336,3 +351,44 @@
         (discarded)="clearError()"
     />
 </form>
+
+<p-dialog
+    [visible]="isEditOpen()"
+    (visibleChange)="isEditOpen.set($event)"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [dismissableMask]="!isSavingEdit()"
+    [closeOnEscape]="!isSavingEdit()"
+    [closable]="!isSavingEdit()"
+    header="Editar espacio"
+    styleClass="availability-edit-dialog"
+    [style]="{ width: 'min(30rem, calc(100vw - 2rem))' }"
+>
+    <form [formGroup]="editForm" (ngSubmit)="saveEdit()" class="flex flex-col gap-4" novalidate>
+        <p class="mgs-section-lead m-0">Cambie el día o las horas de este espacio libre. Si ya tiene una cita, cancélela o reprográmela desde la agenda.</p>
+        <app-form-field label="Día" inputId="edit-date" [control]="editForm.controls.date">
+            <p-datepicker inputId="edit-date" formControlName="date" [minDate]="today" dateFormat="dd/mm/yy" [showIcon]="true" [fluid]="true" [readonlyInput]="true" appendTo="body" />
+        </app-form-field>
+        <div class="availability-range__fields">
+            <app-form-field label="Desde" inputId="edit-start" [control]="editForm.controls.startTime">
+                <p-datepicker inputId="edit-start" formControlName="startTime" [timeOnly]="true" hourFormat="12" [stepMinute]="15" [fluid]="true" [readonlyInput]="true" appendTo="body" />
+            </app-form-field>
+            <app-form-field label="Hasta" inputId="edit-end" [control]="editForm.controls.endTime">
+                <p-datepicker inputId="edit-end" formControlName="endTime" [timeOnly]="true" hourFormat="12" [stepMinute]="15" [fluid]="true" [readonlyInput]="true" appendTo="body" />
+            </app-form-field>
+        </div>
+        @if (isEditRangeInvalid()) {
+            <small class="mgs-field__error" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>La hora final debe ser posterior a la inicial.</small>
+        }
+        @if (editError(); as message) {
+            <div class="mgs-alert" role="alert">
+                <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ message }}</span>
+            </div>
+        }
+        <div class="flex justify-end gap-2">
+            <p-button type="button" label="Volver" [text]="true" severity="secondary" [disabled]="isSavingEdit()" (onClick)="isEditOpen.set(false)" />
+            <p-button type="submit" label="Guardar cambios" icon="fa-regular fa-floppy-disk" [loading]="isSavingEdit()" />
+        </div>
+    </form>
+</p-dialog>
