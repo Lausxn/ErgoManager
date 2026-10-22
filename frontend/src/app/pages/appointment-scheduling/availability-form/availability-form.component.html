@@ -1,0 +1,376 @@
+<app-page-header eyebrow="Citas" title="Gestionar disponibilidad" subtitle="Habilite los días y horas en que se pueden agendar citas, y retire los que ya no estén disponibles.">
+    <p-button
+        label="Volver a la agenda"
+        icon="fa-solid fa-arrow-left"
+        severity="secondary"
+        [text]="true"
+        routerLink="/appointments"
+        [queryParams]="isAdmin() && availabilityForm.controls.userId.value !== null ? { userId: availabilityForm.controls.userId.value } : {}"
+    />
+</app-page-header>
+
+<form [formGroup]="availabilityForm" (ngSubmit)="submit()" class="mgs-form-layout" novalidate>
+    <div class="mgs-stack">
+        @if (isAdmin()) {
+            <section class="mgs-card">
+                <div class="mgs-card-header">
+                    <div>
+                        <h2 class="mgs-section-title">Ergonomista</h2>
+                        <p class="mgs-section-lead">Persona cuya disponibilidad se gestiona.</p>
+                    </div>
+                </div>
+                <app-form-field label="Ergonomista" inputId="userId" [control]="availabilityForm.controls.userId">
+                    @if (isLoadingErgonomists()) {
+                        <p-skeleton height="2.6rem" />
+                    } @else {
+                        <p-select
+                            inputId="userId"
+                            formControlName="userId"
+                            [options]="ergonomists()"
+                            optionLabel="fullName"
+                            optionValue="id"
+                            placeholder="Elija un ergonomista"
+                            [filter]="ergonomists().length > 6"
+                            filterBy="fullName,email"
+                            emptyMessage="No hay ergonomistas activos"
+                            [fluid]="true"
+                        >
+                            <ng-template #item let-ergonomist>
+                                <div class="flex flex-col">
+                                    <span class="font-semibold">{{ ergonomist.fullName }}</span>
+                                    <span class="text-xs text-muted-color">{{ ergonomist.email }}</span>
+                                </div>
+                            </ng-template>
+                        </p-select>
+                    }
+                </app-form-field>
+            </section>
+        }
+
+        <section class="mgs-card" aria-labelledby="availability-new-title">
+            <div class="mgs-card-header">
+                <div>
+                    <h2 class="mgs-section-title" id="availability-new-title">Habilitar fechas y horas</h2>
+                    <p class="mgs-section-lead">Elija uno o varios días en el calendario y los horarios en que se atenderá.</p>
+                </div>
+            </div>
+
+            <div class="availability-planner">
+                <div class="availability-calendar">
+                    <p-datepicker
+                        #calendar
+                        formControlName="dates"
+                        [inline]="true"
+                        selectionMode="multiple"
+                        [minDate]="today"
+                        [disabledDays]="disabledWeekDays()"
+                        [disabledDates]="fullDays()"
+                        [showOtherMonths]="false"
+                        (onMonthChange)="changeMonth($event)"
+                        ariaLabel="Días a habilitar"
+                    >
+                        <ng-template #date let-date>
+                            @let marker = markerOf(date);
+                            @let full = isFullDay(date);
+                            <span class="availability-calendar__day" [class.availability-calendar__day--full]="full" [attr.title]="full ? 'Sin horas libres con estos horarios' : null">
+                                {{ date.day }}
+                                @if (full) {
+                                    <i class="fa-solid fa-lock availability-calendar__lock" aria-hidden="true"></i>
+                                }
+                                @if (marker) {
+                                    <span class="availability-calendar__dots" aria-hidden="true">
+                                        @if (marker.free) {
+                                            <span class="availability-calendar__dot availability-calendar__dot--free"></span>
+                                        }
+                                        @if (marker.booked) {
+                                            <span class="availability-calendar__dot availability-calendar__dot--booked"></span>
+                                        }
+                                    </span>
+                                }
+                            </span>
+                        </ng-template>
+                    </p-datepicker>
+                    <div class="availability-legend" aria-hidden="true">
+                        <span><span class="availability-calendar__dot availability-calendar__dot--free"></span>Espacios libres</span>
+                        <span><span class="availability-calendar__dot availability-calendar__dot--booked"></span>Citas reservadas</span>
+                        <span><i class="fa-solid fa-lock availability-legend__lock"></i>Sin horas libres</span>
+                    </div>
+                    <label class="availability-weekends" for="allowWeekends">
+                        <span class="availability-weekends__text">
+                            <span class="availability-weekends__title">Atender fines de semana</span>
+                            <span class="availability-weekends__hint">{{ weekendsControl.value ? 'Sábados y domingos se pueden elegir.' : 'Sábados y domingos están bloqueados.' }}</span>
+                        </span>
+                        <p-toggleswitch inputId="allowWeekends" [formControl]="weekendsControl" />
+                    </label>
+                    @if (formValue().dates.length > 0) {
+                        <div class="availability-selected">
+                            <span>{{ formValue().dates.length === 1 ? '1 día elegido' : formValue().dates.length + ' días elegidos' }}</span>
+                            <p-button type="button" label="Quitar selección" [text]="true" size="small" severity="secondary" (onClick)="clearDates()" />
+                        </div>
+                    } @else if (availabilityForm.controls.dates.touched) {
+                        <small class="mgs-field__error" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>Elija al menos un día.</small>
+                    }
+                </div>
+
+                <div class="availability-ranges">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="mgs-eyebrow !mr-1">Horarios rápidos</span>
+                        @for (preset of presets; track preset.label) {
+                            <p-button type="button" [label]="preset.label" size="small" severity="secondary" [outlined]="true" (onClick)="applyPreset(preset)" />
+                        }
+                    </div>
+
+                    <ol class="availability-ranges__list" formArrayName="ranges">
+                        @for (range of ranges.controls; track range; let index = $index) {
+                            <li class="availability-range" [formGroupName]="index">
+                                <span class="availability-range__number" aria-hidden="true">{{ index + 1 }}</span>
+                                <div class="availability-range__fields">
+                                    <app-form-field label="Desde" [inputId]="'start-' + index" [control]="range.controls.startTime">
+                                        <p-datepicker [inputId]="'start-' + index" formControlName="startTime" [timeOnly]="true" hourFormat="12" [stepMinute]="15" [fluid]="true" [readonlyInput]="true" placeholder="09:00 AM" />
+                                    </app-form-field>
+                                    <app-form-field label="Hasta" [inputId]="'end-' + index" [control]="range.controls.endTime">
+                                        <p-datepicker [inputId]="'end-' + index" formControlName="endTime" [timeOnly]="true" hourFormat="12" [stepMinute]="15" [fluid]="true" [readonlyInput]="true" placeholder="12:00 PM" />
+                                    </app-form-field>
+                                </div>
+                                <p-button
+                                    type="button"
+                                    icon="fa-regular fa-trash-can"
+                                    [rounded]="true"
+                                    [text]="true"
+                                    severity="secondary"
+                                    [disabled]="ranges.length === 1"
+                                    (onClick)="removeRange(index)"
+                                    pTooltip="Quitar horario"
+                                    tooltipPosition="top"
+                                    ariaLabel="Quitar horario"
+                                />
+                                @if (isRangeInvalid(index)) {
+                                    <small class="mgs-field__error availability-range__error" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>La hora final debe ser posterior a la inicial.</small>
+                                }
+                            </li>
+                        }
+                    </ol>
+                    <p-button type="button" label="Agregar horario" icon="fa-solid fa-plus" severity="secondary" [text]="true" (onClick)="addRange()" />
+
+                    <app-form-field label="Duración de cada cita" inputId="slotMinutes" hint="Cada espacio admite una cita. Divida los horarios para ofrecer varias citas seguidas.">
+                        <p-select inputId="slotMinutes" formControlName="slotMinutes" [options]="slotLengthOptions" optionLabel="label" optionValue="value" [fluid]="true" />
+                    </app-form-field>
+                    @if (leftoverWarning(); as warning) {
+                        <div class="mgs-details-note">
+                            <i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>{{ warning }}</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </section>
+
+        @if (plannedDays().length > 0) {
+            <section class="mgs-card" aria-labelledby="availability-preview-title">
+                <div class="mgs-card-header">
+                    <div>
+                        <h2 class="mgs-section-title" id="availability-preview-title">Vista previa</h2>
+                        <p class="mgs-section-lead">{{ previewLead() }}</p>
+                    </div>
+                </div>
+                <ol class="availability-days">
+                    @for (day of plannedDays(); track day.key) {
+                        <li class="availability-day">
+                            <div class="availability-day__date">
+                                <span class="availability-day__weekday">{{ day.date | date: 'EEE' }}</span>
+                                <span class="availability-day__number">{{ day.date | date: 'd' }}</span>
+                                <span class="availability-day__month">{{ day.date | date: 'MMM' }}</span>
+                            </div>
+                            @if (day.slots.length === 0) {
+                                <p class="text-sm text-muted-color m-0 self-center">Los horarios elegidos no generan espacios este día.</p>
+                            } @else {
+                                <ul class="availability-day__slots">
+                                    @for (slot of day.slots; track slot.key) {
+                                        <li class="availability-slot" [class.availability-slot--blocked]="slot.problem">
+                                            <i [class]="slot.problem ? 'fa-solid fa-ban availability-slot__icon' : 'fa-regular fa-circle-check availability-slot__icon'" aria-hidden="true"></i>
+                                            <span class="availability-slot__text">
+                                                <span class="availability-slot__time">{{ slot.start | date: 'shortTime' }} – {{ slot.end | date: 'shortTime' }}</span>
+                                                <span class="availability-slot__detail">{{ slot.problem ? problemLabels[slot.problem] : 'Se publicará' }}</span>
+                                            </span>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </li>
+                    }
+                </ol>
+            </section>
+        }
+
+        <section class="mgs-card" aria-labelledby="availability-month-title">
+            <div class="mgs-card-header">
+                <div>
+                    <h2 class="mgs-section-title" id="availability-month-title">Configurado en {{ monthDate() | date: 'MMMM y' }}</h2>
+                    <p class="mgs-section-lead">Espacios libres que puede retirar y citas ya reservadas en el mes del calendario.</p>
+                </div>
+            </div>
+
+            @if (isLoadingMonth()) {
+                <ol class="availability-days" aria-hidden="true">
+                    @for (day of [1, 2]; track day) {
+                        <li class="availability-day">
+                            <p-skeleton height="4.6rem" borderRadius="var(--mgs-radius-sm)" />
+                            <ul class="availability-day__slots">
+                                @for (slot of [1, 2, 3]; track slot) {
+                                    <li class="availability-slot">
+                                        <p-skeleton shape="circle" size="1rem" />
+                                        <span class="availability-slot__text gap-2">
+                                            <p-skeleton width="7rem" height="0.9rem" />
+                                            <p-skeleton width="3rem" height="0.7rem" />
+                                        </span>
+                                    </li>
+                                }
+                            </ul>
+                        </li>
+                    }
+                </ol>
+            } @else if (monthError()) {
+                <div class="mgs-alert" role="alert">
+                    <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ monthError() }}</span>
+                    <p-button type="button" label="Reintentar" [text]="true" size="small" (onClick)="loadMonth(true)" styleClass="ml-auto" />
+                </div>
+            } @else if (configuredDays().length === 0) {
+                <app-empty-state icon="fa-regular fa-calendar" title="Sin disponibilidad este mes" message="Elija días en el calendario y publique horarios para que se puedan agendar citas." />
+            } @else {
+                <ol class="availability-days">
+                    @for (day of configuredDays(); track day.key) {
+                        <li class="availability-day" [class.availability-day--past]="day.isPast">
+                            <div class="availability-day__date">
+                                <span class="availability-day__weekday">{{ day.date | date: 'EEE' }}</span>
+                                <span class="availability-day__number">{{ day.date | date: 'd' }}</span>
+                                <span class="availability-day__month">{{ day.date | date: 'MMM' }}</span>
+                            </div>
+                            <div class="flex flex-col gap-3 min-w-0">
+                                <ul class="availability-day__slots">
+                                    @for (entry of day.entries; track entry.key) {
+                                        <li class="availability-slot" [class.availability-slot--booked]="entry.appointment">
+                                            <i [class]="entry.appointment ? 'fa-solid fa-user-clock availability-slot__icon' : 'fa-regular fa-clock availability-slot__icon'" aria-hidden="true"></i>
+                                            <span class="availability-slot__text">
+                                                <span class="availability-slot__time">{{ entry.start | date: 'shortTime' }} – {{ entry.end | date: 'shortTime' }}</span>
+                                                @if (entry.appointment; as appointment) {
+                                                    <span class="availability-slot__detail" [title]="appointment.employeeName">{{ statusLabels[appointment.status] }} · {{ appointment.employeeName }}</span>
+                                                } @else {
+                                                    <span class="availability-slot__detail">Libre · {{ entry.duration }}</span>
+                                                }
+                                            </span>
+                                            @if (entry.slot; as slot) {
+                                                <p-button
+                                                    type="button"
+                                                    icon="fa-solid fa-pen"
+                                                    [rounded]="true"
+                                                    [text]="true"
+                                                    size="small"
+                                                    severity="secondary"
+                                                    [disabled]="isDeleting('slot-' + slot.id) || isDeleting('day-' + day.key)"
+                                                    (onClick)="editSlot(slot)"
+                                                    pTooltip="Editar horario"
+                                                    tooltipPosition="top"
+                                                    ariaLabel="Editar horario"
+                                                />
+                                                <p-button
+                                                    type="button"
+                                                    icon="fa-regular fa-trash-can"
+                                                    [rounded]="true"
+                                                    [text]="true"
+                                                    size="small"
+                                                    severity="secondary"
+                                                    [loading]="isDeleting('slot-' + slot.id)"
+                                                    [disabled]="isDeleting('day-' + day.key)"
+                                                    (onClick)="confirmDeleteSlot(slot)"
+                                                    pTooltip="Eliminar espacio"
+                                                    tooltipPosition="top"
+                                                    ariaLabel="Eliminar espacio"
+                                                />
+                                            } @else {
+                                                <i class="fa-solid fa-lock availability-slot__lock" pTooltip="Reservado: cancele la cita desde la agenda para liberarlo" tooltipPosition="top" aria-label="Reservado"></i>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                                @if (day.freeSlots.length > 1) {
+                                    <p-button
+                                        type="button"
+                                        [label]="'Eliminar los ' + day.freeSlots.length + ' espacios libres'"
+                                        icon="fa-regular fa-calendar-xmark"
+                                        size="small"
+                                        severity="secondary"
+                                        [text]="true"
+                                        [loading]="isDeleting('day-' + day.key)"
+                                        (onClick)="confirmDeleteDay(day)"
+                                        styleClass="self-start"
+                                    />
+                                }
+                            </div>
+                        </li>
+                    }
+                </ol>
+            }
+        </section>
+    </div>
+
+    <aside class="mgs-card mgs-sticky flex flex-col gap-5">
+        <div>
+            <span class="mgs-eyebrow">Resumen</span>
+            <div class="mgs-section-title !mt-2 !mb-0">{{ ergonomistName() || 'Sin ergonomista' }}</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+            <app-stat-card label="A publicar" [value]="plannedSummary().valid" [accent]="plannedSummary().valid > 0" />
+            <app-stat-card label="Con conflicto" [value]="plannedSummary().blocked" />
+        </div>
+
+        <dl class="mgs-details">
+            <div>
+                <dt>Días elegidos</dt>
+                <dd>{{ formValue().dates.length }}</dd>
+            </div>
+            <div>
+                <dt>Libres en el mes</dt>
+                <dd>
+                    @if (isLoadingMonth()) {
+                        <p-skeleton width="2rem" height="1rem" />
+                    } @else {
+                        {{ monthSummary().free }}
+                    }
+                </dd>
+            </div>
+            <div>
+                <dt>Reservados en el mes</dt>
+                <dd>
+                    @if (isLoadingMonth()) {
+                        <p-skeleton width="2rem" height="1rem" />
+                    } @else {
+                        {{ monthSummary().booked }}
+                    }
+                </dd>
+            </div>
+        </dl>
+
+        <div class="mgs-details-note">
+            <i class="fa-regular fa-lightbulb" aria-hidden="true"></i>
+            <span>Solo los espacios libres y futuros se ofrecen al agendar. Cada espacio admite una cita y no puede cruzarse con otro del mismo ergonomista; puede empezar justo cuando termina el anterior.</span>
+        </div>
+    </aside>
+
+    @if (errorMessage(); as message) {
+        <div class="mgs-alert" role="alert">
+            <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ message }}</span>
+        </div>
+    }
+
+    <app-save-bar
+        [tracker]="unsaved"
+        [saving]="isSubmitting()"
+        message="Cuidado, los horarios todavía no se han publicado."
+        discardLabel="Descartar"
+        [submitLabel]="publishLabel()"
+        submitIcon="fa-regular fa-calendar-check"
+        (discarded)="clearError()"
+    />
+</form>
+
+<app-slot-edit-dialog [(visible)]="isEditOpen" [slot]="editingSlot()" (saved)="onSlotSaved($event)" (outdated)="loadMonth(true)" />

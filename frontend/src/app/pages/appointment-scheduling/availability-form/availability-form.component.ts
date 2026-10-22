@@ -1,0 +1,927 @@
+import { DatePipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, input, numberAttribute, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { Observable, Subscription, catchError, concatMap, forkJoin, from, map, merge, of, toArray } from 'rxjs';
+import { ButtonModule } from 'primeng/button';
+import { DatePicker, DatePickerModule } from 'primeng/datepicker';
+import { SelectModule } from 'primeng/select';
+import { SkeletonModule } from 'primeng/skeleton';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { TooltipModule } from 'primeng/tooltip';
+
+import { AuthService } from '../../../core/services/auth.service';
+import { HasUnsavedChanges } from '../../../core/guards/unsaved-changes.guard';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { FormFieldComponent } from '../../../shared/components/form-field/form-field.component';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
+import { SaveBarComponent } from '../../../shared/components/save-bar/save-bar.component';
+import { StatCardComponent } from '../../../shared/components/stat-card/stat-card.component';
+import { trackUnsavedChanges } from '../../../shared/forms/unsaved-changes';
+import { AppointmentResponse, AvailabilityResponse } from '../../../shared/models/appointment.model';
+import { DialogService } from '../../../shared/services/dialog.service';
+import { ToastService } from '../../../shared/services/toast.service';
+import { getApiErrorMessage, isConflict } from '../../../shared/utils/api-error';
+import { toLocalDateTime } from '../../../shared/utils/date-time';
+import { markFormAsDirty } from '../../../shared/utils/form';
+import { APPOINTMENT_STATUS_LABELS } from '../../../shared/utils/labels';
+import { UserService } from '../../users/user.service';
+import { AppointmentService } from '../appointment.service';
+import { SlotEditDialogComponent } from '../slot-edit-dialog/slot-edit-dialog.component';
+import { combineDayAndTime, dayKey, formatDuration, minutesBetween, rangesOverlap, timeOfDay } from '../appointment-utils';
+
+/** Shown for every HTTP 409, whatever the server sends, so a technical text never reaches the user. */
+const OVERLAP_MESSAGE = 'El horario seleccionado se cruza con una disponibilidad existente. Seleccione otro rango de fecha y hora.';
+
+/** Ergonomist offered in the selector of the administrator. */
+interface ErgonomistOption {
+    id: number;
+    fullName: string;
+    email: string;
+}
+
+/** Why a planned slot cannot be published; null when it can. */
+type SlotProblem = 'past' | 'overlapsSlot' | 'overlapsAppointment' | 'repeated' | null;
+
+/** Slot the form is about to publish, with the result of the overlap check. */
+interface PlannedSlot {
+    key: string;
+    start: Date;
+    end: Date;
+    problem: SlotProblem;
+}
+
+/** Planned slots of one day, ready to be drawn as a group. */
+interface PlannedDay {
+    key: string;
+    date: Date;
+    slots: PlannedSlot[];
+}
+
+/** Entry of a day already configured: a free slot, or a booked appointment. */
+interface ConfiguredEntry {
+    key: string;
+    start: string;
+    end: string;
+    duration: string;
+    slot?: AvailabilityResponse;
+    appointment?: AppointmentResponse;
+}
+
+/** Configured entries of one day of the visible month. */
+interface ConfiguredDay {
+    key: string;
+    date: string;
+    isPast: boolean;
+    entries: ConfiguredEntry[];
+    freeSlots: AvailabilityResponse[];
+}
+
+/** Published slot or booked appointment that a new slot cannot overlap. */
+interface TakenInterval {
+    start: Date;
+    end: Date;
+    kind: 'overlapsSlot' | 'overlapsAppointment';
+}
+
+/** Time range as read from the form. */
+interface RangeValue {
+    startTime: Date | null;
+    endTime: Date | null;
+}
+
+/** Day of the PrimeNG calendar template, month from 0. */
+interface CalendarDate {
+    day: number;
+    month: number;
+    year: number;
+}
+
+/** Time range typed in the form, before being split into slots. */
+type RangeGroup = FormGroup<{ startTime: FormControl<Date | null>; endTime: FormControl<Date | null> }>;
+
+const PROBLEM_LABELS: Record<Exclude<SlotProblem, null>, string> = {
+    past: 'Ya pasó',
+    overlapsSlot: 'Se cruza con un espacio publicado',
+    overlapsAppointment: 'Se cruza con una cita reservada',
+    repeated: 'Se repite en esta selección'
+};
+
+/** Ready made ranges for the usual working hours. */
+const RANGE_PRESETS: readonly { label: string; ranges: readonly [number, number][] }[] = [
+    { label: 'Mañana', ranges: [[8, 12]] },
+    { label: 'Tarde', ranges: [[13, 17]] },
+    {
+        label: 'Jornada completa',
+        ranges: [
+            [8, 12],
+            [13, 17]
+        ]
+    }
+];
+
+/** How each range can be cut: null publishes the whole range as one slot. */
+const SLOT_LENGTH_OPTIONS: { label: string; value: number | null }[] = [
+    { label: 'Un solo espacio por rango', value: null },
+    { label: 'Citas de 30 minutos', value: 30 },
+    { label: 'Citas de 45 minutos', value: 45 },
+    { label: 'Citas de 1 hora', value: 60 },
+    { label: 'Citas de 1 h 30 min', value: 90 }
+];
+
+/** Sunday and Saturday, closed in the calendar unless they are opened. */
+const WEEKEND_DAYS = [0, 6];
+const NO_DAYS: number[] = [];
+
+/** Status of an appointment whose slot became free again; every other status keeps it taken. */
+const CANCELLED_STATUS = 'CANCELLED';
+
+/**
+ * Checks that a range ends after it starts.
+ *
+ * @param group group holding both times
+ * @returns the error, or null when the range is valid
+ */
+function validateRange(group: AbstractControl): ValidationErrors | null {
+    const start = group.get('startTime')?.value as Date | null;
+    const end = group.get('endTime')?.value as Date | null;
+    if (!start || !end) {
+        return null;
+    }
+    return end.getHours() * 60 + end.getMinutes() <= start.getHours() * 60 + start.getMinutes() ? { invalidRange: true } : null;
+}
+
+/** Requires at least one day picked in the calendar. */
+function requireDates(control: AbstractControl): ValidationErrors | null {
+    return Array.isArray(control.value) && control.value.length > 0 ? null : { required: true };
+}
+
+/**
+ * Availability management of an ergonomist (HU-016): a month calendar with the
+ * days that already have slots, a form that publishes several days and ranges
+ * at once, checking overlaps before sending, and the list of the configured
+ * slots, which can be removed one by one or by day. The administrator works on
+ * behalf of the ergonomist they choose.
+ */
+@Component({
+    selector: 'app-availability-form',
+    standalone: true,
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [
+        DatePipe,
+        ReactiveFormsModule,
+        RouterLink,
+        ButtonModule,
+        DatePickerModule,
+        SelectModule,
+        SkeletonModule,
+        ToggleSwitchModule,
+        TooltipModule,
+        EmptyStateComponent,
+        FormFieldComponent,
+        PageHeaderComponent,
+        SaveBarComponent,
+        SlotEditDialogComponent,
+        StatCardComponent
+    ],
+    templateUrl: './availability-form.component.html',
+    styleUrl: './availability-form.component.scss'
+})
+export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
+    private readonly formBuilder = inject(FormBuilder);
+    private readonly appointmentService = inject(AppointmentService);
+    private readonly userService = inject(UserService);
+    private readonly authService = inject(AuthService);
+    private readonly dialogService = inject(DialogService);
+    private readonly toastService = inject(ToastService);
+    private readonly destroyRef = inject(DestroyRef);
+
+    /** Ergonomist to preselect, from the ?userId= query parameter (administrator only). */
+    readonly userId = input<number | undefined, unknown>(undefined, { transform: numberAttribute });
+    protected readonly isAdmin = computed(() => this.authService.session()?.role === 'ADMIN');
+
+    /** Start of today: earlier days cannot be chosen. */
+    protected readonly today = startOfToday();
+    protected readonly presets = RANGE_PRESETS;
+    protected readonly slotLengthOptions = SLOT_LENGTH_OPTIONS;
+    protected readonly problemLabels = PROBLEM_LABELS;
+    protected readonly statusLabels = APPOINTMENT_STATUS_LABELS;
+
+    protected readonly availabilityForm = this.formBuilder.group({
+        userId: this.formBuilder.control<number | null>(null, [Validators.required]),
+        dates: this.formBuilder.nonNullable.control<Date[]>([], [requireDates]),
+        slotMinutes: this.formBuilder.control<number | null>(null),
+        ranges: this.formBuilder.array<RangeGroup>([this.buildRange(8, 12)])
+    });
+
+    /** Opens Saturday and Sunday in the calendar; not part of what is published. */
+    protected readonly weekendsControl = new FormControl(false, { nonNullable: true });
+    private readonly allowWeekends = toSignal(this.weekendsControl.valueChanges, { initialValue: this.weekendsControl.value });
+    protected readonly disabledWeekDays = computed(() => (this.allowWeekends() ? NO_DAYS : WEEKEND_DAYS));
+
+    protected readonly unsaved = trackUnsavedChanges(this.availabilityForm, {
+        restore: (snapshot) => {
+            this.ranges.clear({ emitEvent: false });
+            for (const range of snapshot.ranges) {
+                this.ranges.push(this.buildRange(range.startTime, range.endTime), { emitEvent: false });
+            }
+            this.availabilityForm.reset(snapshot);
+        }
+    });
+
+    private readonly calendar = viewChild<DatePicker>('calendar');
+
+    protected readonly ergonomists = signal<ErgonomistOption[]>([]);
+    protected readonly isLoadingErgonomists = signal(false);
+    protected readonly errorMessage = signal<string | null>(null);
+    protected readonly isSubmitting = signal(false);
+
+    /** Month shown by the calendar, month from 1 to 12. */
+    protected readonly visibleMonth = signal({ year: this.today.getFullYear(), month: this.today.getMonth() + 1 });
+    private readonly freeSlots = signal<AvailabilityResponse[]>([]);
+    private readonly appointments = signal<AppointmentResponse[]>([]);
+    private readonly loadedMonths = new Set<string>();
+    protected readonly isLoadingMonth = signal(false);
+    protected readonly monthError = signal<string | null>(null);
+    protected readonly deletingKeys = signal<ReadonlySet<string>>(new Set());
+
+    /** Free slot whose date and time are being changed in the dialog. */
+    protected readonly editingSlot = signal<AvailabilityResponse | null>(null);
+    protected readonly isEditOpen = signal(false);
+    private monthRequest?: Subscription;
+
+    /** Raw form value; the calendar empties its selection to null, read here as no days. */
+    protected readonly formValue = toSignal(merge(this.availabilityForm.valueChanges, this.availabilityForm.statusChanges).pipe(map(() => this.readForm())), {
+        initialValue: this.readForm()
+    });
+
+    /** First day of the visible month, for its title. */
+    protected readonly monthDate = computed(() => new Date(this.visibleMonth().year, this.visibleMonth().month - 1, 1));
+
+    /**
+     * Published slots and booked appointments indexed by the days they touch,
+     * so each planned slot is only compared with the ones of its own day.
+     */
+    private readonly takenByDay = computed(() => {
+        const index = new Map<string, TakenInterval[]>();
+        const add = (startText: string, endText: string, kind: TakenInterval['kind']) => {
+            const start = new Date(startText);
+            const end = new Date(endText);
+            for (const key of new Set([dayKey(start), dayKey(end)])) {
+                const intervals = index.get(key) ?? [];
+                intervals.push({ start, end, kind });
+                index.set(key, intervals);
+            }
+        };
+        this.freeSlots().forEach((slot) => add(slot.startDateTime, slot.endDateTime, 'overlapsSlot'));
+        this.bookedAppointments().forEach((appointment) => add(appointment.startDateTime, appointment.endDateTime, 'overlapsAppointment'));
+        return index;
+    });
+
+    protected get ranges(): FormArray<RangeGroup> {
+        return this.availabilityForm.controls.ranges;
+    }
+
+    protected readonly ergonomistName = computed(() => {
+        if (!this.isAdmin()) {
+            return this.authService.session()?.fullName ?? '';
+        }
+        const id = this.formValue().userId;
+        return this.ergonomists().find((ergonomist) => ergonomist.id === id)?.fullName ?? '';
+    });
+
+    /** Appointments that still hold their slot: every status but cancelled. */
+    private readonly bookedAppointments = computed(() => this.appointments().filter((appointment) => appointment.status !== CANCELLED_STATUS));
+
+    /** Free and booked counts per day, for the markers of the calendar. */
+    protected readonly dayMarkers = computed(() => {
+        const markers = new Map<string, { free: number; booked: number }>();
+        const add = (start: string, kind: 'free' | 'booked') => {
+            const key = start.slice(0, 10);
+            const marker = markers.get(key) ?? { free: 0, booked: 0 };
+            marker[kind]++;
+            markers.set(key, marker);
+        };
+        this.freeSlots().forEach((slot) => add(slot.startDateTime, 'free'));
+        this.bookedAppointments().forEach((appointment) => add(appointment.startDateTime, 'booked'));
+        return markers;
+    });
+
+    /**
+     * Slots the form would publish: every picked day times every range, cut in
+     * appointments of the chosen length, each one checked against the slots
+     * already published, the booked appointments and the rest of the selection.
+     */
+    protected readonly plannedDays = computed<PlannedDay[]>(() => {
+        const { dates, ranges, slotMinutes } = this.formValue();
+        const now = Date.now();
+        const taken = this.takenByDay();
+
+        return [...dates]
+            .sort((a, b) => a.getTime() - b.getTime())
+            .map((date) => {
+                const key = dayKey(date);
+                return { key, date, slots: planDay(date, ranges, slotMinutes, taken.get(key) ?? [], now) };
+            });
+    });
+
+    /**
+     * Days of the visible month where the current ranges leave nothing to
+     * publish, because every slot already passed or is taken. They are closed in
+     * the calendar; a day already picked stays open so it can be unpicked.
+     */
+    protected readonly fullDays = computed<Date[]>(() => {
+        const { dates, ranges, slotMinutes } = this.formValue();
+        const { year, month } = this.visibleMonth();
+        const picked = new Set(dates.map(dayKey));
+        const taken = this.takenByDay();
+        const now = Date.now();
+        const full: Date[] = [];
+        for (let day = 1, last = new Date(year, month, 0).getDate(); day <= last; day++) {
+            const date = new Date(year, month - 1, day);
+            const key = dayKey(date);
+            if (date < this.today || picked.has(key)) {
+                continue;
+            }
+            const slots = planDay(date, ranges, slotMinutes, taken.get(key) ?? [], now);
+            if (slots.length > 0 && slots.every((slot) => slot.problem !== null)) {
+                full.push(date);
+            }
+        }
+        return full;
+    });
+
+    private readonly fullDayKeys = computed(() => new Set(this.fullDays().map(dayKey)));
+
+    protected readonly plannedSummary = computed(() => {
+        const summary = { valid: 0, blocked: 0 };
+        for (const day of this.plannedDays()) {
+            for (const slot of day.slots) {
+                if (slot.problem === null) {
+                    summary.valid++;
+                } else {
+                    summary.blocked++;
+                }
+            }
+        }
+        return summary;
+    });
+
+    protected readonly previewLead = computed(() => {
+        const { valid, blocked } = this.plannedSummary();
+        const published = valid === 1 ? '1 espacio se publicará.' : `${valid} espacios se publicarán.`;
+        if (blocked === 0) {
+            return published;
+        }
+        return `${published} ${blocked === 1 ? '1 no se puede habilitar porque ya pasó o se cruza' : `${blocked} no se pueden habilitar porque ya pasaron o se cruzan`} con otro horario.`;
+    });
+
+    protected readonly publishLabel = computed(() => {
+        const valid = this.plannedSummary().valid;
+        return valid === 0 ? 'Publicar' : valid === 1 ? 'Publicar 1 espacio' : `Publicar ${valid} espacios`;
+    });
+
+    /** Ranges cut into appointments leave minutes over when the length does not fit exactly. */
+    protected readonly leftoverWarning = computed(() => {
+        const { ranges, slotMinutes } = this.formValue();
+        if (slotMinutes === null) {
+            return null;
+        }
+        const wasted = ranges.some((range) => {
+            const minutes = rangeMinutes(range.startTime, range.endTime);
+            return minutes !== null && minutes % slotMinutes !== 0;
+        });
+        return wasted ? `Algunos rangos no son múltiplos de ${formatDuration(slotMinutes)}: los minutos que sobran al final no se publican.` : null;
+    });
+
+    /** Days of the visible month that already have free slots or booked appointments. */
+    protected readonly configuredDays = computed<ConfiguredDay[]>(() => {
+        const { year, month } = this.visibleMonth();
+        const prefix = `${year}-${String(month).padStart(2, '0')}`;
+        const todayKey = dayKey(this.today);
+        const days = new Map<string, ConfiguredDay>();
+        const dayOf = (start: string) => {
+            const key = start.slice(0, 10);
+            const day = days.get(key) ?? { key, date: start, isPast: key < todayKey, entries: [], freeSlots: [] };
+            days.set(key, day);
+            return day;
+        };
+        for (const slot of this.freeSlots()) {
+            if (slot.startDateTime.startsWith(prefix)) {
+                const day = dayOf(slot.startDateTime);
+                day.freeSlots.push(slot);
+                day.entries.push({ key: `slot-${slot.id}`, start: slot.startDateTime, end: slot.endDateTime, duration: formatDuration(minutesBetween(slot.startDateTime, slot.endDateTime)), slot });
+            }
+        }
+        for (const appointment of this.bookedAppointments()) {
+            if (appointment.startDateTime.startsWith(prefix)) {
+                dayOf(appointment.startDateTime).entries.push({
+                    key: `appointment-${appointment.id}`,
+                    start: appointment.startDateTime,
+                    end: appointment.endDateTime,
+                    duration: formatDuration(minutesBetween(appointment.startDateTime, appointment.endDateTime)),
+                    appointment
+                });
+            }
+        }
+        return [...days.values()].sort((a, b) => a.key.localeCompare(b.key)).map((day) => ({ ...day, entries: day.entries.sort((a, b) => a.start.localeCompare(b.start)) }));
+    });
+
+    protected readonly monthSummary = computed(() => {
+        const summary = { free: 0, booked: 0, days: 0 };
+        for (const day of this.configuredDays()) {
+            summary.days++;
+            for (const entry of day.entries) {
+                if (entry.slot) {
+                    summary.free++;
+                } else {
+                    summary.booked++;
+                }
+            }
+        }
+        return summary;
+    });
+
+    ngOnInit(): void {
+        this.keepDatesConsistent();
+        if (!this.isAdmin()) {
+            this.availabilityForm.controls.userId.setValue(this.authService.session()?.userId ?? null);
+            this.unsaved.markSaved();
+            this.loadMonth();
+            return;
+        }
+        this.loadErgonomists();
+        // The calendar data belongs to one ergonomist: switching drops what was read before.
+        this.availabilityForm.controls.userId.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.resetCalendarData());
+    }
+
+    /** Called by unsavedChangesGuard before leaving the page. */
+    canLeave(): boolean {
+        return this.unsaved.canLeave();
+    }
+
+    /** Clears the messages of a failed save after the changes were discarded. */
+    protected clearError(): void {
+        this.errorMessage.set(null);
+    }
+
+    /**
+     * Follows the month shown by the calendar and reads it when it is new.
+     *
+     * @param event month (1 to 12) and year shown
+     */
+    protected changeMonth(event: { month?: number; year?: number }): void {
+        const visible = this.visibleMonth();
+        if (event.month === undefined || event.year === undefined || (event.month === visible.month && event.year === visible.year)) {
+            return;
+        }
+        this.visibleMonth.set({ year: event.year, month: event.month });
+        this.loadMonth();
+    }
+
+    /**
+     * Markers of a calendar day: free slots and booked appointments.
+     *
+     * @param date day as described by the PrimeNG calendar (month from 0)
+     * @returns the counts, or undefined when the day is empty
+     */
+    protected markerOf(date: CalendarDate): { free: number; booked: number } | undefined {
+        return this.dayMarkers().get(calendarKey(date));
+    }
+
+    /**
+     * Tells whether a calendar day is closed because nothing is left to publish.
+     *
+     * @param date day as described by the PrimeNG calendar (month from 0)
+     */
+    protected isFullDay(date: CalendarDate): boolean {
+        return this.fullDayKeys().has(calendarKey(date));
+    }
+
+    protected addRange(): void {
+        const last = this.ranges.at(this.ranges.length - 1)?.getRawValue();
+        const startHour = last?.endTime ? Math.min(last.endTime.getHours() + 1, 22) : 8;
+        this.ranges.push(this.buildRange(startHour, Math.min(startHour + 2, 23)));
+    }
+
+    protected removeRange(index: number): void {
+        if (this.ranges.length > 1) {
+            this.ranges.removeAt(index);
+        }
+    }
+
+    /**
+     * Replaces the ranges with a ready made set of working hours.
+     *
+     * @param preset ranges to use, as [start hour, end hour]
+     */
+    protected applyPreset(preset: (typeof RANGE_PRESETS)[number]): void {
+        this.ranges.clear();
+        for (const [start, end] of preset.ranges) {
+            this.ranges.push(this.buildRange(start, end));
+        }
+    }
+
+    protected clearDates(): void {
+        this.availabilityForm.controls.dates.setValue([]);
+    }
+
+    /**
+     * Tells whether a range has to show its "end after start" message.
+     *
+     * @param index position of the range
+     */
+    protected isRangeInvalid(index: number): boolean {
+        const range = this.ranges.at(index);
+        return range.hasError('invalidRange') && (range.dirty || range.touched);
+    }
+
+    /** Publishes every slot without problems, one request after another. */
+    protected submit(): void {
+        if (this.isSubmitting()) {
+            return;
+        }
+        const userId = this.availabilityForm.controls.userId.value;
+        if (this.availabilityForm.invalid || userId === null) {
+            markFormAsDirty(this.availabilityForm);
+            this.errorMessage.set(this.availabilityForm.controls.dates.invalid ? 'Elija al menos un día en el calendario.' : 'Revise los campos marcados antes de publicar.');
+            return;
+        }
+        const planned = this.plannedDays().flatMap((day) => day.slots);
+        const valid = planned.filter((slot) => slot.problem === null);
+        if (valid.length === 0) {
+            this.errorMessage.set(planned.length === 0 ? 'Los rangos elegidos no generan ningún espacio.' : 'Ninguno de los espacios se puede publicar: todos ya pasaron o se cruzan con otro horario.');
+            return;
+        }
+
+        this.errorMessage.set(null);
+        this.isSubmitting.set(true);
+        const skipped = planned.length - valid.length;
+        from(valid)
+            .pipe(
+                concatMap((slot) =>
+                    this.appointmentService.createAvailability({ userId, startDateTime: toLocalDateTime(slot.start), endDateTime: toLocalDateTime(slot.end) }).pipe(
+                        map((created) => ({ slot, created, error: null as unknown })),
+                        catchError((error: unknown) => of({ slot, created: null, error }))
+                    )
+                ),
+                toArray(),
+                takeUntilDestroyed(this.destroyRef)
+            )
+            .subscribe((results) => {
+                this.isSubmitting.set(false);
+                const created = results.flatMap((result) => (result.created ? [result.created] : []));
+                const failed = results.filter((result) => !result.created);
+                if (created.length > 0) {
+                    this.freeSlots.update((slots) => [...slots, ...created]);
+                }
+                if (failed.length === 0) {
+                    const omitted = skipped === 1 ? 'Se omitió 1 que no se podía publicar.' : `Se omitieron ${skipped} que no se podían publicar.`;
+                    this.toastService.success(created.length === 1 ? 'Espacio publicado' : `${created.length} espacios publicados`, skipped > 0 ? omitted : 'Ya están disponibles para agendar citas.');
+                    this.resetSelection();
+                    return;
+                }
+                // The published ones now show as overlaps, so a retry only sends the failed ones.
+                const times = failed.map((result) => formatSlot(result.slot)).join(', ');
+                const reason = failureReason(failed[0].error);
+                this.errorMessage.set(`${failed.length === 1 ? 'No se pudo publicar 1 espacio' : `No se pudieron publicar ${failed.length} espacios`}: ${times}. ${reason}`);
+                if (created.length > 0) {
+                    this.toastService.success(created.length === 1 ? '1 espacio publicado' : `${created.length} espacios publicados`, failed.length === 1 ? '1 no se pudo publicar.' : `${failed.length} no se pudieron publicar.`);
+                } else {
+                    this.toastService.error('No se publicó ningún espacio', reason);
+                }
+                // A slot published meanwhile by someone else explains a conflict: read the calendar again so the preview shows it.
+                this.loadedMonths.clear();
+                this.loadMonth(true);
+            });
+    }
+
+    /**
+     * Asks for confirmation and removes a free slot.
+     *
+     * @param slot slot to remove
+     */
+    protected async confirmDeleteSlot(slot: AvailabilityResponse): Promise<void> {
+        const confirmed = await this.dialogService.confirm({
+            title: 'Eliminar espacio',
+            message: `El espacio de ${formatTimes(slot.startDateTime, slot.endDateTime)} dejará de estar disponible para agendar citas.`,
+            confirmLabel: 'Eliminar',
+            destructive: true
+        });
+        if (confirmed) {
+            this.deleteSlots([slot], `slot-${slot.id}`);
+        }
+    }
+
+    /**
+     * Asks for confirmation and removes every free slot of a day. Booked
+     * appointments are kept: they have to be cancelled from the agenda.
+     *
+     * @param day day whose free slots are removed
+     */
+    protected async confirmDeleteDay(day: ConfiguredDay): Promise<void> {
+        const count = day.freeSlots.length;
+        const confirmed = await this.dialogService.confirm({
+            title: 'Eliminar espacios del día',
+            message: `Se eliminarán ${count === 1 ? 'el espacio libre' : `los ${count} espacios libres`} de este día. Las citas ya reservadas se conservan.`,
+            confirmLabel: 'Eliminar',
+            destructive: true
+        });
+        if (confirmed) {
+            this.deleteSlots(day.freeSlots, `day-${day.key}`);
+        }
+    }
+
+    protected isDeleting(key: string): boolean {
+        return this.deletingKeys().has(key);
+    }
+
+    /**
+     * Opens the dialog that changes the date and time of a free slot.
+     *
+     * @param slot slot to edit
+     */
+    protected editSlot(slot: AvailabilityResponse): void {
+        this.editingSlot.set(slot);
+        this.isEditOpen.set(true);
+    }
+
+    /**
+     * Shows the new time of an edited slot without reading the month again.
+     *
+     * @param updated slot returned by the backend
+     */
+    protected onSlotSaved(updated: AvailabilityResponse): void {
+        this.freeSlots.update((slots) => slots.map((slot) => (slot.id === updated.id ? updated : slot)));
+    }
+
+    /** Reads the calendar data of the visible month, unless it is already loaded. */
+    protected loadMonth(force = false): void {
+        const userId = this.availabilityForm.controls.userId.value;
+        const { year, month } = this.visibleMonth();
+        const key = `${userId}-${year}-${month}`;
+        if (userId === null || (!force && this.loadedMonths.has(key))) {
+            return;
+        }
+        const first = new Date(year, month - 1, 1);
+        const last = new Date(year, month, 0, 23, 59, 59);
+        this.monthRequest?.unsubscribe();
+        this.isLoadingMonth.set(true);
+        this.monthError.set(null);
+        this.monthRequest = forkJoin({
+            slots: this.appointmentService.findFreeAvailabilities(userId, toLocalDateTime(first), toLocalDateTime(last)),
+            appointments: this.appointmentService.findAgenda(userId, toLocalDateTime(first), toLocalDateTime(last))
+        })
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: ({ slots, appointments }) => {
+                    this.loadedMonths.add(key);
+                    // What was read replaces the month, so slots booked or removed meanwhile do not stay behind.
+                    const inMonth = (item: { startDateTime: string }) => {
+                        const start = new Date(item.startDateTime);
+                        return start >= first && start <= last;
+                    };
+                    this.freeSlots.update((current) => [...current.filter((slot) => !inMonth(slot)), ...slots.filter((slot) => !slot.taken)]);
+                    this.appointments.update((current) => [...current.filter((appointment) => !inMonth(appointment)), ...appointments]);
+                    this.isLoadingMonth.set(false);
+                },
+                error: (error: unknown) => {
+                    this.isLoadingMonth.set(false);
+                    this.monthError.set(getApiErrorMessage(error, 'No se pudo cargar el calendario.'));
+                }
+            });
+    }
+
+    /**
+     * Removes free slots one after another and reports the result.
+     *
+     * @param slots slots to remove
+     * @param key   key of the button that shows the progress
+     */
+    private deleteSlots(slots: readonly AvailabilityResponse[], key: string): void {
+        this.deletingKeys.update((keys) => new Set(keys).add(key));
+        from(slots)
+            .pipe(
+                concatMap(
+                    (slot): Observable<{ slot: AvailabilityResponse; error: unknown }> =>
+                        this.appointmentService.deleteAvailability(slot.id).pipe(
+                            map(() => ({ slot, error: null })),
+                            catchError((error: unknown) => of({ slot, error }))
+                        )
+                ),
+                toArray(),
+                takeUntilDestroyed(this.destroyRef)
+            )
+            .subscribe((results) => {
+                this.deletingKeys.update((keys) => {
+                    const next = new Set(keys);
+                    next.delete(key);
+                    return next;
+                });
+                const removed = new Set(results.filter((result) => result.error === null).map((result) => result.slot.id));
+                const failed = results.filter((result) => result.error !== null);
+                this.freeSlots.update((current) => current.filter((slot) => !removed.has(slot.id)));
+                if (failed.length === 0) {
+                    this.toastService.success(removed.size === 1 ? 'Espacio eliminado' : `${removed.size} espacios eliminados`, 'Ya no están disponibles para agendar citas.');
+                    return;
+                }
+                const partial = `${removed.size === 1 ? 'Se eliminó 1' : `Se eliminaron ${removed.size}`}; ${failed.length === 1 ? '1 no se pudo eliminar' : `${failed.length} no se pudieron eliminar`}`;
+                this.toastService.error(removed.size > 0 ? partial : 'No se pudo eliminar', getApiErrorMessage(failed[0].error, 'Puede que ya tenga una cita agendada.'));
+                // A slot that could not be removed may have been booked meanwhile: read the month again.
+                this.loadMonth(true);
+            });
+    }
+
+    private readForm() {
+        const value = this.availabilityForm.getRawValue();
+        return { ...value, dates: value.dates ?? [] };
+    }
+
+    /**
+     * Keeps the picked days a list: the calendar empties its selection to null,
+     * which the unsaved changes would tell apart from the initial empty list.
+     * A value written by code (clear, discard, publish) makes the calendar jump
+     * to another month without telling, so the visible month follows it. Also
+     * unpicks Saturdays and Sundays when the weekends are closed again.
+     */
+    private keepDatesConsistent(): void {
+        const dates = this.availabilityForm.controls.dates;
+        dates.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((value) => {
+            if (value === null) {
+                dates.setValue([], { emitModelToViewChange: false });
+                return;
+            }
+            const calendar = this.calendar();
+            if (calendar) {
+                this.changeMonth({ month: calendar.currentMonth + 1, year: calendar.currentYear });
+            }
+        });
+        this.weekendsControl.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((allow) => {
+            const picked = dates.value ?? [];
+            const open = allow ? picked : picked.filter((date) => !WEEKEND_DAYS.includes(date.getDay()));
+            if (open.length !== picked.length) {
+                dates.setValue(open);
+            }
+        });
+    }
+
+    /** Empties the picked days and puts back the default range after publishing. */
+    private resetSelection(): void {
+        this.ranges.clear({ emitEvent: false });
+        this.ranges.push(this.buildRange(8, 12), { emitEvent: false });
+        this.availabilityForm.patchValue({ dates: [], slotMinutes: null });
+        this.availabilityForm.markAsPristine();
+        this.availabilityForm.markAsUntouched();
+        this.unsaved.markSaved();
+    }
+
+    /** Drops the data of the previous ergonomist and reads the visible month of the new one. */
+    private resetCalendarData(): void {
+        this.monthRequest?.unsubscribe();
+        this.loadedMonths.clear();
+        this.freeSlots.set([]);
+        this.appointments.set([]);
+        this.loadMonth();
+    }
+
+    /** Reads the active ergonomists and preselects the requested one. */
+    private loadErgonomists(): void {
+        this.isLoadingErgonomists.set(true);
+        this.userService
+            .findAll()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: (users) => {
+                    const ergonomists = users
+                        .filter((user) => user.active && user.role === 'ERGONOMIST')
+                        .map((user) => ({ id: user.id, fullName: [user.firstName, user.firstLastName, user.secondLastName].filter(Boolean).join(' '), email: user.email }))
+                        .sort((a, b) => a.fullName.localeCompare(b.fullName));
+                    this.ergonomists.set(ergonomists);
+                    this.isLoadingErgonomists.set(false);
+                    const preselected = ergonomists.find((ergonomist) => ergonomist.id === this.userId()) ?? ergonomists[0];
+                    if (preselected && this.availabilityForm.pristine) {
+                        this.availabilityForm.controls.userId.setValue(preselected.id);
+                        this.unsaved.markSaved();
+                    }
+                },
+                error: (error: unknown) => {
+                    this.isLoadingErgonomists.set(false);
+                    this.errorMessage.set(getApiErrorMessage(error, 'No se pudieron cargar los ergonomistas.'));
+                }
+            });
+    }
+
+    /**
+     * Builds the controls of a time range.
+     *
+     * @param start start hour, or a time picked before
+     * @param end   end hour, or a time picked before
+     */
+    private buildRange(start: number | Date | null, end: number | Date | null): RangeGroup {
+        const toTime = (value: number | Date | null) => (typeof value === 'number' ? timeOfDay(value) : value);
+        return this.formBuilder.group(
+            {
+                startTime: this.formBuilder.control<Date | null>(toTime(start), [Validators.required]),
+                endTime: this.formBuilder.control<Date | null>(toTime(end), [Validators.required])
+            },
+            { validators: validateRange }
+        );
+    }
+}
+
+/**
+ * Slots that the ranges produce on one day, each one checked against what is
+ * already taken that day and against the slots accepted before it.
+ *
+ * @param date        day to plan
+ * @param ranges      time ranges of the form
+ * @param slotMinutes length of each slot, or null for one slot per range
+ * @param takenToday  published slots and booked appointments of the day
+ * @param now         current time, in milliseconds
+ */
+function planDay(date: Date, ranges: readonly RangeValue[], slotMinutes: number | null, takenToday: readonly TakenInterval[], now: number): PlannedSlot[] {
+    const accepted: { start: Date; end: Date }[] = [];
+    const slots: PlannedSlot[] = [];
+    for (const range of ranges) {
+        const rangeStart = combineDayAndTime(date, range.startTime);
+        const rangeEnd = combineDayAndTime(date, range.endTime);
+        if (!rangeStart || !rangeEnd || rangeEnd <= rangeStart) {
+            continue;
+        }
+        for (const { start, end } of splitRange(rangeStart, rangeEnd, slotMinutes)) {
+            let problem: SlotProblem = null;
+            if (start.getTime() <= now) {
+                problem = 'past';
+            } else {
+                // A booked appointment explains the conflict better than its slot.
+                const clashes = takenToday.filter((other) => rangesOverlap(start, end, other.start, other.end));
+                if (clashes.length > 0) {
+                    problem = clashes.some((other) => other.kind === 'overlapsAppointment') ? 'overlapsAppointment' : 'overlapsSlot';
+                } else if (accepted.some((other) => rangesOverlap(start, end, other.start, other.end))) {
+                    problem = 'repeated';
+                } else {
+                    accepted.push({ start, end });
+                }
+            }
+            slots.push({ key: `${start.getTime()}-${end.getTime()}`, start, end, problem });
+        }
+    }
+    return slots.sort((a, b) => a.start.getTime() - b.start.getTime());
+}
+
+/** yyyy-MM-dd of a day of the PrimeNG calendar, whose month starts at 0. */
+function calendarKey(date: CalendarDate): string {
+    return `${date.year}-${String(date.month + 1).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
+}
+
+/**
+ * Cuts a range in consecutive appointments of the given length; without a
+ * length the whole range is a single slot.
+ */
+function splitRange(start: Date, end: Date, minutes: number | null): { start: Date; end: Date }[] {
+    if (minutes === null) {
+        return [{ start, end }];
+    }
+    const slots: { start: Date; end: Date }[] = [];
+    const step = minutes * 60000;
+    for (let time = start.getTime(); time + step <= end.getTime(); time += step) {
+        slots.push({ start: new Date(time), end: new Date(time + step) });
+    }
+    return slots;
+}
+
+/** Minutes covered by a range, or null when it is incomplete or reversed. */
+function rangeMinutes(start: Date | null, end: Date | null): number | null {
+    if (!start || !end) {
+        return null;
+    }
+    const minutes = end.getHours() * 60 + end.getMinutes() - (start.getHours() * 60 + start.getMinutes());
+    return minutes > 0 ? minutes : null;
+}
+
+/**
+ * Explains why the backend rejected a slot. A conflict always gets the fixed
+ * overlap message; any other error keeps the message of the backend.
+ */
+function failureReason(error: unknown): string {
+    return isConflict(error) ? OVERLAP_MESSAGE : getApiErrorMessage(error, 'Intente de nuevo.');
+}
+
+/** "lun 3 nov, 9:00 – 10:00", to name a slot in a message. */
+function formatSlot(slot: { start: Date; end: Date }): string {
+    const day = slot.start.toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' });
+    const time = (date: Date) => date.toLocaleTimeString('es', { hour: 'numeric', minute: '2-digit' });
+    return `${day}, ${time(slot.start)} – ${time(slot.end)}`;
+}
+
+/** Same as formatSlot, for the date-times of the backend. */
+function formatTimes(start: string, end: string): string {
+    return formatSlot({ start: new Date(start), end: new Date(end) });
+}
+
+function startOfToday(): Date {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+}

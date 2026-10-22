@@ -1,0 +1,45 @@
+/* The shell, card and actions share the password page's theme and spacing. */
+.deactivation-user {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-width: 0;
+
+    &__avatar {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        width: 3.5rem;
+        height: 3.5rem;
+        border: 1px solid var(--surface-border);
+        border-radius: 4px;
+        background: var(--surface-ground);
+        color: var(--mgs-accent-text);
+        font-size: 1.4rem;
+    }
+
+    h2 {
+        margin: 0.4rem 0;
+        font-size: 1.25rem;
+        overflow-wrap: anywhere;
+    }
+}
+
+.deactivation-description {
+    margin: 0;
+    line-height: 1.6;
+    color: var(--text-color-secondary);
+}
+
+/* Let tall content scroll on short screens instead of clipping above the header. */
+.mgs-security__content {
+    flex: 1 0 auto;
+}
+
+@media (max-width: 575px) {
+    .mgs-security__actions {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+}

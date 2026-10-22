@@ -1,0 +1,194 @@
+import { HttpClient } from '@angular/common/http';
+import { Injectable, inject, signal } from '@angular/core';
+import { Observable, tap } from 'rxjs';
+
+import { environment } from '../../../environments/environment';
+import { ChangePasswordRequest, LoginRequest, LoginResponse } from '../../shared/models/auth.model';
+import { Role } from '../../shared/models/role.model';
+
+const SESSION_STORAGE_KEY = 'ergomanager.session';
+
+/** Key of the time of the last user activity, shared by every open tab (see InactivityService). */
+export const LAST_ACTIVITY_STORAGE_KEY = 'ergomanager.lastActivity';
+
+/**
+ * Demo user of the preview mode (see environment.previewMode). It has no token,
+ * so the backend still rejects any protected call.
+ */
+const PREVIEW_SESSION: LoginResponse = {
+    token: '',
+    tokenType: 'Bearer',
+    expiresAtMs: Number.MAX_SAFE_INTEGER,
+    userId: 0,
+    fullName: 'Vista previa',
+    role: 'ADMIN',
+    mustChangePassword: false
+};
+
+/**
+ * Keeps the signed in session of an administrator or an ergonomist. It is the
+ * only place where the JWT is read from and written to the browser storage.
+ */
+@Injectable({ providedIn: 'root' })
+export class AuthService {
+    private readonly http = inject(HttpClient);
+
+    /** True while the temporary preview mode lets every page open without signing in. */
+    readonly isPreviewMode = environment.previewMode;
+    private readonly currentSession = signal<LoginResponse | null>(readStoredSession() ?? this.getPreviewSession());
+
+    /** Session of the signed in user, or null when nobody is signed in. */
+    readonly session = this.currentSession.asReadonly();
+
+    /**
+     * Checks whether there is a stored session that has not expired. It is a
+     * method and not a computed signal, so the expiration is evaluated on every
+     * call instead of being cached.
+     *
+     * @returns true while the session is valid
+     */
+    isAuthenticated(): boolean {
+        if (this.isPreviewMode) {
+            return true;
+        }
+        const session = this.currentSession();
+        return session !== null && session.expiresAtMs > Date.now();
+    }
+
+    /**
+     * Returns the first page of the signed in user: the dashboard, which shows
+     * the functions of each role.
+     *
+     * @returns url of the home page
+     */
+    getHomeUrl(): string {
+        return '/dashboard';
+    }
+
+    /**
+     * Sends the credentials to the backend and stores the returned session.
+     *
+     * @param request email and password typed by the user
+     * @returns the session issued by the backend
+     */
+    login(request: LoginRequest): Observable<LoginResponse> {
+        return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, request).pipe(tap((session) => this.storeSession(session)));
+    }
+
+    /**
+     * Replaces the password of the signed in user.
+     *
+     * Contract expected from the backend (pending, see HU-019):
+     * - PUT /api/auth/password with a ChangePasswordRequest body and the JWT.
+     * - 200 with a LoginResponse holding a new token: the tokens issued before
+     *   the change stop working, so the current session is replaced here.
+     * - 400 when the current password is wrong or the new one breaks the rules.
+     *   It must not be 401, because the error interceptor signs the user out.
+     *
+     * @param request current and new passwords
+     * @returns the new session issued by the backend
+     */
+    changePassword(request: ChangePasswordRequest): Observable<LoginResponse> {
+        return this.http.put<LoginResponse>(`${environment.apiUrl}/auth/password`, request).pipe(tap((session) => this.storeSession(session)));
+    }
+
+    /**
+     * Hides the temporary-password reminder only in the current in-memory
+     * session. The stored session keeps mustChangePassword=true.
+     */
+    dismissPasswordReminder(): void {
+        const session = this.currentSession();
+
+        if (session === null || !session.mustChangePassword) {
+            return;
+        }
+
+        this.currentSession.set({
+            ...session,
+            mustChangePassword: false
+        });
+    }
+
+    /**
+     * Clears the stored session.
+     */
+    logout(): void {
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+        localStorage.removeItem(LAST_ACTIVITY_STORAGE_KEY);
+        this.currentSession.set(this.getPreviewSession());
+    }
+
+    /**
+     * Checks whether the stored session exists but its token already expired,
+     * to tell that case apart from a visitor who never signed in.
+     *
+     * @returns true when the session expired
+     */
+    hasExpiredSession(): boolean {
+        const session = this.currentSession();
+        return !this.isPreviewMode && session !== null && session.expiresAtMs <= Date.now();
+    }
+
+    /**
+     * Returns the token that the interceptor attaches to every request.
+     *
+     * @returns the token, or null when nobody is signed in
+     */
+    getToken(): string | null {
+        return this.currentSession()?.token || null;
+    }
+
+    /**
+     * Checks whether the signed in user holds one of the given roles.
+     *
+     * @param allowedRoles roles that can reach the feature
+     * @returns true when the session matches one of them
+     */
+    hasAnyRole(allowedRoles: readonly Role[]): boolean {
+        if (this.isPreviewMode) {
+            return true;
+        }
+        const session = this.currentSession();
+        return session !== null && allowedRoles.includes(session.role);
+    }
+
+    /**
+     * Returns the demo session when the preview mode is on.
+     *
+     * @returns the demo session, or null outside the preview mode
+     */
+    private getPreviewSession(): LoginResponse | null {
+        return this.isPreviewMode ? PREVIEW_SESSION : null;
+    }
+
+    /**
+     * Stores the session both in memory and in the browser, so a page reload
+     * does not sign the user out.
+     *
+     * @param session session returned by the backend
+     */
+    private storeSession(session: LoginResponse): void {
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+        // A new session starts with fresh activity, so an old timestamp cannot close it.
+        localStorage.setItem(LAST_ACTIVITY_STORAGE_KEY, String(Date.now()));
+        this.currentSession.set(session);
+    }
+}
+
+/**
+ * Reads the session left in the browser by a previous visit.
+ *
+ * @returns the stored session, or null when there is none or it is unreadable
+ */
+function readStoredSession(): LoginResponse | null {
+    const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (raw === null) {
+        return null;
+    }
+    try {
+        return JSON.parse(raw) as LoginResponse;
+    } catch {
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+        return null;
+    }
+}

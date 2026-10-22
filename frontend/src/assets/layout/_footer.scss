@@ -1,0 +1,12 @@
+.layout-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    padding: 1rem 0;
+    font-size: 0.85rem;
+    color: var(--text-color-secondary);
+    /* Thin wine rule, like the footer of every page of the brand book. */
+    border-top: 1px solid var(--mgs-wine);
+}

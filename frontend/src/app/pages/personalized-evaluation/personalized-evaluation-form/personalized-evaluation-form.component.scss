@@ -1,0 +1,233 @@
+/* Personalized evaluation: risk cards, counters, success panel and history table. */
+
+/* ===== Risk level cards ===== */
+
+.risk-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr));
+    gap: 0.85rem;
+}
+
+.risk-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1.1rem;
+    border: 1px solid var(--surface-border);
+    border-radius: var(--mgs-radius-sm);
+    background: var(--surface-card);
+    cursor: pointer;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s,
+        transform 0.2s var(--mgs-ease);
+
+    &:hover {
+        border-color: var(--text-color-secondary);
+        transform: translateY(-2px);
+    }
+
+    &:focus-within {
+        outline: 2px solid var(--mgs-accent-text);
+        outline-offset: 2px;
+    }
+
+    &--selected,
+    &--selected:hover {
+        border-color: var(--mgs-accent-text);
+        box-shadow:
+            inset 0 0 0 1px var(--mgs-accent-text),
+            var(--mgs-shadow-sm);
+    }
+
+    &__top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    &__icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.4rem;
+        height: 2.4rem;
+        border-radius: var(--mgs-radius-sm);
+        background: var(--surface-ground);
+        color: var(--heading-color);
+        font-size: 1.05rem;
+        transition:
+            background-color 0.2s,
+            color 0.2s;
+    }
+
+    &--selected &__icon {
+        background: var(--mgs-wine);
+        color: #ffffff;
+    }
+
+    &__meter {
+        display: inline-flex;
+        align-items: flex-end;
+        gap: 3px;
+        height: 1.1rem;
+    }
+
+    &__bar {
+        width: 5px;
+        border-radius: 2px;
+        background: var(--surface-border);
+
+        &:nth-child(1) {
+            height: 35%;
+        }
+
+        &:nth-child(2) {
+            height: 55%;
+        }
+
+        &:nth-child(3) {
+            height: 78%;
+        }
+
+        &:nth-child(4) {
+            height: 100%;
+        }
+
+        &--on {
+            background: var(--mgs-graphite);
+        }
+    }
+
+    &--selected &__bar--on {
+        background: var(--mgs-wine);
+    }
+
+    &__description {
+        font-size: 0.84rem;
+        line-height: 1.45;
+        color: var(--text-color-secondary);
+    }
+}
+
+:host-context(.app-dark) .risk-card__bar--on {
+    background: var(--p-surface-300);
+}
+
+.risk-error {
+    margin-top: 0.85rem;
+}
+
+/* ===== Character counters ===== */
+
+.text-counter {
+    align-self: flex-end;
+    margin-top: -0.2rem;
+    font-size: 0.75rem;
+    color: var(--text-color-secondary);
+    font-variant-numeric: tabular-nums;
+
+    &--near {
+        color: var(--mgs-accent-text);
+        font-weight: 700;
+    }
+}
+
+.aside-placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 50%;
+    background: var(--surface-ground);
+    color: var(--text-color-secondary);
+    font-size: 1.35rem;
+}
+
+/* ===== Success panel ===== */
+
+.evaluation-success {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+    padding: 0;
+    overflow: hidden;
+
+    &__band {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 1.25rem;
+        padding: 1.75rem 2rem;
+        background: var(--mgs-black);
+        color: #ffffff;
+
+        > p-tag {
+            margin-left: auto;
+        }
+    }
+
+    &__icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        width: 3rem;
+        height: 3rem;
+        border-radius: 50%;
+        background: var(--mgs-wine);
+        font-size: 1.2rem;
+    }
+
+    &__eyebrow {
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        opacity: 0.75;
+    }
+
+    &__title {
+        margin: 0;
+        font-family: var(--mgs-font-display);
+        font-size: 1.6rem;
+        font-weight: 700;
+        line-height: 1.15;
+    }
+
+    &__meta {
+        font-size: 0.88rem;
+        opacity: 0.75;
+    }
+
+    &__body {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+        gap: 1.5rem 2.5rem;
+        padding: 0 2rem;
+    }
+
+    &__text {
+        margin: 0.5rem 0 0;
+        line-height: 1.6;
+        white-space: pre-line;
+        color: var(--text-color);
+    }
+
+    .mgs-form-actions {
+        margin: 0 2rem 1.75rem;
+    }
+}
+
+:host-context(.app-dark) .evaluation-success__band {
+    background: var(--p-surface-950);
+    border-bottom: 1px solid var(--surface-border);
+}
+
+.evaluations {
+    margin-top: 2rem;
+}

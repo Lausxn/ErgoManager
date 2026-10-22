@@ -1,0 +1,181 @@
+/* Agenda: selectors above the figures, table, and free slots grouped by day. */
+
+.agenda-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+
+    &__ergonomist {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+        min-width: min(20rem, 100%);
+    }
+}
+
+:host ::ng-deep .agenda-controls__select {
+    width: min(22rem, 100%);
+}
+
+.agenda-note {
+    display: block;
+    max-width: 16rem;
+    overflow: hidden;
+    font-size: 0.8rem;
+    color: var(--text-color-secondary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.agenda-when {
+    display: flex;
+    flex-direction: column;
+
+    &__day {
+        font-weight: 600;
+        color: var(--heading-color);
+        text-transform: capitalize;
+    }
+
+    &__time {
+        font-size: 0.84rem;
+        color: var(--text-color-secondary);
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+.agenda-evaluated {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--heading-color);
+    white-space: nowrap;
+
+    i {
+        color: var(--mgs-accent-text);
+    }
+
+    &--pending {
+        font-weight: 400;
+        color: var(--text-color-secondary);
+
+        i {
+            color: var(--text-color-secondary);
+        }
+    }
+}
+
+/* ===== Free slots ===== */
+
+.agenda-slots {
+    margin-top: 1.75rem;
+}
+
+.agenda-days {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.agenda-day {
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    align-items: start;
+    gap: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--surface-border);
+
+    &:last-child {
+        padding-bottom: 0;
+        border-bottom: 0;
+    }
+
+    &__date {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0.5rem 0.25rem;
+        border-radius: var(--mgs-radius-sm);
+        background: var(--mgs-graphite);
+        color: #ffffff;
+        line-height: 1.1;
+    }
+
+    &__weekday,
+    &__month {
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        opacity: 0.8;
+    }
+
+    &__number {
+        font-family: var(--mgs-font-display);
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    &__slots {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+        gap: 0.65rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+}
+
+:host-context(.app-dark) .agenda-day__date {
+    background: var(--p-surface-800);
+}
+
+.agenda-slot {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 0.5rem 0.55rem 0.9rem;
+    border: 1px solid var(--surface-border);
+    border-radius: var(--mgs-radius-sm);
+    background: var(--surface-card);
+    box-shadow: var(--mgs-shadow-sm);
+    transition:
+        border-color 0.2s,
+        transform 0.2s var(--mgs-ease);
+
+    &:hover {
+        border-color: color-mix(in srgb, var(--mgs-wine), transparent 55%);
+        transform: translateY(-1px);
+    }
+
+    &__icon {
+        color: var(--mgs-accent-text);
+    }
+
+    &__text {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    &__time {
+        font-weight: 600;
+        color: var(--heading-color);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+    &__duration {
+        font-size: 0.75rem;
+        color: var(--text-color-secondary);
+    }
+}

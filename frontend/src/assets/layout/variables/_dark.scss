@@ -1,0 +1,8 @@
+:root[class*='app-dark'] {
+    /* "Negro" is the background of the dark impact pages. */
+    --surface-ground: var(--p-surface-950);
+    --code-background: var(--p-surface-800);
+    --code-color: var(--p-surface-100);
+    --heading-color: var(--p-surface-0);
+    --mgs-accent-text: var(--p-primary-300);
+}

@@ -1,0 +1,23 @@
+/* Only what the shared mgs-* classes do not cover: spacing and the date line of the impact band. */
+.dashboard-hero {
+    margin-bottom: 1.75rem;
+
+    &__date {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 1.5rem 0 0;
+        font-size: 0.85rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        color: var(--p-surface-300);
+
+        time {
+            display: inline-block;
+        }
+
+        time::first-letter {
+            text-transform: uppercase;
+        }
+    }
+}
