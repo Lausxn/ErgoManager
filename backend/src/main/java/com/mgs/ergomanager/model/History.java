@@ -14,6 +14,8 @@ import jakarta.persistence.Table;
 import com.mgs.ergomanager.model.enums.HistoryType;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Traceability entry that links every evaluation milestone of an employee to
@@ -42,6 +44,7 @@ public class History {
 
     // Nullable in the schema so databases updated in place keep their older rows.
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "entry_type", length = 30)
     private HistoryType type;
 

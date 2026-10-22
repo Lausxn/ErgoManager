@@ -57,6 +57,10 @@ public interface AvailabilityRepository extends JpaRepository<Availability, Long
                                                                     LocalDateTime end,
                                                                     LocalDateTime start);
 
+    /** Applies the existing overlap rule while excluding the slot being edited. */
+    boolean existsByUserIdAndIdNotAndStartDateTimeBeforeAndEndDateTimeAfter(
+            Long userId, Long id, LocalDateTime end, LocalDateTime start);
+
     /**
      * Reads a slot and locks it, so two employees cannot book it at once.
      *
