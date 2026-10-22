@@ -260,6 +260,19 @@
                                             @if (entry.slot; as slot) {
                                                 <p-button
                                                     type="button"
+                                                    icon="fa-solid fa-pen"
+                                                    [rounded]="true"
+                                                    [text]="true"
+                                                    size="small"
+                                                    severity="secondary"
+                                                    [disabled]="isDeleting('slot-' + slot.id) || isDeleting('day-' + day.key)"
+                                                    (onClick)="editSlot(slot)"
+                                                    pTooltip="Editar horario"
+                                                    tooltipPosition="top"
+                                                    ariaLabel="Editar horario"
+                                                />
+                                                <p-button
+                                                    type="button"
                                                     icon="fa-regular fa-trash-can"
                                                     [rounded]="true"
                                                     [text]="true"
@@ -359,3 +372,5 @@
         (discarded)="clearError()"
     />
 </form>
+
+<app-slot-edit-dialog [(visible)]="isEditOpen" [slot]="editingSlot()" (saved)="onSlotSaved($event)" (outdated)="loadMonth(true)" />

@@ -1,6 +1,6 @@
 import { AppointmentStatus } from './appointment-status.model';
 
-/** Body sent to POST /api/appointments/availabilities. */
+/** Body sent to POST and PUT /api/appointments/availabilities. */
 export interface AvailabilityRequest {
     userId: number;
     startDateTime: string;
@@ -22,6 +22,11 @@ export interface AppointmentRequest {
     selfEvaluationId: number;
     availabilityId: number;
     notes?: string;
+}
+
+/** Body sent to PATCH /api/appointments/{id}/reschedule. */
+export interface AppointmentRescheduleRequest {
+    availabilityId: number;
 }
 
 /** Appointment returned by /api/appointments. */

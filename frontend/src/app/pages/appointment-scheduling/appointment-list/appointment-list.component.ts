@@ -28,6 +28,7 @@ import { UserService } from '../../users/user.service';
 import { AppointmentService } from '../appointment.service';
 import { addDays, formatDuration, groupSlotsByDay, isPendingStatus, minutesBetween } from '../appointment-utils';
 import { BookingDialogComponent } from '../booking-dialog/booking-dialog.component';
+import { RescheduleDialogComponent } from '../reschedule-dialog/reschedule-dialog.component';
 
 /** Placeholder rows drawn as skeletons while the agenda loads. */
 const SKELETON_ROWS = Array.from({ length: 5 }, (_, index) => ({ id: -index - 1 }));
@@ -76,6 +77,7 @@ interface AppointmentRow extends AppointmentResponse {
         BookingDialogComponent,
         EmptyStateComponent,
         PageHeaderComponent,
+        RescheduleDialogComponent,
         StatCardComponent
     ],
     templateUrl: './appointment-list.component.html',
@@ -118,6 +120,10 @@ export class AppointmentListComponent implements OnInit {
     protected readonly deletingSlotId = signal<number | null>(null);
     protected readonly cancellingId = signal<number | null>(null);
     protected readonly isBookingOpen = signal(false);
+
+    /** Pending appointment being moved to another slot. */
+    protected readonly reschedulingAppointment = signal<AppointmentResponse | null>(null);
+    protected readonly isRescheduleOpen = signal(false);
 
     /** Range of the last load, used to decide whether a booked appointment belongs to it. */
     private range = { from: new Date(), to: new Date() };
@@ -238,7 +244,9 @@ export class AppointmentListComponent implements OnInit {
         }
         const now = new Date();
         const days = PERIOD_DAYS[this.period()];
-        this.range = days > 0 ? { from: now, to: addDays(now, days) } : { from: addDays(now, days), to: now };
+        // Upcoming periods start with today, so the appointments of this morning are still listed.
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        this.range = days > 0 ? { from: startOfToday, to: addDays(now, days) } : { from: addDays(now, days), to: now };
 
         this.agendaRequest?.unsubscribe();
         this.isLoading.set(true);
@@ -310,6 +318,32 @@ export class AppointmentListComponent implements OnInit {
             this.appointments.update((appointments) => [...appointments, appointment]);
         }
         this.slots.update((slots) => slots.filter((slot) => !(slot.startDateTime === appointment.startDateTime && slot.endDateTime === appointment.endDateTime)));
+    }
+
+    /**
+     * Opens the dialog that moves a pending appointment to another free slot.
+     *
+     * @param row appointment to move
+     */
+    protected openReschedule(row: AppointmentRow): void {
+        if (!row.isPending) {
+            return;
+        }
+        this.reschedulingAppointment.set(row);
+        this.isRescheduleOpen.set(true);
+    }
+
+    /**
+     * Shows the appointment at its new time and reads the free slots again: the
+     * old slot is free and the new one is taken.
+     *
+     * @param appointment appointment returned by the backend
+     */
+    protected onRescheduled(appointment: AppointmentResponse): void {
+        const start = new Date(appointment.startDateTime);
+        const inRange = start >= this.range.from && start <= this.range.to;
+        this.appointments.update((appointments) => (inRange ? appointments.map((item) => (item.id === appointment.id ? { ...item, ...appointment } : item)) : appointments.filter((item) => item.id !== appointment.id)));
+        this.loadSlots();
     }
 
     /**

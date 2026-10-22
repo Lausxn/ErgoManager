@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { AppointmentRequest, AppointmentResponse, AvailabilityRequest, AvailabilityResponse } from '../../shared/models/appointment.model';
+import { AppointmentRequest, AppointmentRescheduleRequest, AppointmentResponse, AvailabilityRequest, AvailabilityResponse } from '../../shared/models/appointment.model';
 
 /**
  * HTTP access to the /api/appointments endpoints, both for the availability of
@@ -78,5 +78,37 @@ export class AppointmentService {
      */
     deleteAvailability(id: number): Observable<void> {
         return this.http.delete<void>(`${this.baseUrl}/availabilities/${id}`);
+    }
+
+    /**
+     * Reads a single time slot, with its current state.
+     *
+     * @param id identifier of the slot
+     * @returns the slot
+     */
+    findAvailabilityById(id: number): Observable<AvailabilityResponse> {
+        return this.http.get<AvailabilityResponse>(`${this.baseUrl}/availabilities/${id}`);
+    }
+
+    /**
+     * Changes the date and time of a slot that has not been booked.
+     *
+     * @param id      identifier of the slot
+     * @param request new date and time, with the same ergonomist
+     * @returns the updated slot
+     */
+    updateAvailability(id: number, request: AvailabilityRequest): Observable<AvailabilityResponse> {
+        return this.http.put<AvailabilityResponse>(`${this.baseUrl}/availabilities/${id}`, request);
+    }
+
+    /**
+     * Moves a pending appointment to another free slot of the same ergonomist.
+     *
+     * @param id      identifier of the appointment
+     * @param request slot the appointment moves to
+     * @returns the rescheduled appointment
+     */
+    reschedule(id: number, request: AppointmentRescheduleRequest): Observable<AppointmentResponse> {
+        return this.http.patch<AppointmentResponse>(`${this.baseUrl}/${id}/reschedule`, request);
     }
 }

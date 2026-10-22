@@ -1,0 +1,54 @@
+<p-dialog
+    [visible]="visible()"
+    (visibleChange)="visible.set($event)"
+    (onShow)="onShow()"
+    header="Editar horario"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [dismissableMask]="!isSubmitting()"
+    [closeOnEscape]="!isSubmitting()"
+    [closable]="!isSubmitting()"
+    [style]="{ width: 'min(30rem, calc(100vw - 2rem))' }"
+>
+    <form [formGroup]="slotForm" (ngSubmit)="submit()" class="flex flex-col gap-4" novalidate>
+        <p class="m-0 text-sm text-muted-color">Cambie la fecha o las horas del espacio libre. No puede cruzarse con otro espacio del mismo ergonomista.</p>
+
+        @if (isLoading()) {
+            <div class="flex flex-col gap-3" aria-hidden="true">
+                <p-skeleton height="3.5rem" />
+                <div class="grid grid-cols-2 gap-3"><p-skeleton height="3.5rem" /><p-skeleton height="3.5rem" /></div>
+            </div>
+        } @else {
+            <app-form-field label="Fecha" inputId="slot-day" [control]="slotForm.controls.day">
+                <p-datepicker inputId="slot-day" formControlName="day" [minDate]="today" dateFormat="dd/mm/yy" [showIcon]="true" [fluid]="true" [readonlyInput]="true" appendTo="body" />
+            </app-form-field>
+            <div class="grid grid-cols-2 gap-3">
+                <app-form-field label="Desde" inputId="slot-start" [control]="slotForm.controls.startTime">
+                    <p-datepicker inputId="slot-start" formControlName="startTime" [timeOnly]="true" hourFormat="12" [stepMinute]="15" [fluid]="true" [readonlyInput]="true" appendTo="body" />
+                </app-form-field>
+                <app-form-field label="Hasta" inputId="slot-end" [control]="slotForm.controls.endTime">
+                    <p-datepicker inputId="slot-end" formControlName="endTime" [timeOnly]="true" hourFormat="12" [stepMinute]="15" [fluid]="true" [readonlyInput]="true" appendTo="body" />
+                </app-form-field>
+            </div>
+            @if (duration(); as length) {
+                <div class="mgs-details-note">
+                    <i class="fa-regular fa-clock" aria-hidden="true"></i><span>El espacio durará {{ length }}.</span>
+                </div>
+            }
+        }
+
+        @if (errorMessage(); as message) {
+            <div class="mgs-alert" role="alert">
+                <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ message }}</span>
+            </div>
+        }
+    </form>
+
+    <ng-template #footer>
+        <div class="flex justify-end gap-2">
+            <p-button label="Cancelar" [text]="true" severity="secondary" [disabled]="isSubmitting()" (onClick)="close()" />
+            <p-button label="Guardar horario" icon="fa-regular fa-floppy-disk" [loading]="isSubmitting()" [disabled]="isLoading()" (onClick)="submit()" />
+        </div>
+    </ng-template>
+</p-dialog>

@@ -28,6 +28,7 @@ import { markFormAsDirty } from '../../../shared/utils/form';
 import { APPOINTMENT_STATUS_LABELS } from '../../../shared/utils/labels';
 import { UserService } from '../../users/user.service';
 import { AppointmentService } from '../appointment.service';
+import { SlotEditDialogComponent } from '../slot-edit-dialog/slot-edit-dialog.component';
 import { combineDayAndTime, dayKey, formatDuration, minutesBetween, rangesOverlap, timeOfDay } from '../appointment-utils';
 
 /** Shown for every HTTP 409, whatever the server sends, so a technical text never reaches the user. */
@@ -181,6 +182,7 @@ function requireDates(control: AbstractControl): ValidationErrors | null {
         FormFieldComponent,
         PageHeaderComponent,
         SaveBarComponent,
+        SlotEditDialogComponent,
         StatCardComponent
     ],
     templateUrl: './availability-form.component.html',
@@ -243,6 +245,10 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
     protected readonly isLoadingMonth = signal(false);
     protected readonly monthError = signal<string | null>(null);
     protected readonly deletingKeys = signal<ReadonlySet<string>>(new Set());
+
+    /** Free slot whose date and time are being changed in the dialog. */
+    protected readonly editingSlot = signal<AvailabilityResponse | null>(null);
+    protected readonly isEditOpen = signal(false);
     private monthRequest?: Subscription;
 
     /** Raw form value; the calendar empties its selection to null, read here as no days. */
@@ -629,6 +635,25 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
 
     protected isDeleting(key: string): boolean {
         return this.deletingKeys().has(key);
+    }
+
+    /**
+     * Opens the dialog that changes the date and time of a free slot.
+     *
+     * @param slot slot to edit
+     */
+    protected editSlot(slot: AvailabilityResponse): void {
+        this.editingSlot.set(slot);
+        this.isEditOpen.set(true);
+    }
+
+    /**
+     * Shows the new time of an edited slot without reading the month again.
+     *
+     * @param updated slot returned by the backend
+     */
+    protected onSlotSaved(updated: AvailabilityResponse): void {
+        this.freeSlots.update((slots) => slots.map((slot) => (slot.id === updated.id ? updated : slot)));
     }
 
     /** Reads the calendar data of the visible month, unless it is already loaded. */

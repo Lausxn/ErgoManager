@@ -128,7 +128,17 @@ describe('AvailabilityFormComponent', () => {
         return button!;
     }
 
-    afterEach(() => http.verify());
+    // A fixed morning early in the month: the planned days (today + 10) stay in the
+    // month the calendar shows, whatever the real date the tests run on.
+    beforeEach(() => {
+        jasmine.clock().install();
+        jasmine.clock().mockDate(new Date(2026, 2, 9, 9, 0));
+    });
+
+    afterEach(() => {
+        http.verify();
+        jasmine.clock().uninstall();
+    });
 
     describe('mensaje de cruce (Task 62)', () => {
         for (const response of [{ message: MESSAGE }, {}, { message: 'SQL constraint exception' }]) {

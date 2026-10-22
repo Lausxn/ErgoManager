@@ -138,6 +138,17 @@
                                     <p-button label="Registrar evaluación" icon="fa-solid fa-notes-medical" size="small" severity="secondary" [outlined]="true" (onClick)="evaluate(row)" />
                                 }
                                 @if (row.isPending) {
+                                    <p-button
+                                        icon="fa-solid fa-calendar-days"
+                                        [rounded]="true"
+                                        [text]="true"
+                                        severity="secondary"
+                                        [disabled]="cancellingId() === row.id"
+                                        (onClick)="openReschedule(row)"
+                                        pTooltip="Reprogramar cita"
+                                        tooltipPosition="top"
+                                        ariaLabel="Reprogramar cita"
+                                    />
                                     <p-button icon="fa-solid fa-ban" [rounded]="true" [text]="true" [loading]="cancellingId() === row.id" (onClick)="confirmCancel(row)" pTooltip="Cancelar cita" tooltipPosition="top" ariaLabel="Cancelar cita" />
                                 }
                             </div>
@@ -243,3 +254,4 @@
 }
 
 <app-booking-dialog [(visible)]="isBookingOpen" [ergonomistId]="selectedErgonomistId()" [ergonomistName]="selectedErgonomistName()" [pendingSelfEvaluationIds]="pendingSelfEvaluationIds()" (booked)="onBooked($event)" />
+<app-reschedule-dialog [(visible)]="isRescheduleOpen" [appointment]="reschedulingAppointment()" (rescheduled)="onRescheduled($event)" />
