@@ -1,5 +1,5 @@
 <app-page-header eyebrow="Administración" title="Empresas cliente" subtitle="Organizaciones cuyos colaboradores responden las autoevaluaciones ergonómicas.">
-    <p-button label="Registrar empresa" icon="fa-solid fa-building" routerLink="/companies/new" />
+    <p-button label="Crear perfil" icon="fa-solid fa-building" routerLink="/companies/new" />
 </app-page-header>
 
 <section class="mgs-stats" aria-label="Resumen de empresas">
@@ -86,7 +86,16 @@
                     </td>
                     <td class="text-right">
                         <div class="mgs-row-actions">
-                            <p-button icon="fa-solid fa-pen" [rounded]="true" [text]="true" severity="secondary" [routerLink]="['/companies', row.id]" pTooltip="Editar" tooltipPosition="top" ariaLabel="Editar empresa" />
+                            <p-button
+                                icon="fa-solid fa-pen"
+                                [rounded]="true"
+                                [text]="true"
+                                severity="secondary"
+                                [routerLink]="['/companies', row.id]"
+                                pTooltip="Editar perfil"
+                                tooltipPosition="top"
+                                [ariaLabel]="'Editar perfil de ' + row.businessName"
+                            />
                             @if (row.active) {
                                 <p-button icon="fa-solid fa-ban" [rounded]="true" [text]="true" [loading]="isBusy(row.id)" (onClick)="confirmDeactivate(row)" pTooltip="Desactivar" tooltipPosition="top" ariaLabel="Desactivar empresa" />
                             } @else {
@@ -115,8 +124,8 @@
                             <p-button label="Reintentar" icon="fa-solid fa-rotate-right" severity="secondary" [outlined]="true" (onClick)="loadCompanies()" />
                         </app-empty-state>
                     } @else if (summary().total === 0) {
-                        <app-empty-state icon="fa-solid fa-building" title="Todavía no hay empresas" message="Registre la primera empresa cliente para enviarle formularios de autoevaluación.">
-                            <p-button label="Registrar empresa" icon="fa-solid fa-building" routerLink="/companies/new" />
+                        <app-empty-state icon="fa-solid fa-building" title="Todavía no hay empresas" message="Cree el primer perfil de empresa cliente para continuar con la gestión.">
+                            <p-button label="Crear perfil" icon="fa-solid fa-building" routerLink="/companies/new" />
                         </app-empty-state>
                     } @else {
                         <app-empty-state icon="fa-solid fa-filter-circle-xmark" title="Sin coincidencias" message="Ninguna empresa coincide con la búsqueda o el filtro de estado." />

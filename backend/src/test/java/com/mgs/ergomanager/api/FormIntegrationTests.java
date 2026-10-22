@@ -42,22 +42,41 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
         ergonomist = persistUser("ergo.forms@example.test", Role.ERGONOMIST);
     }
 
-    private static Map<String, Object> question(Long id, String statement, int order, int weight) {
+    private static Map<String, Object> option(Long id, String label, int weight, int order) {
+        Map<String, Object> option = new HashMap<>();
+        option.put("id", id);
+        option.put("label", label);
+        option.put("weight", weight);
+        option.put("optionOrder", order);
+        return option;
+    }
+
+    private static Map<String, Object> question(Long id, String statement, int order, List<Map<String, Object>> options) {
         Map<String, Object> question = new HashMap<>();
         question.put("id", id);
         question.put("statement", statement);
         question.put("questionOrder", order);
-        question.put("weight", weight);
+        question.put("optionList", options);
         return question;
     }
 
-    private static Map<String, Object> form(String title, int year, List<Map<String, Object>> questions) {
+    /** Self evaluation question with two predefined answers. */
+    private static Map<String, Object> question(Long id, String statement, int order) {
+        return question(id, statement, order, List.of(option(null, "Nunca", 1, 1), option(null, "Siempre", 3, 2)));
+    }
+
+    private static Map<String, Object> form(String title, int year, String type, List<Map<String, Object>> questions) {
         Map<String, Object> form = new HashMap<>();
         form.put("title", title);
         form.put("description", "  ");
         form.put("publicationYear", year);
+        form.put("type", type);
         form.put("questionList", questions);
         return form;
+    }
+
+    private static Map<String, Object> form(String title, int year, List<Map<String, Object>> questions) {
+        return form(title, year, "SELF_EVALUATION", questions);
     }
 
     @Test
@@ -65,15 +84,20 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
         MvcResult result = mvc.perform(post("/api/forms").with(as(admin))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(form(" Postura 2026 ", 2026, List.of(
-                                question(null, "Segunda", 2, 1),
-                                question(null, " Primera ", 1, 2))))))
+                                question(null, "Segunda", 2),
+                                question(null, " Primera ", 1))))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("title").value("Postura 2026"))
                 .andExpect(jsonPath("description").doesNotExist())
-                .andExpect(jsonPath("active").value(true))
+                .andExpect(jsonPath("type").value("SELF_EVALUATION"))
+                .andExpect(jsonPath("active").value(false))
                 .andExpect(jsonPath("questionList.length()").value(2))
                 .andExpect(jsonPath("questionList[0].statement").value("Primera"))
-                .andExpect(jsonPath("questionList[0].weight").value(2))
+                .andExpect(jsonPath("questionList[0].optionList.length()").value(2))
+                .andExpect(jsonPath("questionList[0].optionList[0].label").value("Nunca"))
+                .andExpect(jsonPath("questionList[0].optionList[0].weight").value(1))
+                .andExpect(jsonPath("questionList[0].optionList[1].label").value("Siempre"))
+                .andExpect(jsonPath("questionList[0].optionList[1].weight").value(3))
                 .andReturn();
         long id = idOf(result);
         mvc.perform(get("/api/forms/{id}", id).with(as(admin)))
@@ -82,6 +106,21 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
         mvc.perform(get("/api/forms/{id}", 999_999).with(as(admin)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("message").value("No se encontró el formulario."));
+    }
+
+    @Test
+    void createsDraftWhileAnotherFormIsActive() throws Exception {
+        persistForm("Activo", 1);
+
+        mvc.perform(post("/api/forms").with(as(admin))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(form("Nuevo", 2026, List.of(question(null, "Pregunta", 1))))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("active").value(false));
+        // The active form keeps being answered while the draft is prepared.
+        mvc.perform(get("/api/forms/active"))
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].title").value("Activo"));
     }
 
     @Test
@@ -103,7 +142,9 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].title").value("Vigente"))
-                .andExpect(jsonPath("$[0].questionList[0].statement").value("Pregunta 1"));
+                .andExpect(jsonPath("$[0].questionList[0].statement").value("Pregunta 1"))
+                .andExpect(jsonPath("$[0].questionList[0].optionList[0].label").value("Bajo"))
+                .andExpect(jsonPath("$[0].questionList[0].optionList[0].weight").doesNotExist());
     }
 
     @Test
@@ -115,9 +156,9 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
         Question third = questions.get(2);
 
         List<Map<String, Object>> update = new ArrayList<>();
-        update.add(question(first.getId(), "Primera editada", 1, 3));
-        update.add(question(third.getId(), "Pregunta 3", 2, 1));
-        update.add(question(null, "Nueva", 3, 2));
+        update.add(question(first.getId(), "Primera editada", 1));
+        update.add(question(third.getId(), "Pregunta 3", 2));
+        update.add(question(null, "Nueva", 3));
         mvc.perform(put("/api/forms/{id}", form.getId()).with(as(admin))
                         .contentType(MediaType.APPLICATION_JSON).content(toJson(form("Editado", 2027, update))))
                 .andExpect(status().isOk())
@@ -126,7 +167,7 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
                 .andExpect(jsonPath("questionList.length()").value(3))
                 .andExpect(jsonPath("questionList[0].id").value(first.getId()))
                 .andExpect(jsonPath("questionList[0].statement").value("Primera editada"))
-                .andExpect(jsonPath("questionList[0].weight").value(3))
+                .andExpect(jsonPath("questionList[0].optionList.length()").value(2))
                 .andExpect(jsonPath("questionList[1].id").value(third.getId()))
                 .andExpect(jsonPath("questionList[2].statement").value("Nueva"));
 
@@ -142,7 +183,7 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
         Long foreignId = questionsOf(other).get(0).getId();
         mvc.perform(put("/api/forms/{id}", form.getId()).with(as(admin))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(form("Propio", 2026, List.of(question(foreignId, "X", 1, 1))))))
+                        .content(toJson(form("Propio", 2026, List.of(question(foreignId, "X", 1))))))
                 .andExpect(status().isBadRequest());
     }
 
@@ -165,6 +206,21 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("active").value(true))
                 .andExpect(jsonPath("questionList.length()").value(1));
+    }
+
+    @Test
+    void rejectsActivatingFormWhenAnotherFormIsActive() throws Exception {
+        persistForm("Activo", 1);
+        Form inactive = persistForm("Inactivo", 1);
+        inactive.setActive(false);
+        formRepository.flush();
+
+        mvc.perform(patch("/api/forms/{id}/activate", inactive.getId()).with(as(admin)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("message")
+                        .value("Ya existe una autoevaluación activa. Desactívela antes de activar otra."));
+
+        assertThat(formRepository.findById(inactive.getId()).orElseThrow().isActive()).isFalse();
     }
 
     @Test
@@ -222,14 +278,26 @@ class FormIntegrationTests extends ApiIntegrationTestSupport {
     void ergonomistHasFullAccessAndAnonymousIsUnauthorized() throws Exception {
         Form form = persistForm("Compartido", 1);
         Company company = persistCompany("Compartida", "3-101-000105", true);
+
         mvc.perform(get("/api/forms").with(as(ergonomist))).andExpect(status().isOk());
         mvc.perform(get("/api/forms/{id}", form.getId()).with(as(ergonomist))).andExpect(status().isOk());
-        mvc.perform(post("/api/forms").with(as(ergonomist)).contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(form("X", 2026, List.of(question(null, "X", 1, 1))))))
-                .andExpect(status().is2xxSuccessful());
-        mvc.perform(post("/api/forms/{id}/resend/{companyId}", form.getId(), company.getId()).with(as(ergonomist)))
-                .andExpect(status().is2xxSuccessful());
-        mvc.perform(delete("/api/forms/{id}", form.getId()).with(as(ergonomist))).andExpect(status().isNoContent());
+
+        mvc.perform(delete("/api/forms/{id}", form.getId()).with(as(ergonomist)))
+                .andExpect(status().isNoContent());
+
+        MvcResult created = mvc.perform(post("/api/forms").with(as(ergonomist))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(form("X", 2026, List.of(question(null, "X", 1))))))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        long createdFormId = idOf(created);
+        mvc.perform(patch("/api/forms/{id}/activate", createdFormId).with(as(ergonomist)))
+                .andExpect(status().isOk());
+
+        mvc.perform(post("/api/forms/{id}/resend/{companyId}", createdFormId, company.getId()).with(as(ergonomist)))
+                .andExpect(status().isAccepted());
+
         mvc.perform(get("/api/forms")).andExpect(status().isUnauthorized());
     }
 }

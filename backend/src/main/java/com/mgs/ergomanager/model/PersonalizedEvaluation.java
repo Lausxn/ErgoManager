@@ -1,10 +1,7 @@
 package com.mgs.ergomanager.model;
 
-import com.mgs.ergomanager.model.enums.RiskLevel;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -16,8 +13,10 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
 
 /**
- * Evaluation written by the ergonomist after attending an appointment. It is
- * the source of the PDF report delivered to the client company.
+ * Evaluation written by the ergonomist after attending an appointment, with a
+ * diagnosis and a recommendation for each question of the personalized
+ * evaluation form ({@link PersonalizedAnswer}). It has no risk level and is the
+ * source of the PDF report delivered to the client company.
  */
 @Entity
 @Table(name = "personalized_evaluations")
@@ -36,15 +35,10 @@ public class PersonalizedEvaluation {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "diagnosis", nullable = false, length = 1000)
-    private String diagnosis;
-
-    @Column(name = "recommendations", nullable = false, length = 1000)
-    private String recommendations;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "risk_level", nullable = false, length = 20)
-    private RiskLevel riskLevel;
+    // Nullable so evaluations stored before the personalized forms existed keep loading.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "form_id")
+    private Form form;
 
     @Column(name = "report_path", length = 255)
     private String reportPath;
@@ -77,28 +71,12 @@ public class PersonalizedEvaluation {
         this.user = user;
     }
 
-    public String getDiagnosis() {
-        return diagnosis;
+    public Form getForm() {
+        return form;
     }
 
-    public void setDiagnosis(String diagnosis) {
-        this.diagnosis = diagnosis;
-    }
-
-    public String getRecommendations() {
-        return recommendations;
-    }
-
-    public void setRecommendations(String recommendations) {
-        this.recommendations = recommendations;
-    }
-
-    public RiskLevel getRiskLevel() {
-        return riskLevel;
-    }
-
-    public void setRiskLevel(RiskLevel riskLevel) {
-        this.riskLevel = riskLevel;
+    public void setForm(Form form) {
+        this.form = form;
     }
 
     public String getReportPath() {

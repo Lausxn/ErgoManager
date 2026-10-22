@@ -37,7 +37,8 @@ public class SelfEvaluationController {
     }
 
     /**
-     * Stores a self evaluation and returns its calculated risk level.
+     * Stores a self evaluation and returns its risk level, calculated from the
+     * weights of the chosen predefined answers.
      *
      * @param request answers sent by the employee
      * @return the stored self evaluation

@@ -17,7 +17,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 /**
  * Self evaluation submitted by an employee of a client company. The risk level
- * is derived from the total score obtained from the answers.
+ * is derived from the average weight of the chosen answers.
  */
 @Entity
 @Table(name = "self_evaluations")
@@ -51,6 +51,13 @@ public class SelfEvaluation {
     @Enumerated(EnumType.STRING)
     @Column(name = "risk_level", nullable = false, length = 20)
     private RiskLevel riskLevel;
+
+    // Nullable so self evaluations stored before the average existed keep loading.
+    @Column(name = "average_score")
+    private Double averageScore;
+
+    @Column(name = "risk_percentage")
+    private Double riskPercentage;
 
     @CreationTimestamp
     @Column(name = "submitted_at", nullable = false, updatable = false)
@@ -118,6 +125,22 @@ public class SelfEvaluation {
 
     public void setRiskLevel(RiskLevel riskLevel) {
         this.riskLevel = riskLevel;
+    }
+
+    public Double getAverageScore() {
+        return averageScore;
+    }
+
+    public void setAverageScore(Double averageScore) {
+        this.averageScore = averageScore;
+    }
+
+    public Double getRiskPercentage() {
+        return riskPercentage;
+    }
+
+    public void setRiskPercentage(Double riskPercentage) {
+        this.riskPercentage = riskPercentage;
     }
 
     public LocalDateTime getSubmittedAt() {

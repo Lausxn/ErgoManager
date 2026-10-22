@@ -25,7 +25,8 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/personalized-evaluations")
-@Tag(name = "Personalized evaluations", description = "Evaluations written by the ergonomist and PDF reports")
+@Tag(name = "Personalized evaluations",
+        description = "Evaluations written by the ergonomist for each question and PDF reports")
 public class PersonalizedEvaluationController {
 
     private static final String REPORT_FILE_PREFIX = "personalized-evaluation-";
@@ -41,7 +42,8 @@ public class PersonalizedEvaluationController {
     }
 
     /**
-     * Stores the evaluation written after an appointment.
+     * Stores the evaluation written after an appointment: a diagnosis and a
+     * recommendation for each question of the active personalized evaluation form.
      *
      * @param request data written by the ergonomist
      * @return the stored evaluation

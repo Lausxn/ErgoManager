@@ -66,6 +66,19 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles invalid fields found by the service layer.
+     *
+     * @param exception exception raised by the service layer
+     * @param request   request being processed
+     * @return response with HTTP status 400 and one message per invalid field
+     */
+    @ExceptionHandler(FieldValidationException.class)
+    public ResponseEntity<ErrorResponse> handleFieldValidation(FieldValidationException exception,
+                                                               HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, VALIDATION_MESSAGE, request, exception.getFieldErrors());
+    }
+
+    /**
      * Handles a broken business rule.
      *
      * @param exception exception raised by the service layer
