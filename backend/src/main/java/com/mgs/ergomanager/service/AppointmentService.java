@@ -1,6 +1,7 @@
 package com.mgs.ergomanager.service;
 
 import com.mgs.ergomanager.dto.appointment.AppointmentRequestDTO;
+import com.mgs.ergomanager.dto.appointment.AppointmentRescheduleRequestDTO;
 import com.mgs.ergomanager.dto.appointment.AppointmentResponseDTO;
 import com.mgs.ergomanager.dto.appointment.AvailabilityRequestDTO;
 import com.mgs.ergomanager.dto.appointment.AvailabilityResponseDTO;
@@ -19,6 +20,12 @@ public interface AppointmentService {
      * @return the created slot
      */
     AvailabilityResponseDTO createAvailability(AvailabilityRequestDTO request);
+
+    /** Reads one slot, including its reserved state. */
+    AvailabilityResponseDTO findAvailabilityById(Long id);
+
+    /** Changes the dates of a free slot without changing its owner. */
+    AvailabilityResponseDTO updateAvailability(Long id, AvailabilityRequestDTO request);
 
     /**
      * Returns the free slots of an ergonomist inside a date range.
@@ -62,4 +69,14 @@ public interface AppointmentService {
      * @return the cancelled appointment
      */
     AppointmentResponseDTO cancel(Long id);
+
+    /**
+     * Moves a pending appointment to another free time slot of the same
+     * ergonomist.
+     *
+     * @param id      identifier of the appointment
+     * @param request new time slot selected for the appointment
+     * @return the rescheduled appointment
+     */
+    AppointmentResponseDTO reschedule(Long id, AppointmentRescheduleRequestDTO request);
 }
