@@ -22,7 +22,7 @@
                 </div>
             } @else {
                 <div class="mgs-form-grid">
-                    <app-form-field label="Razón social" inputId="businessName" [control]="companyForm.controls.businessName" [errors]="businessNameErrors" hint="Debe ser única. No distingue mayúsculas ni espacios, pero sí las tildes.">
+                    <app-form-field label="Razón social" inputId="businessName" [control]="companyForm.controls.businessName" [errors]="businessNameErrors" hint="El nombre del perfil debe ser único en el sistema.">
                         <input pInputText id="businessName" formControlName="businessName" [maxlength]="limits.businessName" autocomplete="organization" placeholder="Ej. Servicios Industriales del Valle S.A." />
                     </app-form-field>
                     <app-form-field label="Cédula jurídica" inputId="taxId" [control]="companyForm.controls.taxId" [errors]="taxIdErrors" [half]="true" hint="Única por empresa. Escriba solo los números: los guiones se agregan solos.">
