@@ -32,6 +32,15 @@ export class FormService {
     }
 
     /**
+     * Reads the active personalized evaluation form.
+     *
+     * @returns active personalized evaluation form
+     */
+    findActivePersonalized(): Observable<FormResponse> {
+        return this.http.get<FormResponse>(`${this.baseUrl}/personalized/active`);
+    }
+
+    /**
      * Reads a single form with its questions.
      *
      * @param id identifier of the form
@@ -77,7 +86,7 @@ export class FormService {
      *
      * @param id        identifier of the form
      * @param companyId identifier of the company to notify
-     * @returns an empty response
+     * @returns resend result
      */
     resendAnnually(id: number, companyId: number): Observable<FormResendResponse> {
         return this.http.post<FormResendResponse>(`${this.baseUrl}/${id}/resend/${companyId}`, {});
