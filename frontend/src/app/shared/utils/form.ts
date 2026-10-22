@@ -1,4 +1,4 @@
-import { AbstractControl, FormArray, FormGroup, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 
 /**
  * Marks every control of a form as touched and dirty, so PrimeNG paints the
@@ -53,3 +53,20 @@ export function fieldErrorMessage(control: AbstractControl | null, overrides: Re
 
 /** Rejects values made only of spaces, which required alone lets through. */
 export const notBlank = Validators.pattern(/\S/);
+
+/**
+ * Checks the trimmed value of a control against a format. Unlike
+ * Validators.pattern it reports its own error key, so each format gets its own
+ * message instead of the generic "required" one. Empty values pass: the
+ * required validator reports them.
+ *
+ * @param pattern  format the value has to follow
+ * @param errorKey key of the error, used to pick its message
+ * @returns validator for a text control
+ */
+export function matchesFormat(pattern: RegExp, errorKey: string): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+        const value = typeof control.value === 'string' ? control.value.trim() : '';
+        return value === '' || pattern.test(value) ? null : { [errorKey]: true };
+    };
+}

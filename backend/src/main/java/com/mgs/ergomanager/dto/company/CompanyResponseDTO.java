@@ -1,6 +1,7 @@
 package com.mgs.ergomanager.dto.company;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Client company exposed by the API.
@@ -13,6 +14,8 @@ import java.time.LocalDateTime;
  * @param address      postal address
  * @param active       false when the company was deactivated
  * @param createdAt    moment the company was registered
+ * @param previousNames names the company used before, the most recent first;
+ *                      they stay reserved for it
  */
 public record CompanyResponseDTO(
         Long id,
@@ -22,5 +25,6 @@ public record CompanyResponseDTO(
         String phoneNumber,
         String address,
         boolean active,
-        LocalDateTime createdAt) {
+        LocalDateTime createdAt,
+        List<String> previousNames) {
 }

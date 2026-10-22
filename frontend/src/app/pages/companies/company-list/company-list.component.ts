@@ -17,12 +17,12 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { StatCardComponent } from '../../../shared/components/stat-card/stat-card.component';
 import { CompanyResponse } from '../../../shared/models/company.model';
-import { DialogService } from '../../../shared/services/dialog.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { getApiErrorMessage } from '../../../shared/utils/api-error';
 import { ACTIVE_TAG_CLASSES } from '../../../shared/utils/labels';
 import { companyInitials } from '../company-initials';
 import { CompanyService } from '../company.service';
+import { DeactivateCompanyDialogComponent } from '../deactivate-company-dialog/deactivate-company-dialog.component';
 
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
 
@@ -57,6 +57,7 @@ interface CompanyRow extends CompanyResponse {
         TagModule,
         TooltipModule,
         EmptyStateComponent,
+        DeactivateCompanyDialogComponent,
         PageHeaderComponent,
         StatCardComponent
     ],
@@ -64,7 +65,6 @@ interface CompanyRow extends CompanyResponse {
 })
 export class CompanyListComponent {
     private readonly companyService = inject(CompanyService);
-    private readonly dialogService = inject(DialogService);
     private readonly toastService = inject(ToastService);
     private readonly destroyRef = inject(DestroyRef);
     private readonly companyList = signal<CompanyResponse[]>([]);
@@ -77,6 +77,10 @@ export class CompanyListComponent {
 
     /** Ids of the companies with a request running, to avoid double clicks. */
     protected readonly busyIds = signal<ReadonlySet<number>>(new Set());
+
+    /** Company shown in the deactivation pop-up. */
+    protected readonly deactivationTarget = signal<CompanyResponse | null>(null);
+    protected readonly isDeactivationDialogOpen = signal(false);
     protected readonly skeletonRows = SKELETON_ROWS;
     protected readonly activeTagClasses = ACTIVE_TAG_CLASSES;
 
@@ -142,36 +146,42 @@ export class CompanyListComponent {
     }
 
     /**
-     * Asks for confirmation and deactivates the company. Its evaluations and
-     * history are kept.
+     * Opens the pop-up that asks for confirmation before deactivating the company.
      *
      * @param row company to deactivate
      */
-    protected async confirmDeactivate(row: CompanyRow): Promise<void> {
+    protected confirmDeactivate(row: CompanyRow): void {
         if (!row.active || this.isBusy(row.id)) {
             return;
         }
-        const confirmed = await this.dialogService.confirm({
-            title: 'Desactivar empresa',
-            message: `${row.businessName} dejará de recibir formularios y sus colaboradores no podrán autoevaluarse. Las evaluaciones y el historial se conservan, y puede reactivarla cuando quiera.`,
-            confirmLabel: 'Desactivar',
-            destructive: true
-        });
-        if (!confirmed) {
+        this.deactivationTarget.set(row);
+        this.isDeactivationDialogOpen.set(true);
+    }
+
+    /**
+     * Deactivates the company confirmed in the pop-up. Its evaluations and
+     * history are kept.
+     *
+     * @param company company to deactivate
+     */
+    protected deactivate(company: CompanyResponse): void {
+        if (this.isBusy(company.id)) {
             return;
         }
-        this.setBusy(row.id, true);
+        this.setBusy(company.id, true);
         this.companyService
-            .deactivate(row.id)
+            .deactivate(company.id)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: () => {
-                    this.setBusy(row.id, false);
-                    this.toastService.success('Empresa desactivada', row.businessName);
-                    this.updateCompany(row.id, { active: false });
+                    this.setBusy(company.id, false);
+                    this.isDeactivationDialogOpen.set(false);
+                    this.toastService.success('Empresa desactivada', company.businessName);
+                    this.updateCompany(company.id, { active: false });
                 },
                 error: (error: unknown) => {
-                    this.setBusy(row.id, false);
+                    this.setBusy(company.id, false);
+                    this.isDeactivationDialogOpen.set(false);
                     this.toastService.error('No se pudo desactivar', getApiErrorMessage(error, 'Intente de nuevo en unos minutos.'));
                 }
             });

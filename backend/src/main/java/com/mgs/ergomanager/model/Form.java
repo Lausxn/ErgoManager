@@ -1,17 +1,23 @@
 package com.mgs.ergomanager.model;
 
+import com.mgs.ergomanager.model.enums.FormType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
- * Self evaluation form template. Only one form is expected to be active at a
- * time; deactivated forms are kept so that past evaluations stay readable.
+ * Form template of a self evaluation or of a personalized evaluation. Only one
+ * form of each type is expected to be active at a time; deactivated forms are
+ * kept so that past evaluations stay readable.
  */
 @Entity
 @Table(name = "forms")
@@ -30,6 +36,13 @@ public class Form {
 
     @Column(name = "publication_year", nullable = false)
     private Integer publicationYear;
+
+    // Nullable and stored as text so databases updated in place keep their
+    // older forms, which are read as self evaluations.
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "form_type", length = 30)
+    private FormType type = FormType.SELF_EVALUATION;
 
     @Column(name = "active", nullable = false)
     private boolean active = true;
@@ -68,6 +81,14 @@ public class Form {
 
     public void setPublicationYear(Integer publicationYear) {
         this.publicationYear = publicationYear;
+    }
+
+    public FormType getType() {
+        return type == null ? FormType.SELF_EVALUATION : type;
+    }
+
+    public void setType(FormType type) {
+        this.type = type;
     }
 
     public boolean isActive() {

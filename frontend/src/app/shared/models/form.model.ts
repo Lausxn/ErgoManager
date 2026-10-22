@@ -1,41 +1,47 @@
-/** Question sent as part of a form. */
+/** Form categories supported by HU-009. */
+export type FormType = 'SELF_EVALUATION' | 'PERSONALIZED_EVALUATION';
+export interface AnswerOptionRequest {
+    id?: number;
+    label: string;
+    weight: number;
+    optionOrder: number;
+}
+export interface AnswerOptionResponse {
+    id: number;
+    label: string;
+    weight?: number;
+    optionOrder: number;
+}
 export interface QuestionRequest {
-    /** Present when the question already exists, so it is updated instead of replaced. */
     id?: number;
     statement: string;
     questionOrder: number;
-    weight: number;
+    optionList?: AnswerOptionRequest[];
 }
-
-/** Question returned as part of a form. */
 export interface QuestionResponse {
     id: number;
     statement: string;
     questionOrder: number;
-    weight: number;
     active: boolean;
+    optionList?: AnswerOptionResponse[];
 }
-
-/** Body sent to POST and PUT /api/forms. */
 export interface FormRequest {
     title: string;
     description?: string;
     publicationYear: number;
+    type: FormType;
     questionList: QuestionRequest[];
 }
-
-/** Self evaluation form returned by /api/forms. */
 export interface FormResponse {
     id: number;
     title: string;
     description?: string;
     publicationYear: number;
+    type: FormType;
     active: boolean;
     createdAt: string;
     questionList: QuestionResponse[];
 }
-
-/** Answer of POST /api/forms/{id}/resend/{companyId}. */
 export interface FormResendResponse {
     recipientCount: number;
 }

@@ -1,0 +1,47 @@
+<p-dialog
+    [visible]="visible()"
+    (visibleChange)="visible.set($event)"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [dismissableMask]="!isDeactivating()"
+    [closeOnEscape]="!isDeactivating()"
+    [closable]="!isDeactivating()"
+    [showHeader]="false"
+    [focusOnShow]="false"
+    styleClass="deactivate-company-dialog"
+    [style]="{ width: 'min(30rem, calc(100vw - 2rem))' }"
+    ariaLabelledBy="deactivate-company-title"
+>
+    @if (company(); as profile) {
+        <div class="deactivate-company">
+            <div class="deactivate-company__icon" aria-hidden="true">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+
+            <span class="mgs-eyebrow">Desactivar perfil de cliente</span>
+            <h2 id="deactivate-company-title" class="deactivate-company__title">¿Está seguro de desactivar este perfil?</h2>
+
+            <div class="deactivate-company__profile">
+                <p-avatar [label]="initials() || undefined" [icon]="initials() ? undefined : 'fa-solid fa-building'" shape="circle" size="large" styleClass="mgs-avatar" />
+                <div class="deactivate-company__identity">
+                    <strong class="deactivate-company__name">{{ profile.businessName }}</strong>
+                    <span class="deactivate-company__meta">Cédula jurídica {{ profile.taxId }}</span>
+                </div>
+                <p-tag [value]="profile.active ? 'Activa' : 'Inactiva'" [styleClass]="profile.active ? activeTagClasses.active : activeTagClasses.inactive" />
+            </div>
+
+            <ul class="deactivate-company__effects" aria-label="Qué ocurre al desactivar el perfil">
+                <li><i class="fa-solid fa-envelope-circle-check" aria-hidden="true"></i><span>Dejará de recibir formularios de autoevaluación.</span></li>
+                <li><i class="fa-solid fa-user-lock" aria-hidden="true"></i><span>Sus colaboradores no podrán responder desde el enlace de la empresa.</span></li>
+                <li><i class="fa-solid fa-calendar-xmark" aria-hidden="true"></i><span>No se podrán agendar citas ni registrar evaluaciones personalizadas de sus colaboradores.</span></li>
+                <li><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i><span>Las evaluaciones y el historial se conservan, y puede reactivarla cuando quiera.</span></li>
+            </ul>
+
+            <div class="deactivate-company__actions">
+                <p-button label="Cancelar" severity="secondary" [outlined]="true" [disabled]="isDeactivating()" (onClick)="cancel()" />
+                <p-button [label]="isDeactivating() ? 'Desactivando...' : 'Desactivar'" icon="fa-solid fa-ban" [loading]="isDeactivating()" (onClick)="confirm()" />
+            </div>
+        </div>
+    }
+</p-dialog>

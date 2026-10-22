@@ -4,6 +4,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 import com.jayway.jsonpath.JsonPath;
+import com.mgs.ergomanager.model.AnswerOption;
 import com.mgs.ergomanager.model.Availability;
 import com.mgs.ergomanager.model.Company;
 import com.mgs.ergomanager.model.Form;
@@ -12,6 +13,7 @@ import com.mgs.ergomanager.model.SelfEvaluation;
 import com.mgs.ergomanager.model.User;
 import com.mgs.ergomanager.model.enums.RiskLevel;
 import com.mgs.ergomanager.model.enums.Role;
+import com.mgs.ergomanager.repository.AnswerOptionRepository;
 import com.mgs.ergomanager.repository.AvailabilityRepository;
 import com.mgs.ergomanager.repository.CompanyRepository;
 import com.mgs.ergomanager.repository.FormRepository;
@@ -65,6 +67,9 @@ abstract class ApiIntegrationTestSupport {
 
     @Autowired
     protected QuestionRepository questionRepository;
+
+    @Autowired
+    protected AnswerOptionRepository answerOptionRepository;
 
     @Autowired
     protected SelfEvaluationRepository selfEvaluationRepository;
@@ -122,7 +127,23 @@ abstract class ApiIntegrationTestSupport {
             questions.add(question);
         }
         questionRepository.saveAllAndFlush(questions);
+        List<AnswerOption> options = new ArrayList<>();
+        for (Question question : questions) {
+            options.add(newOption(question, "Bajo", 1));
+            options.add(newOption(question, "Medio", 2));
+            options.add(newOption(question, "Alto", 3));
+        }
+        answerOptionRepository.saveAllAndFlush(options);
         return form;
+    }
+
+    private static AnswerOption newOption(Question question, String label, int weight) {
+        AnswerOption option = new AnswerOption();
+        option.setQuestion(question);
+        option.setLabel(label);
+        option.setWeight(weight);
+        option.setOptionOrder(weight);
+        return option;
     }
 
     protected List<Question> questionsOf(Form form) {

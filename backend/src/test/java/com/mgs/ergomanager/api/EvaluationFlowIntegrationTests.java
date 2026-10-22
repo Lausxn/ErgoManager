@@ -9,11 +9,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.lowagie.text.pdf.PdfReader;
+import com.lowagie.text.pdf.parser.PdfTextExtractor;
+import com.mgs.ergomanager.model.AnswerOption;
 import com.mgs.ergomanager.model.Availability;
 import com.mgs.ergomanager.model.Company;
 import com.mgs.ergomanager.model.Form;
 import com.mgs.ergomanager.model.Question;
 import com.mgs.ergomanager.model.User;
+import com.mgs.ergomanager.model.enums.FormType;
 import com.mgs.ergomanager.model.enums.Role;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -41,6 +45,8 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
     private Company company;
     private Form form;
     private List<Question> questions;
+    private Form personalizedForm;
+    private List<Question> personalizedQuestions;
 
     @BeforeEach
     void createData() {
@@ -48,20 +54,36 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
         ergonomist = persistUser("ergo.flow@example.test", Role.ERGONOMIST);
         otherErgonomist = persistUser("otro.flow@example.test", Role.ERGONOMIST);
         company = persistCompany("Flujo S.A.", "3-101-000200", true);
-        // Weights 1, 2 and 3: the highest weighted score is 3 * 6 = 18.
-        form = persistForm("Postura", 1, 2, 3);
+        // Three questions, each with the answers Bajo (1), Medio (2) and Alto (3).
+        form = persistForm("Postura", 1, 1, 1);
         questions = questionsOf(form);
+        personalizedForm = persistPersonalizedForm("Entrevista ergonómica", "Postura frente a la pantalla",
+                "Distribución del escritorio");
+        personalizedQuestions = questionsOf(personalizedForm);
     }
 
     // ----- helpers -----
 
-    private Map<String, Object> selfEvaluationBody(Long companyId, int... scores) {
+    /**
+     * Returns the predefined answer of a question that has the given weight.
+     *
+     * @param question question of the form
+     * @param weight   weight of the answer, from 1 to 3
+     * @return the predefined answer
+     */
+    private AnswerOption optionOf(Question question, int weight) {
+        return answerOptionRepository.findByQuestionIdIn(List.of(question.getId())).stream()
+                .filter(option -> option.getWeight() == weight)
+                .findFirst()
+                .orElseThrow();
+    }
+
+    private Map<String, Object> selfEvaluationBody(Long companyId, int... weights) {
         List<Map<String, Object>> answers = new ArrayList<>();
-        for (int index = 0; index < scores.length; index++) {
+        for (int index = 0; index < weights.length; index++) {
             Map<String, Object> answer = new HashMap<>();
             answer.put("questionId", questions.get(index).getId());
-            answer.put("selectedOption", "Opción " + scores[index]);
-            answer.put("score", scores[index]);
+            answer.put("optionId", optionOf(questions.get(index), weights[index]).getId());
             answers.add(answer);
         }
         Map<String, Object> body = new HashMap<>();
@@ -74,10 +96,10 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
         return body;
     }
 
-    private long submitSelfEvaluation(int... scores) throws Exception {
+    private long submitSelfEvaluation(int... weights) throws Exception {
         MvcResult result = mvc.perform(post("/api/self-evaluations")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(selfEvaluationBody(company.getId(), scores))))
+                        .content(toJson(selfEvaluationBody(company.getId(), weights))))
                 .andExpect(status().isCreated())
                 .andReturn();
         return idOf(result);
@@ -109,13 +131,68 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
                 .content(toJson(body));
     }
 
-    private MockHttpServletRequestBuilder evaluationRequest(long appointmentId) {
+    /**
+     * Stores an active personalized evaluation form with the given questions.
+     *
+     * @param title      name of the form
+     * @param statements texts of the questions, in order
+     * @return the stored form
+     */
+    private Form persistPersonalizedForm(String title, String... statements) {
+        Form personalized = persistForm(title);
+        personalized.setType(FormType.PERSONALIZED_EVALUATION);
+        formRepository.saveAndFlush(personalized);
+        List<Question> created = new ArrayList<>();
+        for (int index = 0; index < statements.length; index++) {
+            Question question = new Question();
+            question.setForm(personalized);
+            question.setStatement(statements[index]);
+            question.setQuestionOrder(index + 1);
+            created.add(question);
+        }
+        questionRepository.saveAllAndFlush(created);
+        return personalized;
+    }
+
+    private static Map<String, Object> personalizedAnswer(Question question, String diagnosis, String recommendation) {
+        Map<String, Object> answer = new HashMap<>();
+        answer.put("questionId", question.getId());
+        answer.put("diagnosis", diagnosis);
+        answer.put("recommendation", recommendation);
+        return answer;
+    }
+
+    private Map<String, Object> evaluationBody(long appointmentId) {
         Map<String, Object> body = new HashMap<>();
         body.put("appointmentId", appointmentId);
-        body.put("diagnosis", "Postura encorvada frente al monitor.");
-        body.put("recommendations", "Elevar el monitor y usar reposapiés.");
-        body.put("riskLevel", "HIGH");
+        body.put("formId", personalizedForm.getId());
+        body.put("answerList", new ArrayList<>(List.of(
+                personalizedAnswer(personalizedQuestions.get(0), " Postura encorvada frente al monitor. ",
+                        "Elevar el monitor a la altura de los ojos."),
+                personalizedAnswer(personalizedQuestions.get(1), "Teclado lejos del cuerpo.",
+                        "Acercar el teclado y usar reposamuñecas."))));
+        return body;
+    }
+
+    private MockHttpServletRequestBuilder evaluationRequest(Map<String, Object> body) {
         return post("/api/personalized-evaluations").contentType(MediaType.APPLICATION_JSON).content(toJson(body));
+    }
+
+    private MockHttpServletRequestBuilder evaluationRequest(long appointmentId) {
+        return evaluationRequest(evaluationBody(appointmentId));
+    }
+
+    /**
+     * Books an appointment with the ergonomist for a new self evaluation.
+     *
+     * @param daysAhead day of the appointment, to keep the slots of each test apart
+     * @return identifier of the appointment
+     */
+    private long bookAppointment(int daysAhead) throws Exception {
+        long selfEvaluationId = submitSelfEvaluation(2, 2, 2);
+        Availability slot = persistAvailability(ergonomist, futureAt(daysAhead, 8), futureAt(daysAhead, 9));
+        return idOf(mvc.perform(bookingRequest(selfEvaluationId, slot.getId()).with(as(admin)))
+                .andExpect(status().isCreated()).andReturn());
     }
 
     private MockHttpServletRequestBuilder withRange(MockHttpServletRequestBuilder request, Long userId) {
@@ -126,38 +203,45 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
 
     // ----- self evaluations -----
 
+    // Average = total / 3 questions; percentage = (average - 1) / 2 * 100. The rows
+    // 2-1-2 and 3-2-2 fall exactly on the limits between levels.
     @ParameterizedTest
     @CsvSource({
-            "0, 0, 0, 0, LOW",
-            "0, 0, 1, 3, LOW",
-            "1, 1, 1, 6, MEDIUM",
-            "3, 0, 2, 9, HIGH",
-            "3, 3, 2, 15, CRITICAL",
-            "3, 3, 3, 18, CRITICAL"
+            "1, 1, 1, 3, 1.0, 0.0, LOW",
+            "1, 1, 2, 4, 1.33, 16.67, LOW",
+            "2, 1, 2, 5, 1.67, 33.33, MEDIUM",
+            "2, 2, 2, 6, 2.0, 50.0, MEDIUM",
+            "3, 2, 2, 7, 2.33, 66.67, HIGH",
+            "3, 3, 3, 9, 3.0, 100.0, HIGH"
     })
-    void calculatesWeightedScoreAndRiskLevel(int first, int second, int third, int total, String risk)
+    void calculatesTheRiskLevelFromTheAverageWeight(int first, int second, int third, int total,
+                                                    double average, double percentage, String risk)
             throws Exception {
         mvc.perform(post("/api/self-evaluations")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(selfEvaluationBody(company.getId(), first, second, third))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("totalScore").value(total))
+                .andExpect(jsonPath("averageScore").value(average))
+                .andExpect(jsonPath("riskPercentage").value(percentage))
                 .andExpect(jsonPath("riskLevel").value(risk))
                 .andExpect(jsonPath("employeeEmail").value("ana.mora@flujo.test"))
                 .andExpect(jsonPath("employeeName").value("Ana Mora"))
                 .andExpect(jsonPath("answerList.length()").value(3))
-                .andExpect(jsonPath("answerList[0].statement").value("Pregunta 1"));
+                .andExpect(jsonPath("answerList[0].statement").value("Pregunta 1"))
+                .andExpect(jsonPath("answerList[0].optionId").value(optionOf(questions.get(0), first).getId()))
+                .andExpect(jsonPath("answerList[0].score").value(first));
     }
 
     @Test
     void submissionCreatesHistoryEntry() throws Exception {
-        long id = submitSelfEvaluation(1, 1, 1);
+        long id = submitSelfEvaluation(2, 2, 2);
         mvc.perform(get("/api/histories").param("companyId", String.valueOf(company.getId())).with(as(admin)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].selfEvaluationId").value(id))
                 .andExpect(jsonPath("$[0].companyName").value("Flujo S.A."))
                 .andExpect(jsonPath("$[0].employeeEmail").value("ana.mora@flujo.test"))
-                .andExpect(jsonPath("$[0].description").value("Autoevaluación \"Postura\" enviada. Riesgo Medio (6 pts)."))
+                .andExpect(jsonPath("$[0].description").value("Autoevaluación \"Postura\" enviada. Riesgo Medio (50 %)."))
                 .andExpect(jsonPath("$[0].type").value("SELF_EVALUATION"));
     }
 
@@ -176,10 +260,57 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("message").value("Responda todas las preguntas del formulario."));
 
-        mvc.perform(post("/api/self-evaluations").contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(selfEvaluationBody(company.getId(), 1, 4, 1))))
+        Map<String, Object> withoutOption = selfEvaluationBody(company.getId(), 1, 1, 1);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> withoutOptionAnswers = (List<Map<String, Object>>) withoutOption.get("answerList");
+        withoutOptionAnswers.get(1).remove("optionId");
+        mvc.perform(post("/api/self-evaluations").contentType(MediaType.APPLICATION_JSON).content(toJson(withoutOption)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("fieldErrors['answerList[1].score']").value("El puntaje debe estar entre 0 y 3."));
+                .andExpect(jsonPath("fieldErrors['answerList[1].optionId']").value("Seleccione una respuesta."));
+    }
+
+    @Test
+    void theChosenAnswerMustBelongToItsActiveQuestion() throws Exception {
+        Map<String, Object> foreign = selfEvaluationBody(company.getId(), 1, 1, 1);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> answers = (List<Map<String, Object>>) foreign.get("answerList");
+        answers.get(1).put("optionId", optionOf(questions.get(2), 3).getId());
+        mvc.perform(post("/api/self-evaluations").contentType(MediaType.APPLICATION_JSON).content(toJson(foreign)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("message").value("La respuesta seleccionada no corresponde a la pregunta 2."));
+
+        AnswerOption hidden = optionOf(questions.get(0), 3);
+        hidden.setActive(false);
+        answerOptionRepository.flush();
+        mvc.perform(post("/api/self-evaluations").contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(selfEvaluationBody(company.getId(), 3, 1, 1))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("message").value("La respuesta seleccionada no corresponde a la pregunta 1."));
+    }
+
+    @Test
+    void keepsTheAnswerAsTheEmployeeSawItWhenTheFormIsEditedLater() throws Exception {
+        long id = submitSelfEvaluation(3, 1, 1);
+        AnswerOption chosen = optionOf(questions.get(0), 3);
+        chosen.setLabel("Texto editado");
+        chosen.setWeight(1);
+        answerOptionRepository.flush();
+
+        mvc.perform(get("/api/self-evaluations/{id}", id).with(as(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("totalScore").value(5))
+                .andExpect(jsonPath("answerList[0].selectedOption").value("Alto"))
+                .andExpect(jsonPath("answerList[0].score").value(3));
+    }
+
+    @Test
+    void aPersonalizedEvaluationFormCannotBeAnsweredAsASelfEvaluation() throws Exception {
+        form.setType(FormType.PERSONALIZED_EVALUATION);
+        formRepository.flush();
+        mvc.perform(post("/api/self-evaluations").contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(selfEvaluationBody(company.getId(), 1, 1, 1))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("message").value("Este formulario no es una autoevaluación."));
     }
 
     @Test
@@ -202,7 +333,7 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
 
     @Test
     void readingSelfEvaluationsRequiresSignIn() throws Exception {
-        long older = submitSelfEvaluation(0, 0, 0);
+        long older = submitSelfEvaluation(1, 1, 1);
         long newer = submitSelfEvaluation(3, 3, 3);
         mvc.perform(get("/api/self-evaluations/{id}", older)).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/self-evaluations/{id}", older).with(as(ergonomist)))
@@ -440,6 +571,35 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
 
         mvc.perform(rescheduleRequest(appointmentId, newSlot.getId()))
                 .andExpect(status().isUnauthorized());
+      }
+
+    @Test
+    void inactiveCompanyCannotBeUsedButKeepsItsHistory() throws Exception {
+        long selfEvaluationId = submitSelfEvaluation(3, 3, 3);
+        Availability slot = persistAvailability(ergonomist, futureAt(10, 8), futureAt(10, 9));
+        Availability otherSlot = persistAvailability(ergonomist, futureAt(10, 10), futureAt(10, 11));
+        long appointmentId = idOf(mvc.perform(bookingRequest(selfEvaluationId, slot.getId()).with(as(admin)))
+                .andExpect(status().isCreated()).andReturn());
+
+        mvc.perform(delete("/api/companies/{id}", company.getId()).with(as(admin)))
+                .andExpect(status().isNoContent());
+
+        mvc.perform(evaluationRequest(appointmentId).with(as(ergonomist)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("message").value("La empresa está inactiva. No se pueden registrar evaluaciones."));
+        mvc.perform(patch("/api/appointments/{id}/cancel", appointmentId).with(as(admin)))
+                .andExpect(status().isOk());
+        mvc.perform(bookingRequest(selfEvaluationId, otherSlot.getId()).with(as(admin)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("message").value("La empresa está inactiva. No se pueden agendar citas."));
+
+        // The profile is not deleted: it is still listed and its history can be read.
+        mvc.perform(get("/api/companies/{id}", company.getId()).with(as(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("active").value(false));
+        mvc.perform(get("/api/histories").param("companyId", String.valueOf(company.getId())).with(as(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3));
     }
 
     @Test
@@ -459,6 +619,84 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
                 .andExpect(status().isForbidden());
         mvc.perform(withRange(get("/api/appointments"), ergonomist.getId())).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/appointments").with(as(admin))).andExpect(status().isBadRequest());
+    }
+
+    // ----- personalized evaluations -----
+
+    @Test
+    void thePersonalizedEvaluationNeedsADiagnosisAndARecommendationForEveryQuestion() throws Exception {
+        long appointmentId = bookAppointment(20);
+
+        Map<String, Object> missing = evaluationBody(appointmentId);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> missingAnswers = (List<Map<String, Object>>) missing.get("answerList");
+        missingAnswers.remove(1);
+        mvc.perform(evaluationRequest(missing).with(as(ergonomist)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("message").value("Complete el diagnóstico y la recomendación de todas las preguntas."));
+
+        Map<String, Object> foreign = evaluationBody(appointmentId);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> foreignAnswers = (List<Map<String, Object>>) foreign.get("answerList");
+        foreignAnswers.set(1, personalizedAnswer(questions.get(0), "Diagnóstico", "Recomendación"));
+        mvc.perform(evaluationRequest(foreign).with(as(ergonomist)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("message").value("Complete el diagnóstico y la recomendación de todas las preguntas."));
+
+        Map<String, Object> blank = evaluationBody(appointmentId);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blankAnswers = (List<Map<String, Object>>) blank.get("answerList");
+        blankAnswers.set(0, personalizedAnswer(personalizedQuestions.get(0), "  ", null));
+        blank.remove("formId");
+        mvc.perform(evaluationRequest(blank).with(as(ergonomist)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("fieldErrors['answerList[0].diagnosis']").value("Este campo es obligatorio."))
+                .andExpect(jsonPath("fieldErrors['answerList[0].recommendation']").value("Este campo es obligatorio."))
+                .andExpect(jsonPath("fieldErrors.formId").value("Este campo es obligatorio."));
+
+        // Nothing was stored and the appointment is still pending.
+        mvc.perform(withRange(get("/api/appointments"), ergonomist.getId()).with(as(ergonomist)))
+                .andExpect(jsonPath("$[0].status").value("SCHEDULED"));
+    }
+
+    @Test
+    void thePersonalizedEvaluationUsesTheActivePersonalizedForm() throws Exception {
+        long appointmentId = bookAppointment(21);
+
+        Map<String, Object> selfEvaluationForm = evaluationBody(appointmentId);
+        selfEvaluationForm.put("formId", form.getId());
+        mvc.perform(evaluationRequest(selfEvaluationForm).with(as(ergonomist)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("message").value("El formulario seleccionado no es una evaluación personalizada."));
+
+        Map<String, Object> unknownForm = evaluationBody(appointmentId);
+        unknownForm.put("formId", 999_999L);
+        mvc.perform(evaluationRequest(unknownForm).with(as(ergonomist)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("message").value("El formulario seleccionado no existe."));
+
+        personalizedForm.setActive(false);
+        formRepository.flush();
+        mvc.perform(evaluationRequest(appointmentId).with(as(ergonomist)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("message").value("El formulario seleccionado no está activo."));
+    }
+
+    @Test
+    void keepsTheQuestionAsItWasWhenThePersonalizedFormIsEditedLater() throws Exception {
+        long appointmentId = bookAppointment(22);
+        long evaluationId = idOf(mvc.perform(evaluationRequest(appointmentId).with(as(ergonomist)))
+                .andExpect(status().isCreated()).andReturn());
+
+        Question edited = personalizedQuestions.get(0);
+        edited.setStatement("Texto editado");
+        edited.setQuestionOrder(5);
+        questionRepository.flush();
+
+        mvc.perform(get("/api/personalized-evaluations/{id}", evaluationId).with(as(ergonomist)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("answerList[0].statement").value("Postura frente a la pantalla"))
+                .andExpect(jsonPath("answerList[0].questionOrder").value(1));
     }
 
     // ----- full flow -----
@@ -483,7 +721,14 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("appointmentId").value(appointmentId))
                 .andExpect(jsonPath("userId").value(ergonomist.getId()))
-                .andExpect(jsonPath("riskLevel").value("HIGH"))
+                .andExpect(jsonPath("riskLevel").doesNotExist())
+                .andExpect(jsonPath("formId").value(personalizedForm.getId()))
+                .andExpect(jsonPath("formTitle").value("Entrevista ergonómica"))
+                .andExpect(jsonPath("answerList.length()").value(2))
+                .andExpect(jsonPath("answerList[0].questionOrder").value(1))
+                .andExpect(jsonPath("answerList[0].statement").value("Postura frente a la pantalla"))
+                .andExpect(jsonPath("answerList[0].diagnosis").value("Postura encorvada frente al monitor."))
+                .andExpect(jsonPath("answerList[1].recommendation").value("Acercar el teclado y usar reposamuñecas."))
                 .andExpect(jsonPath("employeeName").value("Ana Mora"))
                 .andExpect(jsonPath("employeeEmail").value("ana.mora@flujo.test"))
                 .andExpect(jsonPath("companyName").value("Flujo S.A."))
@@ -505,7 +750,7 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
         // Reading: admin any, ergonomist only their own; the list is for ergonomists.
         mvc.perform(get("/api/personalized-evaluations/{id}", evaluationId).with(as(admin)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("diagnosis").value("Postura encorvada frente al monitor."));
+                .andExpect(jsonPath("answerList[0].diagnosis").value("Postura encorvada frente al monitor."));
         mvc.perform(get("/api/personalized-evaluations/{id}", evaluationId).with(as(ergonomist)))
                 .andExpect(status().isOk());
         mvc.perform(get("/api/personalized-evaluations/{id}", evaluationId).with(as(otherErgonomist)))
@@ -516,7 +761,8 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
                         .with(as(ergonomist)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].id").value(evaluationId));
+                .andExpect(jsonPath("$[0].id").value(evaluationId))
+                .andExpect(jsonPath("$[0].answerList.length()").value(2));
         mvc.perform(get("/api/personalized-evaluations").param("userId", String.valueOf(ergonomist.getId()))
                         .with(as(otherErgonomist)))
                 .andExpect(status().isForbidden());
@@ -534,6 +780,13 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
             byte[] pdf = report.getResponse().getContentAsByteArray();
             assertThat(pdf.length).isGreaterThan(500);
             assertThat(new String(pdf, 0, 4, StandardCharsets.US_ASCII)).isEqualTo("%PDF");
+            String text = new PdfTextExtractor(new PdfReader(pdf)).getTextFromPage(1);
+            assertThat(text)
+                    .contains("Entrevista ergonómica")
+                    .contains("1. Postura frente a la pantalla")
+                    .contains("Diagnóstico: Postura encorvada frente al monitor.")
+                    .contains("Recomendación: Acercar el teclado y usar reposamuñecas.")
+                    .doesNotContain("Nivel de riesgo");
             assertThat(report.getResponse().getHeader("Content-Disposition"))
                     .contains("personalized-evaluation-" + evaluationId + ".pdf");
         }
@@ -544,7 +797,7 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
         mvc.perform(get("/api/histories/employees/{email}", " Ana.Mora@Flujo.test ").with(as(ergonomist)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(3))
-                .andExpect(jsonPath("$[0].description").value("Evaluación personalizada registrada. Riesgo Alto."))
+                .andExpect(jsonPath("$[0].description").value("Evaluación personalizada \"Entrevista ergonómica\" registrada."))
                 .andExpect(jsonPath("$[0].personalizedEvaluationId").value(evaluationId))
                 .andExpect(jsonPath("$[0].selfEvaluationId").value(selfEvaluationId))
                 .andExpect(jsonPath("$[0].type").value("PERSONALIZED_EVALUATION"))
@@ -553,7 +806,7 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
                 .andExpect(jsonPath("$[1].description").value(org.hamcrest.Matchers.startsWith("Cita agendada para el ")))
                 .andExpect(jsonPath("$[1].description").value(org.hamcrest.Matchers.endsWith(" con Nombre Ergo.")))
                 .andExpect(jsonPath("$[2].description")
-                        .value("Autoevaluación \"Postura\" enviada. Riesgo Crítico (15 pts)."));
+                        .value("Autoevaluación \"Postura\" enviada. Riesgo Alto (83 %)."));
         mvc.perform(get("/api/histories").param("companyId", String.valueOf(company.getId())).with(as(admin)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(3))

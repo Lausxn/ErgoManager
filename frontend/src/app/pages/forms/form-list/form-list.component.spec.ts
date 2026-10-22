@@ -1,0 +1,212 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideRouter } from '@angular/router';
+
+import { environment } from '../../../../environments/environment';
+import { FormListComponent } from './form-list.component';
+import { FormSection } from '../form-navigation/form-navigation.component';
+import { formsRoutes } from '../forms.routes';
+
+const FORMS_URL = `${environment.apiUrl}/forms`;
+
+describe('Gestión de formularios', () => {
+    let fixture: ComponentFixture<FormListComponent>;
+    let http: HttpTestingController;
+
+    beforeEach(() => {
+        TestBed.configureTestingModule({
+            imports: [FormListComponent],
+            providers: [provideRouter([]), provideNoopAnimations(), provideHttpClient(), provideHttpClientTesting()]
+        });
+        http = TestBed.inject(HttpTestingController);
+    });
+
+    afterEach(() => http.verify());
+
+    function open(section: FormSection): HTMLElement {
+        fixture = TestBed.createComponent(FormListComponent);
+        fixture.componentRef.setInput('section', section);
+        fixture.detectChanges();
+        return fixture.nativeElement;
+    }
+
+    it('muestra dos pestañas, el listado y un único botón de creación incluso sin registros', () => {
+        const element = open('self-evaluation');
+        http.expectOne(FORMS_URL).flush([]);
+        fixture.detectChanges();
+        const links = Array.from(element.querySelectorAll<HTMLAnchorElement>('nav a'));
+        expect(links.map((link) => link.getAttribute('href'))).toEqual(['/forms/self-evaluation', '/forms/personalized']);
+        expect(links[0].getAttribute('aria-current')).toBe('page');
+        const createButtons = Array.from(element.querySelectorAll('button')).filter((button) => button.textContent?.trim() === 'Crear formulario');
+        expect(createButtons.length).toBe(1);
+        expect(element.querySelector('p-table')).not.toBeNull();
+        expect(element.textContent).not.toContain('Ver autoevaluaciones');
+    });
+
+    it('muestra autoevaluaciones y acciones para ambos estados', () => {
+        const element = open('self-evaluation');
+        http.expectOne(FORMS_URL).flush([
+            { id: 1, title: 'Puesto de trabajo', publicationYear: 2026, type: 'SELF_EVALUATION', active: true, questionList: [] },
+            { id: 2, title: 'Seguimiento', publicationYear: 2025, type: 'SELF_EVALUATION', active: false, questionList: [] }
+        ]);
+        fixture.detectChanges();
+        expect(element.textContent).toContain('Puesto de trabajo');
+        expect(element.textContent).toContain('Seguimiento');
+        expect(element.querySelector('button[aria-label="Desactivar formulario"]')).not.toBeNull();
+        expect(element.querySelector('button[aria-label="Activar formulario"]')).not.toBeNull();
+    });
+
+    it('separa los formularios personalizados y no ofrece reenviarlos', () => {
+        const element = open('personalized');
+        http.expectOne(FORMS_URL).flush([
+            { id: 1, title: 'Autoevaluación', type: 'SELF_EVALUATION', active: true, questionList: [] },
+            { id: 2, title: 'Evaluación individual', type: 'PERSONALIZED_EVALUATION', active: true, questionList: [] },
+            { id: 3, title: 'Borrador individual', type: 'PERSONALIZED_EVALUATION', active: false, questionList: [] }
+        ]);
+        fixture.detectChanges();
+        expect(element.textContent).toContain('Evaluación individual');
+        expect(element.textContent).toContain('Borrador individual');
+        expect(fixture.componentInstance['filteredRows']().map((row) => row.id)).toEqual([2, 3]);
+        expect(element.querySelector('button[aria-label="Reenviar formulario a una empresa"]')).toBeNull();
+        expect(element.querySelector('button[aria-label="Activar formulario"]')).not.toBeNull();
+        expect(element.querySelector('button[aria-label="Desactivar formulario"]')).not.toBeNull();
+    });
+
+    it('conserva el activo de cada tipo y presenta el rechazo del backend al activar otro', () => {
+        open('self-evaluation');
+        http.expectOne(FORMS_URL).flush([
+            { id: 1, title: 'Auto', type: 'SELF_EVALUATION', active: true, questionList: [] },
+            { id: 2, title: 'Personal', type: 'PERSONALIZED_EVALUATION', active: true, questionList: [] },
+            { id: 3, title: 'Draft', type: 'SELF_EVALUATION', active: false, questionList: [] }
+        ]);
+        expect(fixture.componentInstance['rows']().map((row) => row.id)).toEqual([1, 3]);
+        const toast = spyOn(fixture.componentInstance['toastService'], 'error');
+        fixture.componentInstance['activate'](fixture.componentInstance['rows']()[1]);
+        http.expectOne(`${FORMS_URL}/3/activate`).flush({ message: 'Ya existe una autoevaluación activa. Desactívela antes de activar otra.' }, { status: 400, statusText: 'Business rule' });
+        expect(toast).toHaveBeenCalledWith('No se pudo activar', 'Ya existe una autoevaluación activa. Desactívela antes de activar otra.');
+        expect(fixture.componentInstance['isBusy'](3)).toBeFalse();
+    });
+
+    it('conecta la acción de activar con PATCH y actualiza el estado del formulario', () => {
+        open('self-evaluation');
+        http.expectOne(FORMS_URL).flush([{ id: 4, title: 'Autoevaluación borrador', publicationYear: 2026, type: 'SELF_EVALUATION', active: false, questionList: [] }]);
+
+        const row = fixture.componentInstance['rows']()[0];
+        const toast = spyOn(fixture.componentInstance['toastService'], 'success');
+
+        fixture.componentInstance['activate'](row);
+
+        const request = http.expectOne(`${FORMS_URL}/4/activate`);
+        expect(request.request.method).toBe('PATCH');
+        expect(request.request.body).toEqual({});
+
+        request.flush({
+            id: 4,
+            title: 'Autoevaluación borrador',
+            publicationYear: 2026,
+            type: 'SELF_EVALUATION',
+            active: true,
+            questionList: []
+        });
+
+        expect(fixture.componentInstance['rows']()[0].active).toBeTrue();
+        expect(fixture.componentInstance['isBusy'](4)).toBeFalse();
+        expect(toast).toHaveBeenCalledWith('Formulario activado', 'Autoevaluación borrador');
+    });
+
+    it('conecta la acción de desactivar con DELETE después de la confirmación', async () => {
+        open('self-evaluation');
+        http.expectOne(FORMS_URL).flush([{ id: 5, title: 'Autoevaluación activa', publicationYear: 2026, type: 'SELF_EVALUATION', active: true, questionList: [] }]);
+
+        const row = fixture.componentInstance['rows']()[0];
+        spyOn(fixture.componentInstance['dialogService'], 'confirm').and.resolveTo(true);
+        const toast = spyOn(fixture.componentInstance['toastService'], 'success');
+
+        await fixture.componentInstance['confirmDeactivate'](row);
+
+        const request = http.expectOne(`${FORMS_URL}/5`);
+        expect(request.request.method).toBe('DELETE');
+
+        request.flush(null);
+
+        expect(fixture.componentInstance['rows']()[0].active).toBeFalse();
+        expect(fixture.componentInstance['isBusy'](5)).toBeFalse();
+        expect(toast).toHaveBeenCalledWith('Formulario desactivado', 'Autoevaluación activa');
+    });
+
+    it('no llama al backend cuando se cancela la desactivación', async () => {
+        open('self-evaluation');
+        http.expectOne(FORMS_URL).flush([{ id: 6, title: 'Formulario activo', publicationYear: 2026, type: 'SELF_EVALUATION', active: true, questionList: [] }]);
+
+        const row = fixture.componentInstance['rows']()[0];
+        spyOn(fixture.componentInstance['dialogService'], 'confirm').and.resolveTo(false);
+
+        await fixture.componentInstance['confirmDeactivate'](row);
+
+        http.expectNone(`${FORMS_URL}/6`);
+        expect(fixture.componentInstance['rows']()[0].active).toBeTrue();
+    });
+
+    it('conecta el reenvío con POST y muestra la cantidad de correos enviados', () => {
+        open('self-evaluation');
+        http.expectOne(FORMS_URL).flush([{ id: 7, title: 'Autoevaluación anual', publicationYear: 2026, type: 'SELF_EVALUATION', active: true, questionList: [] }]);
+
+        const row = fixture.componentInstance['rows']()[0];
+        fixture.componentInstance['resendForm'].set(row);
+        fixture.componentInstance['selectedCompanyId'].set(15);
+        fixture.componentInstance['resendVisible'].set(true);
+        const toast = spyOn(fixture.componentInstance['toastService'], 'success');
+
+        fixture.componentInstance['sendResend']();
+
+        const request = http.expectOne(`${FORMS_URL}/7/resend/15`);
+        expect(request.request.method).toBe('POST');
+        expect(request.request.body).toEqual({});
+
+        request.flush({ recipientCount: 3 });
+
+        expect(fixture.componentInstance['isSending']()).toBeFalse();
+        expect(fixture.componentInstance['resendVisible']()).toBeFalse();
+        expect(toast).toHaveBeenCalledWith('Formulario reenviado', 'Se envió a 3 correo(s).');
+    });
+
+    it('mantiene abierto el diálogo y muestra error cuando falla el reenvío', () => {
+        open('self-evaluation');
+        http.expectOne(FORMS_URL).flush([{ id: 8, title: 'Autoevaluación anual', publicationYear: 2026, type: 'SELF_EVALUATION', active: true, questionList: [] }]);
+
+        const row = fixture.componentInstance['rows']()[0];
+        fixture.componentInstance['resendForm'].set(row);
+        fixture.componentInstance['selectedCompanyId'].set(18);
+        fixture.componentInstance['resendVisible'].set(true);
+        const toast = spyOn(fixture.componentInstance['toastService'], 'error');
+
+        fixture.componentInstance['sendResend']();
+
+        http.expectOne(`${FORMS_URL}/8/resend/18`).flush({ message: 'No se pudo realizar el reenvío.' }, { status: 500, statusText: 'Server error' });
+
+        expect(fixture.componentInstance['isSending']()).toBeFalse();
+        expect(fixture.componentInstance['resendVisible']()).toBeTrue();
+        expect(toast).toHaveBeenCalledWith('No se pudo reenviar', 'No se pudo realizar el reenvío.');
+    });
+
+    it('permite reintentar cuando falla la carga del listado', () => {
+        const element = open('self-evaluation');
+        http.expectOne(FORMS_URL).flush({}, { status: 503, statusText: 'Unavailable' });
+        fixture.detectChanges();
+        expect(element.textContent).toContain('No se pudieron cargar los formularios');
+        const retry = Array.from(element.querySelectorAll('button')).find((button) => button.textContent?.includes('Reintentar'))!;
+        retry.click();
+        http.expectOne(FORMS_URL).flush([]);
+    });
+
+    it('abre autoevaluaciones en la ruta principal y mantiene la precedencia de rutas', () => {
+        expect(formsRoutes.find((route) => route.path === '')?.data?.['section']).toBe('self-evaluation');
+        const paths = formsRoutes.map((route) => route.path);
+        for (const path of ['self-evaluation', 'personalized', 'personalized/new']) {
+            expect(paths.indexOf(path)).toBeLessThan(paths.indexOf(':id'));
+        }
+        expect(formsRoutes.find((route) => route.path === 'personalized/new')?.data?.['category']).toBe('personalized');
+    });
+});

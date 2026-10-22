@@ -79,6 +79,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
                         .requestMatchers("/api/forms/**").hasAnyRole("ADMIN", "ERGONOMIST")
                         .requestMatchers("/api/dashboard/**").hasRole("ADMIN")
+                        // Reports of both roles; an ergonomist only sees their own personalized evaluations.
+                        .requestMatchers("/api/reports/**").hasAnyRole("ADMIN", "ERGONOMIST")
                         // Only ergonomists write evaluations and list their own; admins can read
                         // a single evaluation and its report. Ownership is checked by the service.
                         .requestMatchers(HttpMethod.POST, "/api/personalized-evaluations").hasRole("ERGONOMIST")
