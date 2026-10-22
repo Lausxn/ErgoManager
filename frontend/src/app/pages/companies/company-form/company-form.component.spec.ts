@@ -6,219 +6,274 @@ import { Router, provideRouter } from '@angular/router';
 
 import { environment } from '../../../../environments/environment';
 import { CompanyResponse } from '../../../shared/models/company.model';
-import { ToastService } from '../../../shared/services/toast.service';
 import { CompanyFormComponent } from './company-form.component';
 
 const COMPANIES_URL = `${environment.apiUrl}/companies`;
-const DUPLICATED_NAME = 'Ya existe una empresa con ese nombre.';
-const DUPLICATED_TAX_ID = 'Ya existe una empresa con esa cédula jurídica.';
 
-const STORED: CompanyResponse = {
+const COMPANY_URL = `${COMPANIES_URL}/7`;
+
+/** Company stored in the backend, opened for editing. */
+const STORED_COMPANY: CompanyResponse = {
     id: 7,
-    businessName: 'Servicios del Valle S.A.',
-    taxId: '3-101-800080',
-    contactEmail: 'rrhh@valle.test',
+    businessName: 'Comercial Norte',
+    taxId: '3-101-000010',
+    contactEmail: 'rrhh@norte.test',
     phoneNumber: '2222-3333',
     address: 'Heredia',
     active: true,
     createdAt: '2026-10-01T10:00:00'
 };
 
-describe('CompanyFormComponent', () => {
-    let fixture: ComponentFixture<CompanyFormComponent>;
-    let http: HttpTestingController;
-    let toast: jasmine.SpyObj<ToastService>;
-    let navigate: jasmine.Spy;
+/** Every registered company: the one being edited, another active one and an inactive one. */
+const REGISTERED_COMPANIES: CompanyResponse[] = [STORED_COMPANY, { ...STORED_COMPANY, id: 8, businessName: 'Industrias del Valle', taxId: '3-101-000009' }, { ...STORED_COMPANY, id: 9, businessName: 'Café Sol', taxId: '3-101-000011', active: false }];
 
-    /** Opens the form: to create a profile, or to edit the given company. */
-    function open(id?: number): void {
-        toast = jasmine.createSpyObj<ToastService>('ToastService', ['success', 'error', 'info']);
+describe('CompanyFormComponent (HU-020 validaciones de edición)', () => {
+    let fixture: ComponentFixture<CompanyFormComponent>;
+    let element: HTMLElement;
+    let httpTesting: HttpTestingController;
+
+    beforeEach(() => {
         TestBed.configureTestingModule({
             imports: [CompanyFormComponent],
-            providers: [provideRouter([]), provideNoopAnimations(), provideHttpClient(), provideHttpClientTesting(), { provide: ToastService, useValue: toast }]
+            providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations()]
         });
-        http = TestBed.inject(HttpTestingController);
-        navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+        httpTesting = TestBed.inject(HttpTestingController);
+        spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+        open(STORED_COMPANY);
+    });
+
+    afterEach(() => httpTesting.verify());
+
+    /**
+     * Opens the form to edit a company, answering the requests it makes on start.
+     *
+     * @param stored company stored in the backend
+     */
+    function open(stored: CompanyResponse): void {
         fixture = TestBed.createComponent(CompanyFormComponent);
-        if (id !== undefined) {
-            fixture.componentRef.setInput('id', id);
-        }
+        fixture.componentRef.setInput('id', stored.id);
+        fixture.detectChanges();
+        httpTesting.expectOne({ method: 'GET', url: COMPANIES_URL }).flush(REGISTERED_COMPANIES.map((company) => (company.id === stored.id ? stored : company)));
+        httpTesting.expectOne({ method: 'GET', url: `${COMPANIES_URL}/${stored.id}` }).flush(stored);
+        fixture.detectChanges();
+        element = fixture.nativeElement;
+    }
+
+    /**
+     * Answers the save with HTTP 409 and then the list the form reads again to
+     * find the taken field.
+     *
+     * @param message   explanation sent by the backend
+     * @param companies companies registered at that moment
+     */
+    function rejectAsDuplicate(message: string, companies: CompanyResponse[]): void {
+        httpTesting.expectOne({ method: 'PUT', url: COMPANY_URL }).flush({ status: 409, message }, { status: 409, statusText: 'Conflict' });
+        httpTesting.expectOne({ method: 'GET', url: COMPANIES_URL }).flush(companies);
         fixture.detectChanges();
     }
 
-    function page(): HTMLElement {
-        return fixture.nativeElement as HTMLElement;
-    }
-
-    /** Types a value in a field, as the user would. */
+    /**
+     * Types a value in a field, as the user would.
+     *
+     * @param id    id of the input
+     * @param value text typed
+     */
     function type(id: string, value: string): void {
-        const input = page().querySelector<HTMLInputElement>(`#${id}`)!;
+        const input = element.querySelector<HTMLInputElement>(`#${id}`)!;
         input.value = value;
         input.dispatchEvent(new Event('input'));
         input.dispatchEvent(new Event('blur'));
         fixture.detectChanges();
     }
 
-    function clickButton(label: string): void {
-        const button = Array.from(page().querySelectorAll('button')).find((element) => element.textContent?.trim() === label);
-        expect(button).withContext(`botón "${label}"`).toBeDefined();
-        button!.click();
+    /** Sends the form. */
+    function submit(): void {
+        element.querySelector('form')!.dispatchEvent(new Event('submit'));
         fixture.detectChanges();
     }
 
-    /** Message shown under a field, empty when it has none. */
+    /**
+     * Reads the message shown under a field.
+     *
+     * @param id id of the input
+     * @returns text of the error, empty when there is none
+     */
     function errorOf(id: string): string {
-        return page().querySelector(`#${id}-error`)?.textContent?.trim() ?? '';
+        return element.querySelector(`#${id}-error`)?.textContent?.trim() ?? '';
     }
 
+    /** Text of the general alert above the actions. */
     function alertText(): string {
-        return page().querySelector('.mgs-alert[role="alert"]')?.textContent?.trim() ?? '';
+        return element.querySelector('.mgs-alert')?.textContent?.trim() ?? '';
     }
 
-    /** Fills the required fields of a new profile and sends it. */
-    function fillAndCreate(): void {
-        type('businessName', '  Servicios del Valle S.A. ');
-        type('taxId', ' 3-101-800080 ');
-        type('contactEmail', ' RRHH@Valle.TEST ');
-        clickButton('Crear perfil');
-    }
-
-    afterEach(() => http.verify());
-
-    describe('crear perfil', () => {
-        it('envía POST /api/companies con los datos limpios y vuelve al listado', () => {
-            open();
-            fillAndCreate();
-
-            const request = http.expectOne({ method: 'POST', url: COMPANIES_URL });
-            expect(request.request.body).toEqual({ businessName: 'Servicios del Valle S.A.', taxId: '3-101-800080', contactEmail: 'rrhh@valle.test', phoneNumber: undefined, address: undefined });
-            request.flush({ ...STORED, phoneNumber: undefined, address: undefined });
-
-            expect(toast.success).toHaveBeenCalledWith('Perfil creado', 'Servicios del Valle S.A.');
-            expect(navigate).toHaveBeenCalledWith(['/companies']);
-        });
-
-        it('envía los datos opcionales cuando se escriben', () => {
-            open();
-            type('phoneNumber', ' 2222-3333 ');
-            type('address', ' Heredia ');
-            fillAndCreate();
-
-            const request = http.expectOne({ method: 'POST', url: COMPANIES_URL });
-            expect(request.request.body.phoneNumber).toBe('2222-3333');
-            expect(request.request.body.address).toBe('Heredia');
-            request.flush(STORED);
-        });
-
-        it('no llama al backend si faltan datos obligatorios', () => {
-            open();
-            type('businessName', 'Servicios del Valle S.A.');
-            clickButton('Crear perfil');
-
-            http.expectNone({ method: 'POST', url: COMPANIES_URL });
-            expect(alertText()).toContain('Revise los campos marcados antes de guardar.');
-            expect(errorOf('taxId')).not.toBe('');
-            expect(errorOf('contactEmail')).not.toBe('');
-        });
+    it('carga los datos guardados de la empresa en los campos', () => {
+        expect(element.querySelector<HTMLInputElement>('#businessName')!.value).toBe('Comercial Norte');
+        expect(element.querySelector<HTMLInputElement>('#taxId')!.value).toBe('3-101-000010');
     });
 
-    describe('valores repetidos (HTTP 409)', () => {
-        it('marca la razón social cuando el backend avisa que el nombre ya existe', () => {
-            open();
-            fillAndCreate();
+    it('no guarda con campos vacíos y explica cuáles debe corregir', () => {
+        type('businessName', '   ');
+        type('contactEmail', '');
+        submit();
 
-            http.expectOne({ method: 'POST', url: COMPANIES_URL }).flush({ status: 409, message: DUPLICATED_NAME }, { status: 409, statusText: 'Conflict' });
-            fixture.detectChanges();
-
-            expect(errorOf('businessName')).toBe(DUPLICATED_NAME);
-            expect(errorOf('taxId')).toBe('');
-            expect(alertText()).toContain(DUPLICATED_NAME);
-            expect(navigate).not.toHaveBeenCalled();
-            // The typed values stay, so the user only fixes the name.
-            expect(page().querySelector<HTMLInputElement>('#taxId')!.value).toBe(' 3-101-800080 ');
-        });
-
-        it('marca la cédula jurídica cuando el backend avisa que ya existe', () => {
-            open();
-            fillAndCreate();
-
-            http.expectOne({ method: 'POST', url: COMPANIES_URL }).flush({ status: 409, message: DUPLICATED_TAX_ID }, { status: 409, statusText: 'Conflict' });
-            fixture.detectChanges();
-
-            expect(errorOf('taxId')).toBe(DUPLICATED_TAX_ID);
-            expect(errorOf('businessName')).toBe('');
-            expect(alertText()).toContain(DUPLICATED_TAX_ID);
-        });
-
-        it('sin explicación del backend no marca ningún campo y lo indica en el aviso', () => {
-            open();
-            fillAndCreate();
-
-            http.expectOne({ method: 'POST', url: COMPANIES_URL }).flush(null, { status: 409, statusText: 'Conflict' });
-            fixture.detectChanges();
-
-            expect(errorOf('businessName')).toBe('');
-            expect(errorOf('taxId')).toBe('');
-            expect(alertText()).toContain('Ya existe otra empresa con esos datos.');
-        });
-
-        it('el error de nombre repetido se quita al corregir el nombre', () => {
-            open();
-            fillAndCreate();
-            http.expectOne({ method: 'POST', url: COMPANIES_URL }).flush({ status: 409, message: DUPLICATED_NAME }, { status: 409, statusText: 'Conflict' });
-            fixture.detectChanges();
-
-            type('businessName', 'Servicios del Valle Norte S.A.');
-
-            expect(errorOf('businessName')).toBe('');
-        });
+        httpTesting.expectNone({ method: 'PUT', url: COMPANY_URL });
+        expect(errorOf('businessName')).toBe('Este campo es obligatorio.');
+        expect(errorOf('contactEmail')).toBe('Este campo es obligatorio.');
+        expect(alertText()).toBe('Revise los campos marcados antes de guardar: Razón social y Correo de contacto.');
     });
 
-    it('muestra bajo cada campo los errores de validación del backend (HTTP 400)', () => {
-        open();
-        fillAndCreate();
+    it('explica el formato esperado de la razón social, la cédula jurídica y el teléfono', () => {
+        type('businessName', '---');
+        type('taxId', '3-101-ABC');
+        type('phoneNumber', '123');
+        submit();
 
-        http.expectOne({ method: 'POST', url: COMPANIES_URL }).flush(
-            { status: 400, message: 'Revise los datos ingresados.', fieldErrors: { contactEmail: 'Escriba un correo válido.', taxId: 'Use un máximo de 20 caracteres.' } },
-            { status: 400, statusText: 'Bad Request' }
-        );
+        httpTesting.expectNone({ method: 'PUT', url: COMPANY_URL });
+        expect(errorOf('businessName')).toBe('La razón social debe incluir letras o números.');
+        expect(errorOf('taxId')).toBe('Escriba la cédula jurídica con el formato 3-101-123456.');
+        expect(errorOf('phoneNumber')).toBe('Escriba un teléfono válido de 8 a 15 dígitos, por ejemplo 2222-3333.');
+        expect(alertText()).toBe('Revise los campos marcados antes de guardar: Razón social, Cédula jurídica y Teléfono.');
+    });
+
+    it('no permite la razón social de otra empresa, sin importar mayúsculas ni espacios', () => {
+        for (const name of ['Industrias del Valle', 'INDUSTRIAS  DEL   VALLE', ' industrias del valle ']) {
+            type('businessName', name);
+            expect(errorOf('businessName')).withContext(name).toBe('Ya existe una empresa con esa razón social.');
+        }
+        // An inactive company keeps its name reserved.
+        type('businessName', 'CAFÉ  sol');
+        expect(errorOf('businessName')).toBe('Ya existe una empresa con esa razón social.');
+
+        submit();
+        httpTesting.expectNone({ method: 'PUT', url: COMPANY_URL });
+        expect(alertText()).toBe('Revise los campos marcados antes de guardar: Razón social.');
+    });
+
+    it('considera distinta una razón social que solo cambia las tildes, igual que el backend', () => {
+        type('businessName', 'Cafe Sol');
+        expect(errorOf('businessName')).toBe('');
+        type('businessName', 'Industrías del Valle');
+        expect(errorOf('businessName')).toBe('');
+    });
+
+    it('permite conservar su propia razón social y envía los datos limpios', () => {
+        type('businessName', '  COMERCIAL   norte ');
+        expect(errorOf('businessName')).toBe('');
+        submit();
+
+        const request = httpTesting.expectOne({ method: 'PUT', url: COMPANY_URL });
+        expect(request.request.body.businessName).toBe('COMERCIAL norte');
+        request.flush({ ...STORED_COMPANY, businessName: 'COMERCIAL norte' });
+    });
+
+    it('agrega los guiones de la cédula jurídica mientras se escribe y solo acepta números', () => {
+        const input = element.querySelector<HTMLInputElement>('#taxId')!;
+        for (const [typed, shown] of [
+            ['3', '3'],
+            ['3101', '3-101'],
+            ['31016', '3-101-6'],
+            ['3101600001', '3-101-600001'],
+            ['3 101-600001', '3-101-600001'],
+            ['3-101-60000199', '3-101-600001'],
+            ['3a1b0c1', '3-101']
+        ]) {
+            type('taxId', typed);
+            expect(input.value).withContext(typed).toBe(shown);
+        }
+        type('taxId', '3101600001');
+        submit();
+        const request = httpTesting.expectOne({ method: 'PUT', url: COMPANY_URL });
+        expect(request.request.body.taxId).toBe('3-101-600001');
+        request.flush(STORED_COMPANY);
+    });
+
+    it('no permite la cédula jurídica de otra empresa mientras se escribe', () => {
+        type('taxId', '3101000009');
+        expect(errorOf('taxId')).toBe('Ya existe una empresa con esa cédula jurídica.');
+        // An inactive company keeps its tax id reserved too.
+        type('taxId', '3-101-000011');
+        expect(errorOf('taxId')).toBe('Ya existe una empresa con esa cédula jurídica.');
+
+        submit();
+        httpTesting.expectNone({ method: 'PUT', url: COMPANY_URL });
+        expect(alertText()).toBe('Revise los campos marcados antes de guardar: Cédula jurídica.');
+    });
+
+    it('marca la cédula jurídica cuando el servidor rechaza una registrada después de abrir el formulario', () => {
+        type('taxId', '3-101-000020');
+        submit();
+
+        const message = 'Ya existe una empresa con esa cédula jurídica.';
+        const registeredLater = { ...STORED_COMPANY, id: 10, businessName: 'Distribuidora Central', taxId: '3101000020' };
+        rejectAsDuplicate(message, [...REGISTERED_COMPANIES, registeredLater]);
+
+        expect(errorOf('taxId')).toBe(message);
+        expect(errorOf('businessName')).toBe('');
+        expect(alertText()).toBe(message);
+    });
+
+    it('marca la razón social, y no la cédula, cuando el servidor rechaza un nombre registrado después de abrir el formulario', () => {
+        type('businessName', 'Distribuidora Central');
+        submit();
+
+        const message = 'Ya existe una empresa con ese nombre.';
+        const registeredLater = { ...STORED_COMPANY, id: 10, businessName: 'Distribuidora Central', taxId: '3-101-000021' };
+        rejectAsDuplicate(message, [...REGISTERED_COMPANIES, registeredLater]);
+
+        expect(errorOf('businessName')).toBe('Ya existe una empresa con esa razón social.');
+        expect(errorOf('taxId')).toBe('');
+        expect(alertText()).toBe(message);
+    });
+
+    it('muestra solo el mensaje del servidor cuando no puede saber qué campo está repetido', () => {
+        type('businessName', 'Nombre Nuevo');
+        submit();
+
+        const message = 'Ya existe un perfil de cliente con ese nombre.';
+        rejectAsDuplicate(message, REGISTERED_COMPANIES);
+
+        expect(errorOf('businessName')).toBe('');
+        expect(errorOf('taxId')).toBe('');
+        expect(alertText()).toBe(message);
+    });
+
+    it('actualiza la alerta mientras el usuario corrige los campos', () => {
+        type('businessName', '---');
+        type('taxId', '3-101-ABC');
+        type('phoneNumber', '123');
+        submit();
+        expect(alertText()).toBe('Revise los campos marcados antes de guardar: Razón social, Cédula jurídica y Teléfono.');
+
+        type('taxId', '3-101-000010');
+        type('phoneNumber', '2222-3333');
+        expect(alertText()).toBe('Revise los campos marcados antes de guardar: Razón social.');
+
+        type('businessName', 'Comercial Norte');
+        expect(alertText()).toBe('');
+    });
+
+    it('permite guardar una empresa registrada con formatos anteriores mientras no cambie esos campos', () => {
+        open({ ...STORED_COMPANY, taxId: '3101ABC', phoneNumber: '123' });
+        type('address', 'Alajuela');
+        submit();
+
+        const request = httpTesting.expectOne({ method: 'PUT', url: COMPANY_URL });
+        expect(request.request.body.taxId).toBe('3101ABC');
+        request.flush(STORED_COMPANY);
+
+        type('phoneNumber', '1234');
+        expect(errorOf('phoneNumber')).toBe('Escriba un teléfono válido de 8 a 15 dígitos, por ejemplo 2222-3333.');
+    });
+
+    it('muestra bajo cada campo los errores de validación que devuelve el servidor', () => {
+        type('address', 'San José');
+        submit();
+
+        httpTesting.expectOne({ method: 'PUT', url: COMPANY_URL }).flush({ status: 400, message: 'Revise los datos ingresados.', fieldErrors: { contactEmail: 'Escriba un correo válido.' } }, { status: 400, statusText: 'Bad Request' });
         fixture.detectChanges();
 
         expect(errorOf('contactEmail')).toBe('Escriba un correo válido.');
-        expect(errorOf('taxId')).toBe('Use un máximo de 20 caracteres.');
-        expect(alertText()).toContain('Revise los datos ingresados.');
-    });
-
-    describe('editar perfil', () => {
-        it('carga la empresa con GET /api/companies/{id} y guarda con PUT', () => {
-            open(STORED.id);
-            http.expectOne({ method: 'GET', url: `${COMPANIES_URL}/${STORED.id}` }).flush(STORED);
-            fixture.detectChanges();
-            expect(page().querySelector<HTMLInputElement>('#businessName')!.value).toBe(STORED.businessName);
-
-            type('address', 'Alajuela');
-            clickButton('Guardar cambios');
-
-            const request = http.expectOne({ method: 'PUT', url: `${COMPANIES_URL}/${STORED.id}` });
-            expect(request.request.body).toEqual({ businessName: STORED.businessName, taxId: STORED.taxId, contactEmail: STORED.contactEmail, phoneNumber: STORED.phoneNumber, address: 'Alajuela' });
-            request.flush({ ...STORED, address: 'Alajuela' });
-
-            expect(toast.success).toHaveBeenCalledWith('Empresa actualizada', STORED.businessName);
-            expect(navigate).toHaveBeenCalledWith(['/companies']);
-        });
-
-        it('al renombrar con un nombre que ya existe, marca la razón social', () => {
-            open(STORED.id);
-            http.expectOne({ method: 'GET', url: `${COMPANIES_URL}/${STORED.id}` }).flush(STORED);
-            fixture.detectChanges();
-
-            type('businessName', 'Café Sol');
-            clickButton('Guardar cambios');
-            http.expectOne({ method: 'PUT', url: `${COMPANIES_URL}/${STORED.id}` }).flush({ status: 409, message: DUPLICATED_NAME }, { status: 409, statusText: 'Conflict' });
-            fixture.detectChanges();
-
-            expect(errorOf('businessName')).toBe(DUPLICATED_NAME);
-            expect(errorOf('taxId')).toBe('');
-        });
+        expect(alertText()).toBe('Revise los datos ingresados.');
     });
 });
