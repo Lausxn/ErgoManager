@@ -54,7 +54,7 @@ export class AppMenu {
                 label: 'Evaluación',
                 items: [
                     { label: 'Citas', icon: 'fa-regular fa-calendar-days fa-fw', routerLink: ['/appointments'], routerLinkActiveOptions: SECTION_ACTIVE },
-                    { label: 'Evaluación personalizada', icon: 'fa-solid fa-clipboard-user fa-fw', routerLink: ['/personalized-evaluations'], visible: isErgonomist },
+                    { label: 'Evaluación personalizada', icon: 'fa-solid fa-clipboard-user fa-fw', routerLink: ['/personalized-evaluations'] },
                     { label: 'Historial', icon: 'fa-solid fa-chart-line fa-fw', routerLink: ['/history'] }
                 ]
             },

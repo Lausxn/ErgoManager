@@ -1,4 +1,5 @@
-import { combineDayAndTime, dayKey, formatDuration, rangesOverlap, timeOfDay } from './appointment-utils';
+import { UserResponse } from '../../shared/models/user.model';
+import { agendaOwnersOf, combineDayAndTime, dayKey, formatDuration, rangesOverlap, timeOfDay } from './appointment-utils';
 
 describe('appointment-utils', () => {
     /** Builds a date of 22 October 2026 at the given time. */
@@ -38,6 +39,29 @@ describe('appointment-utils', () => {
         it('devuelve null si falta una parte', () => {
             expect(combineDayAndTime(null, timeOfDay(9))).toBeNull();
             expect(combineDayAndTime(new Date(2026, 9, 22), null)).toBeNull();
+        });
+    });
+
+    describe('agendaOwnersOf', () => {
+        const user = (id: number, firstName: string, role: UserResponse['role'], active = true): UserResponse => ({
+            id,
+            firstName,
+            firstLastName: 'Mora',
+            email: `${firstName.toLowerCase()}@mgs.test`,
+            role,
+            active,
+            createdAt: '2026-10-01T10:00:00'
+        });
+
+        it('ofrece primero la agenda del administrador, marcada como suya, y luego los ergonomistas por nombre', () => {
+            const users = [user(3, 'Zoe', 'ERGONOMIST'), user(1, 'Juan', 'ADMIN'), user(4, 'Ana', 'ERGONOMIST')];
+            expect(agendaOwnersOf(users, 1).map((option) => option.label)).toEqual(['Juan Mora (usted)', 'Ana Mora', 'Zoe Mora']);
+            expect(agendaOwnersOf(users, 1)[0].fullName).toBe('Juan Mora');
+        });
+
+        it('deja fuera a los otros administradores y a los usuarios inactivos', () => {
+            const users = [user(1, 'Juan', 'ADMIN'), user(2, 'Lucía', 'ADMIN'), user(3, 'Zoe', 'ERGONOMIST', false), user(4, 'Ana', 'ERGONOMIST')];
+            expect(agendaOwnersOf(users, 1).map((option) => option.id)).toEqual([1, 4]);
         });
     });
 

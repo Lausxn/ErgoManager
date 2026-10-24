@@ -28,17 +28,10 @@ import { markFormAsDirty } from '../../../shared/utils/form';
 import { APPOINTMENT_STATUS_LABELS } from '../../../shared/utils/labels';
 import { UserService } from '../../users/user.service';
 import { AppointmentService } from '../appointment.service';
-import { combineDayAndTime, dayKey, formatDuration, minutesBetween, rangesOverlap, timeOfDay } from '../appointment-utils';
+import { ErgonomistOption, agendaOwnersOf, combineDayAndTime, dayKey, formatDuration, minutesBetween, rangesOverlap, timeOfDay } from '../appointment-utils';
 
 /** Shown for every HTTP 409, whatever the server sends, so a technical text never reaches the user. */
 const OVERLAP_MESSAGE = 'El horario seleccionado se cruza con una disponibilidad existente. Seleccione otro rango de fecha y hora.';
-
-/** Ergonomist offered in the selector of the administrator. */
-interface ErgonomistOption {
-    id: number;
-    fullName: string;
-    email: string;
-}
 
 /** Why a planned slot cannot be published; null when it can. */
 type SlotProblem = 'past' | 'overlapsSlot' | 'overlapsAppointment' | 'repeated' | null;
@@ -766,10 +759,7 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: (users) => {
-                    const ergonomists = users
-                        .filter((user) => user.active && user.role === 'ERGONOMIST')
-                        .map((user) => ({ id: user.id, fullName: [user.firstName, user.firstLastName, user.secondLastName].filter(Boolean).join(' '), email: user.email }))
-                        .sort((a, b) => a.fullName.localeCompare(b.fullName));
+                    const ergonomists = agendaOwnersOf(users, this.authService.session()?.userId);
                     this.ergonomists.set(ergonomists);
                     this.isLoadingErgonomists.set(false);
                     const preselected = ergonomists.find((ergonomist) => ergonomist.id === this.userId()) ?? ergonomists[0];

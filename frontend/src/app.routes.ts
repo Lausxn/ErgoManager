@@ -50,7 +50,8 @@ export const appRoutes: Routes = [
             },
             {
                 path: 'personalized-evaluations',
-                canActivate: [roleGuard(['ERGONOMIST'])],
+                // Administrators also attend the appointments of their own agenda.
+                canActivate: [roleGuard(['ADMIN', 'ERGONOMIST'])],
                 loadChildren: () => import('./app/pages/personalized-evaluation/personalized-evaluation.routes').then((m) => m.personalizedEvaluationRoutes)
             },
             {

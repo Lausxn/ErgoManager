@@ -78,6 +78,18 @@ public class CurrentUserService {
     }
 
     /**
+     * Lets through only the owner of the resource, whatever their role.
+     *
+     * @param ownerId identifier of the user that owns the resource
+     * @throws AccessDeniedException when the resource belongs to another user
+     */
+    public void checkOwner(Long ownerId) {
+        if (!Objects.equals(getCurrentUser().getId(), ownerId)) {
+            throw new AccessDeniedException(ACCESS_DENIED_MESSAGE);
+        }
+    }
+
+    /**
      * Returns the authentication of the current request.
      *
      * @return authentication of a signed in user

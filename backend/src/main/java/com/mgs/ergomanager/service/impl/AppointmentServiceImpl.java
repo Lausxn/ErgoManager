@@ -27,6 +27,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -87,7 +88,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         currentUserService.checkOwnerOrAdmin(request.userId());
         // Serialize range checks and writes for this agenda, even when it has no slots yet.
         User ergonomist = userRepository.findByIdForUpdate(request.userId())
-                .filter(user -> user.isActive() && user.getRole() == Role.ERGONOMIST)
+                .filter(this::canHaveAgenda)
                 .orElseThrow(() -> new BusinessException("El usuario seleccionado no es un ergónomo activo."));
         if (!request.endDateTime().isAfter(request.startDateTime())) {
             throw new BusinessException("La hora de fin debe ser posterior a la de inicio.");
@@ -131,7 +132,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         // Share the creation lock; READ_COMMITTED sees ranges saved while this request waited.
         userRepository.findByIdForUpdate(ergonomist.getId())
                 .orElseThrow(() -> new BusinessException("El usuario seleccionado no es un ergónomo activo."));
-        if (!ergonomist.isActive() || ergonomist.getRole() != Role.ERGONOMIST) {
+        if (!canHaveAgenda(ergonomist)) {
             throw new BusinessException("El usuario seleccionado no es un ergónomo activo.");
         }
         if (!request.endDateTime().isAfter(request.startDateTime())) {
@@ -311,6 +312,22 @@ public class AppointmentServiceImpl implements AppointmentService {
         return toResponse(
                 saved,
                 personalizedEvaluationRepository.existsByAppointmentId(id));
+    }
+
+    /**
+     * Tells whether a user can publish slots and receive appointments: an active
+     * ergonomist, or the signed in administrator for their own agenda, since an
+     * administrator also attends appointments.
+     *
+     * @param user owner of the agenda
+     * @return true when the user can have an agenda
+     */
+    private boolean canHaveAgenda(User user) {
+        if (!user.isActive()) {
+            return false;
+        }
+        return user.getRole() == Role.ERGONOMIST
+                || (user.getRole() == Role.ADMIN && Objects.equals(user.getId(), currentUserService.getCurrentUser().getId()));
     }
 
     /**

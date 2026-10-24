@@ -173,9 +173,10 @@ class AdminInitializerTests {
         mockMvc.perform(post("/api/users").header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isBadRequest());
+        // An administrator also attends the appointments of their own agenda.
         mockMvc.perform(post("/api/personalized-evaluations").header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isBadRequest());
         mockMvc.perform(post("/api/users")
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isUnauthorized());

@@ -97,8 +97,8 @@ describe('AppMenu', () => {
         expect(ergonomistLabels).toContain('Perfiles de clientes');
     });
 
-    it('muestra Evaluación personalizada solo al ergonomista', () => {
-        expect(visibleEntries('ADMIN').map((entry) => entry.label)).not.toContain('Evaluación personalizada');
+    it('muestra Evaluación personalizada a ambos roles, porque el administrador también atiende citas', () => {
+        expect(visibleEntries('ADMIN').map((entry) => entry.label)).toContain('Evaluación personalizada');
         expect(visibleEntries('ERGONOMIST').map((entry) => entry.label)).toContain('Evaluación personalizada');
     });
 

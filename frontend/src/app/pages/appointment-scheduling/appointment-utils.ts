@@ -1,5 +1,6 @@
 import { AppointmentStatus } from '../../shared/models/appointment-status.model';
 import { AvailabilityResponse } from '../../shared/models/appointment.model';
+import { UserResponse } from '../../shared/models/user.model';
 
 export const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -131,4 +132,35 @@ export function timeOfDay(hours: number, minutes = 0): Date {
     const time = new Date();
     time.setHours(hours, minutes, 0, 0);
     return time;
+}
+
+/** Owner of an agenda offered in the selector of the administrator. */
+export interface ErgonomistOption {
+    id: number;
+    fullName: string;
+    email: string;
+    /** Text of the selector: the name, marked when it is the signed in user. */
+    label: string;
+}
+
+/**
+ * Builds the agendas an administrator can choose from: their own first, since
+ * an administrator also attends appointments, then the active ergonomists by
+ * name. Other administrators are left out.
+ *
+ * @param users         users returned by /api/users
+ * @param currentUserId identifier of the signed in administrator
+ * @returns options of the selector
+ */
+export function agendaOwnersOf(users: readonly UserResponse[], currentUserId: number | undefined): ErgonomistOption[] {
+    const toOption = (user: UserResponse, own: boolean): ErgonomistOption => {
+        const fullName = [user.firstName, user.firstLastName, user.secondLastName].filter(Boolean).join(' ');
+        return { id: user.id, fullName, email: user.email, label: own ? `${fullName} (usted)` : fullName };
+    };
+    const own = users.filter((user) => user.active && user.id === currentUserId).map((user) => toOption(user, true));
+    const ergonomists = users
+        .filter((user) => user.active && user.role === 'ERGONOMIST' && user.id !== currentUserId)
+        .map((user) => toOption(user, false))
+        .sort((a, b) => a.fullName.localeCompare(b.fullName));
+    return [...own, ...ergonomists];
 }

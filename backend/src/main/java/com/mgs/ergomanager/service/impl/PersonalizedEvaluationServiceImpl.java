@@ -166,7 +166,8 @@ public class PersonalizedEvaluationServiceImpl implements PersonalizedEvaluation
     @Override
     @Transactional(readOnly = true)
     public List<PersonalizedEvaluationResponseDTO> findByErgonomist(Long userId) {
-        currentUserService.checkOwnerOrAdmin(userId);
+        // Each one lists only their own evaluations, administrators included.
+        currentUserService.checkOwner(userId);
         List<PersonalizedEvaluation> evaluations = personalizedEvaluationRepository.findDetailedByUserId(userId);
         if (evaluations.isEmpty()) {
             return List.of();

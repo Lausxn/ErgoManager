@@ -20,7 +20,7 @@
                             inputId="userId"
                             formControlName="userId"
                             [options]="ergonomists()"
-                            optionLabel="fullName"
+                            optionLabel="label"
                             optionValue="id"
                             placeholder="Elija un ergonomista"
                             [filter]="ergonomists().length > 6"
@@ -30,7 +30,7 @@
                         >
                             <ng-template #item let-ergonomist>
                                 <div class="flex flex-col">
-                                    <span class="font-semibold">{{ ergonomist.fullName }}</span>
+                                    <span class="font-semibold">{{ ergonomist.label }}</span>
                                     <span class="text-xs text-muted-color">{{ ergonomist.email }}</span>
                                 </div>
                             </ng-template>

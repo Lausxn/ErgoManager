@@ -31,7 +31,7 @@
                         [options]="ergonomists()"
                         [ngModel]="selectedErgonomistId()"
                         (ngModelChange)="selectErgonomist($event)"
-                        optionLabel="fullName"
+                        optionLabel="label"
                         optionValue="id"
                         [filter]="ergonomists().length > 6"
                         filterBy="fullName,email"
@@ -39,7 +39,7 @@
                     >
                         <ng-template #item let-ergonomist>
                             <div class="flex flex-col">
-                                <span class="font-semibold">{{ ergonomist.fullName }}</span>
+                                <span class="font-semibold">{{ ergonomist.label }}</span>
                                 <span class="text-xs text-muted-color">{{ ergonomist.email }}</span>
                             </div>
                         </ng-template>
