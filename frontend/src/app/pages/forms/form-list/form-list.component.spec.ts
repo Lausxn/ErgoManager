@@ -5,8 +5,8 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 
 import { environment } from '../../../../environments/environment';
-import { FormListComponent } from './form-list.component';
-import { FormSection } from '../form-navigation/form-navigation.component';
+import { OptionHubComponent } from '../../../shared/components/option-hub/option-hub.component';
+import { FormListComponent, FormSection } from './form-list.component';
 import { formsRoutes } from '../forms.routes';
 
 const FORMS_URL = `${environment.apiUrl}/forms`;
@@ -32,13 +32,13 @@ describe('Gestión de formularios', () => {
         return fixture.nativeElement;
     }
 
-    it('muestra dos pestañas, el listado y un único botón de creación incluso sin registros', () => {
+    it('muestra el título de su tipo, el regreso a formularios, el listado y un único botón de creación incluso sin registros', () => {
         const element = open('self-evaluation');
         http.expectOne(FORMS_URL).flush([]);
         fixture.detectChanges();
-        const links = Array.from(element.querySelectorAll<HTMLAnchorElement>('nav a'));
-        expect(links.map((link) => link.getAttribute('href'))).toEqual(['/forms/self-evaluation', '/forms/personalized']);
-        expect(links[0].getAttribute('aria-current')).toBe('page');
+        expect(element.querySelector('h1')?.textContent?.trim()).toBe('Autoevaluaciones');
+        expect(element.querySelector('nav')).withContext('sin pestañas').toBeNull();
+        expect(Array.from(element.querySelectorAll('button')).some((button) => button.textContent?.trim() === 'Volver a formularios')).toBeTrue();
         const createButtons = Array.from(element.querySelectorAll('button')).filter((button) => button.textContent?.trim() === 'Crear formulario');
         expect(createButtons.length).toBe(1);
         expect(element.querySelector('p-table')).not.toBeNull();
@@ -201,8 +201,15 @@ describe('Gestión de formularios', () => {
         http.expectOne(FORMS_URL).flush([]);
     });
 
-    it('abre autoevaluaciones en la ruta principal y mantiene la precedencia de rutas', () => {
-        expect(formsRoutes.find((route) => route.path === '')?.data?.['section']).toBe('self-evaluation');
+    it('abre las tarjetas de Autoevaluaciones y Evaluaciones personalizadas en la ruta principal y mantiene la precedencia de rutas', () => {
+        const hub = formsRoutes.find((route) => route.path === '');
+        expect(hub?.component).toBe(OptionHubComponent);
+        expect(hub?.data?.['options'].map((option: { title: string; route: string }) => [option.title, option.route])).toEqual([
+            ['Autoevaluaciones', '/forms/self-evaluation'],
+            ['Evaluaciones personalizadas', '/forms/personalized']
+        ]);
+        expect(formsRoutes.find((route) => route.path === 'self-evaluation')?.data?.['section']).toBe('self-evaluation');
+        expect(formsRoutes.find((route) => route.path === 'personalized')?.data?.['section']).toBe('personalized');
         const paths = formsRoutes.map((route) => route.path);
         for (const path of ['self-evaluation', 'personalized', 'personalized/new']) {
             expect(paths.indexOf(path)).toBeLessThan(paths.indexOf(':id'));

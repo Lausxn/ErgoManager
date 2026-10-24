@@ -19,8 +19,7 @@ const EXPECTED_LINKS: Record<string, string> = {
     Usuarios: '/users',
     Formularios: '/forms',
     'Perfiles de clientes': '/companies',
-    Agenda: '/appointments',
-    Disponibilidad: '/appointments/availabilities',
+    Citas: '/appointments',
     'Evaluación personalizada': '/personalized-evaluations',
     Historial: '/history',
     'Cambiar contraseña': '/account/password'
@@ -103,8 +102,21 @@ describe('AppMenu', () => {
         expect(visibleEntries('ERGONOMIST').map((entry) => entry.label)).toContain('Evaluación personalizada');
     });
 
-    it('muestra Disponibilidad a ambos roles', () => {
-        expect(visibleEntries('ADMIN').map((entry) => entry.label)).toContain('Disponibilidad');
-        expect(visibleEntries('ERGONOMIST').map((entry) => entry.label)).toContain('Disponibilidad');
+    it('agrupa Agenda y Disponibilidad en una sola entrada Citas para ambos roles', () => {
+        for (const role of ['ADMIN', 'ERGONOMIST'] as const) {
+            const labels = visibleEntries(role).map((entry) => entry.label);
+            expect(labels).withContext(role).toContain('Citas');
+            expect(labels).withContext(role).not.toContain('Agenda');
+            expect(labels).withContext(role).not.toContain('Disponibilidad');
+        }
+    });
+
+    it('mantiene resaltadas Citas y Formularios en todas las pantallas de su sección', () => {
+        for (const role of ['ADMIN', 'ERGONOMIST'] as const) {
+            for (const label of ['Citas', 'Formularios']) {
+                const entry = visibleEntries(role).find((candidate) => candidate.label === label);
+                expect(entry?.routerLinkActiveOptions?.paths).withContext(`${role} ${label}`).toBe('subset');
+            }
+        }
     });
 });

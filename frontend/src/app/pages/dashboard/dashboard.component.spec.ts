@@ -17,14 +17,14 @@ const SUMMARY_URL = `${environment.apiUrl}/dashboard/summary`;
 const EXPECTED_ROUTES: Record<Role, Record<string, string>> = {
     ADMIN: {
         Formularios: '/forms',
-        'Agenda de citas': '/appointments',
+        Citas: '/appointments',
         'Perfiles de clientes': '/companies',
         'Reportes e historial': '/history',
         'Gestión de usuarios': '/users'
     },
     ERGONOMIST: {
         Formularios: '/forms',
-        'Agenda de citas': '/appointments',
+        Citas: '/appointments',
         'Perfiles de clientes': '/companies',
         'Evaluación personalizada': '/personalized-evaluations',
         'Reportes e historial': '/history'

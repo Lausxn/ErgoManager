@@ -25,7 +25,7 @@ const UNKNOWN_VALUE = '—';
 /** The five functions enabled for the administrator profile (HU-001). */
 const FUNCTION_CARDS: readonly FunctionCard[] = [
     { number: '01', title: 'Formularios', description: 'Cree, edite y desactive los formularios del sistema.', icon: 'fa-solid fa-file-lines', route: '/forms' },
-    { number: '02', title: 'Agenda de citas', description: 'Programe visitas y evaluaciones presenciales con los clientes.', icon: 'fa-solid fa-calendar-plus', route: '/appointments' },
+    { number: '02', title: 'Citas', description: 'Programe visitas y evaluaciones presenciales con los clientes.', icon: 'fa-solid fa-calendar-plus', route: '/appointments' },
     { number: '03', title: 'Perfiles de clientes', description: 'Cree y gestione los perfiles de todas las empresas cliente.', icon: 'fa-solid fa-building', route: '/companies' },
     { number: '04', title: 'Reportes e historial', description: 'Genere y descargue los informes de resultados ergonómicos.', icon: 'fa-solid fa-chart-column', route: '/history' },
     { number: '05', title: 'Gestión de usuarios', description: 'Cree, edite y desactive cuentas de Administrador y Ergonomista.', icon: 'fa-solid fa-users-gear', route: '/users' }
@@ -34,7 +34,7 @@ const FUNCTION_CARDS: readonly FunctionCard[] = [
 /** The five functions enabled for the ergonomist profile (HU-002). */
 const ERGONOMIST_FUNCTION_CARDS: readonly FunctionCard[] = [
     { number: '01', title: 'Formularios', description: 'Consulte y gestione los formularios utilizados en las evaluaciones ergonómicas.', icon: 'fa-solid fa-file-lines', route: '/forms' },
-    { number: '02', title: 'Agenda de citas', description: 'Consulte y gestione las citas y espacios disponibles para atención.', icon: 'fa-solid fa-calendar-plus', route: '/appointments' },
+    { number: '02', title: 'Citas', description: 'Consulte y gestione las citas y espacios disponibles para atención.', icon: 'fa-solid fa-calendar-plus', route: '/appointments' },
     { number: '03', title: 'Perfiles de clientes', description: 'Consulte la información de las empresas cliente y sus colaboradores.', icon: 'fa-solid fa-building', route: '/companies' },
     { number: '04', title: 'Evaluación personalizada', description: 'Realice evaluaciones ergonómicas personalizadas para los colaboradores.', icon: 'fa-solid fa-clipboard-user', route: '/personalized-evaluations' },
     { number: '05', title: 'Reportes e historial', description: 'Consulte el historial y los resultados de las evaluaciones ergonómicas.', icon: 'fa-solid fa-chart-column', route: '/history' }

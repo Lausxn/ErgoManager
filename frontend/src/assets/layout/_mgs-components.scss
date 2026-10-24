@@ -378,6 +378,65 @@
     list-style: none;
 }
 
+/* Page made only of a few options: they sit in the middle of the free space under the header. */
+.layout-main:has(> .mgs-option-stage) {
+    display: flex;
+    flex-direction: column;
+}
+
+.mgs-option-stage {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+}
+
+.mgs-option-grid--centered {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    align-content: center;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    /* Slightly above the exact middle, where the eye expects the center to be. */
+    padding-bottom: 5rem;
+
+    > li {
+        width: min(17rem, 100%);
+    }
+}
+
+/* Square option with its content centered; icons and titles line up even when a title takes two lines. */
+.mgs-option--tile {
+    aspect-ratio: 1;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 2.25rem 1.75rem 3.75rem;
+    text-align: center;
+
+    .mgs-option__top {
+        justify-content: center;
+    }
+
+    .mgs-option__icon {
+        width: 3.5rem;
+        height: 3.5rem;
+        font-size: 1.45rem;
+    }
+
+    .mgs-option__description {
+        flex: 0 0 auto;
+    }
+
+    /* Pinned to the bottom, so every card shows it at the same height. */
+    .mgs-option__arrow {
+        position: absolute;
+        bottom: 1.5rem;
+        left: 50%;
+        margin-left: -0.5em;
+    }
+}
+
 .mgs-option {
     position: relative;
     display: flex;

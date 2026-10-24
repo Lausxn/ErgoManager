@@ -1,5 +1,5 @@
 <app-page-header eyebrow="Evaluación" title="Evaluación personalizada" subtitle="Registre el diagnóstico y la recomendación de cada aspecto evaluado y genere el reporte en PDF.">
-    <p-button label="Ir a la agenda" icon="fa-regular fa-calendar" severity="secondary" [text]="true" routerLink="/appointments" />
+    <p-button label="Ir a la agenda" icon="fa-regular fa-calendar" severity="secondary" [text]="true" routerLink="/appointments/agenda" />
 </app-page-header>
 
 @if (savedEvaluation(); as evaluation) {
@@ -121,7 +121,7 @@
                                 } @else {
                                     @if (appointmentOptions().length === 0) {
                                         <app-empty-state icon="fa-regular fa-calendar-check" title="No hay citas por evaluar" message="Todas sus citas recientes ya tienen evaluación. Las nuevas aparecerán aquí.">
-                                            <p-button label="Ver agenda" icon="fa-regular fa-calendar" severity="secondary" [outlined]="true" routerLink="/appointments" />
+                                            <p-button label="Ver agenda" icon="fa-regular fa-calendar" severity="secondary" [outlined]="true" routerLink="/appointments/agenda" />
                                         </app-empty-state>
                                     } @else {
                                         <div class="mgs-form-grid">

@@ -1,9 +1,12 @@
 import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { IsActiveMatchOptions, RouterModule } from '@angular/router';
 import { MenuItem } from 'primeng/api';
 import { AppMenuitem } from './app.menuitem';
 import { AuthService } from '../../core/services/auth.service';
+
+/** Keeps an entry highlighted on every screen of its section, not only on its first one. */
+const SECTION_ACTIVE: IsActiveMatchOptions = { paths: 'subset', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' };
 
 /**
  * Side menu of ErgoManager. Every entry is shown only to the roles that the
@@ -35,7 +38,7 @@ export class AppMenu {
                 items: [
                     { label: 'Empresas', icon: 'fa-solid fa-building fa-fw', routerLink: ['/companies'] },
                     { label: 'Usuarios', icon: 'fa-solid fa-users fa-fw', routerLink: ['/users'] },
-                    { label: 'Formularios', icon: 'fa-solid fa-file-pen fa-fw', routerLink: ['/forms'] }
+                    { label: 'Formularios', icon: 'fa-solid fa-file-pen fa-fw', routerLink: ['/forms'], routerLinkActiveOptions: SECTION_ACTIVE }
                 ]
             },
             {
@@ -43,15 +46,14 @@ export class AppMenu {
                 label: 'Ergonomía',
                 visible: isErgonomist && !isAdmin,
                 items: [
-                    { label: 'Formularios', icon: 'fa-solid fa-file-pen fa-fw', routerLink: ['/forms'] },
+                    { label: 'Formularios', icon: 'fa-solid fa-file-pen fa-fw', routerLink: ['/forms'], routerLinkActiveOptions: SECTION_ACTIVE },
                     { label: 'Perfiles de clientes', icon: 'fa-solid fa-building fa-fw', routerLink: ['/companies'] }
                 ]
             },
             {
                 label: 'Evaluación',
                 items: [
-                    { label: 'Agenda', icon: 'fa-regular fa-calendar-days fa-fw', routerLink: ['/appointments'] },
-                    { label: 'Disponibilidad', icon: 'fa-regular fa-calendar-plus fa-fw', routerLink: ['/appointments/availabilities'] },
+                    { label: 'Citas', icon: 'fa-regular fa-calendar-days fa-fw', routerLink: ['/appointments'], routerLinkActiveOptions: SECTION_ACTIVE },
                     { label: 'Evaluación personalizada', icon: 'fa-solid fa-clipboard-user fa-fw', routerLink: ['/personalized-evaluations'], visible: isErgonomist },
                     { label: 'Historial', icon: 'fa-solid fa-chart-line fa-fw', routerLink: ['/history'] }
                 ]

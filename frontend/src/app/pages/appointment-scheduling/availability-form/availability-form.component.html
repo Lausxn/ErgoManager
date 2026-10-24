@@ -1,12 +1,5 @@
 <app-page-header eyebrow="Citas" title="Gestionar disponibilidad" subtitle="Habilite los días y horas en que se pueden agendar citas, y retire los que ya no estén disponibles.">
-    <p-button
-        label="Volver a la agenda"
-        icon="fa-solid fa-arrow-left"
-        severity="secondary"
-        [text]="true"
-        routerLink="/appointments"
-        [queryParams]="isAdmin() && availabilityForm.controls.userId.value !== null ? { userId: availabilityForm.controls.userId.value } : {}"
-    />
+    <p-button label="Volver a citas" icon="fa-solid fa-arrow-left" severity="secondary" [text]="true" routerLink="/appointments" />
 </app-page-header>
 
 <form [formGroup]="availabilityForm" (ngSubmit)="submit()" class="mgs-form-layout" novalidate>
