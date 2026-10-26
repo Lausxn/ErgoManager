@@ -7,7 +7,6 @@ import { Component, input } from '@angular/core';
  */
 @Component({
     selector: 'app-page-header',
-    standalone: true,
     template: `
         <header class="mgs-page-header">
             <div class="mgs-page-header__text">

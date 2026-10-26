@@ -107,7 +107,6 @@ function withTaxIdDashes(digits: string): string {
  */
 @Component({
     selector: 'app-company-form',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [ReactiveFormsModule, RouterLink, AvatarModule, ButtonModule, InputTextModule, ProgressBarModule, SkeletonModule, TagModule, TooltipModule, FormFieldComponent, PageHeaderComponent, SaveBarComponent],
     templateUrl: './company-form.component.html',

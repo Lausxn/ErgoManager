@@ -3,8 +3,7 @@ import { StatusPageComponent } from '../../shared/components/status-page/status-
 
 @Component({
     selector: 'app-error',
-    standalone: true,
     imports: [StatusPageComponent],
     template: `<app-status-page code="Error" title="Ocurrió un problema" message="No se pudo completar la operación. Intente de nuevo en unos minutos." />`
 })
-export class Error {}
+export class ErrorPageComponent {}

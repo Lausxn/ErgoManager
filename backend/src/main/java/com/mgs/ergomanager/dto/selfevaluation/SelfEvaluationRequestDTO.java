@@ -40,8 +40,7 @@ public record SelfEvaluationRequestDTO(
         String employeePosition,
 
         @NotEmpty(message = "Responda todas las preguntas del formulario.")
-        @Valid
-        List<AnswerRequestDTO> answerList) {
+        List<@Valid AnswerRequestDTO> answerList) {
 
     /** Trims the employee data, lowercases the email and turns a blank position into null. */
     public SelfEvaluationRequestDTO {

@@ -25,7 +25,7 @@ public class RestSecurityErrorHandler implements AuthenticationEntryPoint, Acces
 
     static final String MISSING_SESSION_MESSAGE = "Debe iniciar sesión para continuar.";
 
-    static final String ACCESS_DENIED_MESSAGE = "No tiene permisos para realizar esta acción.";
+    static final String ACCESS_DENIED_MESSAGE = CurrentUserService.ACCESS_DENIED_MESSAGE;
 
     private final JsonMapper jsonMapper;
 

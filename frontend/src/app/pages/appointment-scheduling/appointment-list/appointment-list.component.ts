@@ -28,6 +28,7 @@ import { AppointmentService } from '../appointment.service';
 import { ErgonomistOption, addDays, agendaOwnersOf, formatDuration, groupSlotsByDay, isPendingStatus, minutesBetween } from '../appointment-utils';
 import { BookingDialogComponent } from '../booking-dialog/booking-dialog.component';
 import { RescheduleDialogComponent } from '../reschedule-dialog/reschedule-dialog.component';
+import { nameInitials } from '../../../shared/utils/person';
 
 /** Placeholder rows drawn as skeletons while the agenda loads. */
 const SKELETON_ROWS = Array.from({ length: 5 }, (_, index) => ({ id: -index - 1 }));
@@ -52,7 +53,6 @@ interface AppointmentRow extends AppointmentResponse {
  */
 @Component({
     selector: 'app-appointment-list',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [
         DatePipe,
@@ -135,10 +135,9 @@ export class AppointmentListComponent implements OnInit {
         const currentUserId = this.authService.session()?.userId;
         return this.appointments().map((appointment) => {
             const isPending = isPendingStatus(appointment.status);
-            const [first = '', second = ''] = appointment.employeeName.trim().split(/\s+/);
             return {
                 ...appointment,
-                initials: `${first.charAt(0)}${second.charAt(0)}`.toUpperCase(),
+                initials: nameInitials(appointment.employeeName),
                 statusLabel: APPOINTMENT_STATUS_LABELS[appointment.status],
                 statusTagClass: APPOINTMENT_STATUS_TAG_CLASSES[appointment.status],
                 isPending,

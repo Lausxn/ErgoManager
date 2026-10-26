@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 
@@ -12,6 +13,7 @@ import { DialogService } from '../../../shared/services/dialog.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { toLocalDateTime } from '../../../shared/utils/date-time';
 import { timeOfDay } from '../appointment-utils';
+import { AvailabilityEditDialogComponent } from './availability-edit-dialog.component';
 import { AvailabilityFormComponent } from './availability-form.component';
 
 const URL = `${environment.apiUrl}/appointments/availabilities`;
@@ -397,7 +399,11 @@ describe('AvailabilityFormComponent', () => {
         }
 
         function editForm() {
-            return fixture.componentInstance['editForm'];
+            return fixture.debugElement.query(By.directive(AvailabilityEditDialogComponent)).componentInstance['form'] as AvailabilityEditDialogComponent['form'];
+        }
+
+        function isDialogOpen(): boolean {
+            return fixture.componentInstance['editingSlot']() !== null;
         }
 
         /** Opens the dialog of the first free slot. */
@@ -447,7 +453,7 @@ describe('AvailabilityFormComponent', () => {
             fixture.detectChanges();
 
             expect(toast.success).toHaveBeenCalledWith('Espacio actualizado', jasmine.any(String));
-            expect(fixture.componentInstance['isEditOpen']()).toBeFalse();
+            expect(isDialogOpen()).toBeFalse();
             expect(page().textContent).toContain('Libre · 1 h 30 min');
         });
 
@@ -477,7 +483,7 @@ describe('AvailabilityFormComponent', () => {
 
             expect(dialogAlert()).toContain(MESSAGE);
             expect(document.body.textContent).not.toContain('SQL constraint exception');
-            expect(fixture.componentInstance['isEditOpen']()).toBeTrue();
+            expect(isDialogOpen()).toBeTrue();
         });
 
         it('si el espacio ya tiene una cita, muestra el mensaje del backend y la cita en la lista', async () => {

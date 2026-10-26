@@ -21,6 +21,5 @@ public record PersonalizedEvaluationRequestDTO(
         Long formId,
 
         @NotEmpty(message = "Complete el diagnóstico y la recomendación de todas las preguntas.")
-        @Valid
-        List<PersonalizedAnswerRequestDTO> answerList) {
+        List<@Valid PersonalizedAnswerRequestDTO> answerList) {
 }

@@ -31,6 +31,7 @@ import { AppointmentService } from '../../appointment-scheduling/appointment.ser
 import { addDays, isPendingStatus } from '../../appointment-scheduling/appointment-utils';
 import { FormService } from '../../forms/form.service';
 import { PersonalizedEvaluationService } from '../personalized-evaluation.service';
+import { nameInitials } from '../../../shared/utils/person';
 
 /** Maximum length accepted for every diagnosis and recommendation. */
 const MAX_TEXT_LENGTH = 1000;
@@ -69,7 +70,6 @@ type PersonalizedAnswerForm = FormGroup<{
  */
 @Component({
     selector: 'app-personalized-evaluation-form',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [
         DatePipe,
@@ -176,16 +176,7 @@ export class PersonalizedEvaluationFormComponent implements OnInit, HasUnsavedCh
         return total === 0 ? 0 : Math.round((this.completedCount() / total) * 100);
     });
 
-    protected readonly evaluationRows = computed<EvaluationRow[]>(() =>
-        this.evaluations().map((evaluation) => {
-            const [first = '', second = ''] = evaluation.employeeName.trim().split(/\s+/);
-
-            return {
-                ...evaluation,
-                initials: `${first.charAt(0)}${second.charAt(0)}`.toUpperCase()
-            };
-        })
-    );
+    protected readonly evaluationRows = computed<EvaluationRow[]>(() => this.evaluations().map((evaluation) => ({ ...evaluation, initials: nameInitials(evaluation.employeeName) })));
 
     ngOnInit(): void {
         this.loadActiveForm();

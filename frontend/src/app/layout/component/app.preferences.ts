@@ -11,7 +11,6 @@ const NORMAL_FONT_SIZE = PAGE_SIZE_OPTIONS.find((option) => option.value === 'no
  */
 @Component({
     selector: 'app-preferences',
-    standalone: true,
     template: `
         <button type="button" class="mgs-prefs__trigger" [class.mgs-prefs__trigger--open]="open()" (click)="toggle()" aria-haspopup="dialog" [attr.aria-expanded]="open()" aria-controls="mgs-prefs-panel" aria-label="Opciones de visualización">
             <i class="pi pi-sliders-h"></i>
@@ -75,7 +74,7 @@ const NORMAL_FONT_SIZE = PAGE_SIZE_OPTIONS.find((option) => option.value === 'no
         '(document:keydown.escape)': 'close()'
     }
 })
-export class AppPreferences {
+export class AppPreferencesComponent {
     protected readonly layoutService = inject(LayoutService);
     private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
     protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;

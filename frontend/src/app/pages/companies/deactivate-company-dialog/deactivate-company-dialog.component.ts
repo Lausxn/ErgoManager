@@ -15,7 +15,6 @@ import { companyInitials } from '../company-initials';
  */
 @Component({
     selector: 'app-deactivate-company-dialog',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [AvatarModule, ButtonModule, DialogModule, TagModule],
     templateUrl: './deactivate-company-dialog.component.html',

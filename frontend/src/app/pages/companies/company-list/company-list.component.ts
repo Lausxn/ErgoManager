@@ -41,7 +41,6 @@ interface CompanyRow extends CompanyResponse {
  */
 @Component({
     selector: 'app-company-list',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [
         FormsModule,

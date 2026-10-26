@@ -7,7 +7,7 @@ import { appRoutes } from '../../../app.routes';
 import { accountRoutes } from '../../pages/account/account.routes';
 import { LoginResponse } from '../../shared/models/auth.model';
 import { Role } from '../../shared/models/role.model';
-import { AppMenu } from './app.menu';
+import { AppMenuComponent } from './app.menu';
 
 const SESSION_STORAGE_KEY = 'ergomanager.session';
 
@@ -60,10 +60,10 @@ function visibleEntries(role: Role): MenuItem[] {
     TestBed.resetTestingModule();
     localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionOf(role)));
     TestBed.configureTestingModule({
-        imports: [AppMenu],
+        imports: [AppMenuComponent],
         providers: [provideRouter([]), provideHttpClient()]
     });
-    const menu = TestBed.createComponent(AppMenu).componentInstance as unknown as { model: () => MenuItem[] };
+    const menu = TestBed.createComponent(AppMenuComponent).componentInstance as unknown as { model: () => MenuItem[] };
     return menu
         .model()
         .filter((section) => section.visible !== false)
@@ -71,7 +71,7 @@ function visibleEntries(role: Role): MenuItem[] {
         .filter((item) => item.visible !== false && item.routerLink);
 }
 
-describe('AppMenu', () => {
+describe('AppMenuComponent', () => {
     afterEach(() => {
         localStorage.removeItem(SESSION_STORAGE_KEY);
     });
@@ -94,8 +94,8 @@ describe('AppMenu', () => {
         const sectionsOf = (role: Role) => {
             TestBed.resetTestingModule();
             localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionOf(role)));
-            TestBed.configureTestingModule({ imports: [AppMenu], providers: [provideRouter([]), provideHttpClient()] });
-            const model = (TestBed.createComponent(AppMenu).componentInstance as unknown as { model: () => MenuItem[] }).model();
+            TestBed.configureTestingModule({ imports: [AppMenuComponent], providers: [provideRouter([]), provideHttpClient()] });
+            const model = (TestBed.createComponent(AppMenuComponent).componentInstance as unknown as { model: () => MenuItem[] }).model();
             return model.filter((section) => section.visible !== false).map((section) => [section.label, (section.items ?? []).filter((item) => item.visible !== false).map((item) => item.label)]);
         };
         const work = [
@@ -131,17 +131,17 @@ describe('AppMenu', () => {
     it('agrupa los accesos temporales de Autoevaluación pública y Cambiar contraseña bajo un mismo título', () => {
         TestBed.resetTestingModule();
         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionOf('ADMIN')));
-        TestBed.configureTestingModule({ imports: [AppMenu], providers: [provideRouter([]), provideHttpClient()] });
-        const sections = (TestBed.createComponent(AppMenu).componentInstance as unknown as { model: () => MenuItem[] }).model();
+        TestBed.configureTestingModule({ imports: [AppMenuComponent], providers: [provideRouter([]), provideHttpClient()] });
+        const sections = (TestBed.createComponent(AppMenuComponent).componentInstance as unknown as { model: () => MenuItem[] }).model();
         const temporal = sections.find((section) => section.label === 'Temporal');
         expect(temporal?.items?.map((item) => item.label)).toEqual(['Autoevaluación pública', 'Cambiar contraseña']);
         expect(sections.map((section) => section.label)).not.toContain('Empleados');
         expect(sections.map((section) => section.label)).not.toContain('Cuenta');
     });
 
-    it('mantiene resaltadas Citas y Formularios en todas las pantallas de su sección', () => {
+    it('mantiene resaltadas las opciones con subpantallas en todas las pantallas de su sección', () => {
         for (const role of ['ADMIN', 'ERGONOMIST'] as const) {
-            for (const label of ['Citas', 'Formularios']) {
+            for (const label of ['Empresas', 'Formularios', 'Citas', ...(role === 'ADMIN' ? ['Usuarios'] : [])]) {
                 const entry = visibleEntries(role).find((candidate) => candidate.label === label);
                 expect(entry?.routerLinkActiveOptions?.paths).withContext(`${role} ${label}`).toBe('subset');
             }

@@ -67,7 +67,6 @@ interface HourMark {
  */
 @Component({
     selector: 'app-dashboard',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [DatePipe, RouterLink, SkeletonModule],
     templateUrl: './dashboard.component.html',

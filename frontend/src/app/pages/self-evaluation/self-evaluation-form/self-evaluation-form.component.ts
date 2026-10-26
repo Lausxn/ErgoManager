@@ -10,7 +10,7 @@ import { ProgressBarModule } from 'primeng/progressbar';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
 
-import { AppFloatingConfigurator } from '../../../layout/component/app.floatingconfigurator';
+import { AppFloatingConfiguratorComponent } from '../../../layout/component/app.floatingconfigurator';
 import { BrandLogoComponent } from '../../../shared/components/brand-logo/brand-logo.component';
 import { FormFieldComponent } from '../../../shared/components/form-field/form-field.component';
 import { trackUnsavedChanges } from '../../../shared/forms/unsaved-changes';
@@ -44,9 +44,8 @@ const SUBMIT_FAILED_MESSAGE = 'No se pudo enviar la autoevaluación. Intente de 
  */
 @Component({
     selector: 'app-self-evaluation-form',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [DecimalPipe, ReactiveFormsModule, ButtonModule, InputNumberModule, InputTextModule, ProgressBarModule, SkeletonModule, TagModule, AppFloatingConfigurator, BrandLogoComponent, FormFieldComponent],
+    imports: [DecimalPipe, ReactiveFormsModule, ButtonModule, InputNumberModule, InputTextModule, ProgressBarModule, SkeletonModule, TagModule, AppFloatingConfiguratorComponent, BrandLogoComponent, FormFieldComponent],
     templateUrl: './self-evaluation-form.component.html',
     styleUrl: './self-evaluation-form.component.scss'
 })

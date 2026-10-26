@@ -18,7 +18,8 @@ import org.springframework.stereotype.Component;
 public class CurrentUserService {
 
     private static final String ADMIN_AUTHORITY = "ROLE_ADMIN";
-    private static final String ACCESS_DENIED_MESSAGE = "No tiene permisos para realizar esta acción.";
+    /** Answer of every HTTP 403, so the user always reads the same explanation. */
+    public static final String ACCESS_DENIED_MESSAGE = "No tiene permisos para realizar esta acción.";
     private final UserRepository userRepository;
 
     /**
@@ -73,6 +74,17 @@ public class CurrentUserService {
             return;
         }
         if (!Objects.equals(getCurrentUser().getId(), ownerId)) {
+            throw new AccessDeniedException(ACCESS_DENIED_MESSAGE);
+        }
+    }
+
+    /**
+     * Lets through only an administrator.
+     *
+     * @throws AccessDeniedException for any other role
+     */
+    public void checkAdmin() {
+        if (!isAdmin()) {
             throw new AccessDeniedException(ACCESS_DENIED_MESSAGE);
         }
     }

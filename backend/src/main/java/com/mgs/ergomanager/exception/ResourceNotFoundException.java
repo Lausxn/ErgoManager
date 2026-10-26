@@ -14,14 +14,4 @@ public class ResourceNotFoundException extends RuntimeException {
     public ResourceNotFoundException(String message) {
         super(message);
     }
-
-    /**
-     * Builds the exception with the usual "Entity not found with id X" message.
-     *
-     * @param resourceName name of the entity that was searched
-     * @param id           identifier that produced no result
-     */
-    public ResourceNotFoundException(String resourceName, Object id) {
-        super(resourceName + " not found with id " + id);
-    }
 }

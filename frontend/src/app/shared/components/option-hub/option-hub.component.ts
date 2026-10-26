@@ -20,7 +20,6 @@ const DEFAULT_LEAD = 'Elija qué desea gestionar.';
  */
 @Component({
     selector: 'app-option-hub',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [RouterLink, PageHeaderComponent],
     host: { class: 'mgs-option-stage' },

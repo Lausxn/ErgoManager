@@ -62,7 +62,6 @@ function uniqueOptions(control: AbstractControl) {
 
 @Component({
     selector: 'app-form-detail',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [FormsModule, SelectModule, ReactiveFormsModule, RouterLink, ButtonModule, InputNumberModule, InputTextModule, SkeletonModule, TagModule, TextareaModule, TooltipModule, FormFieldComponent, PageHeaderComponent, SaveBarComponent],
     templateUrl: './form-detail.component.html',

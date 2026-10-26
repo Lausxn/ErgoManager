@@ -2,8 +2,8 @@ import { Routes } from '@angular/router';
 import { authGuard } from './app/core/guards/auth.guard';
 import { homeRedirect } from './app/core/guards/redirect-to-home';
 import { roleGuard } from './app/core/guards/role.guard';
-import { AppLayout } from './app/layout/component/app.layout';
-import { Notfound } from './app/pages/notfound/notfound';
+import { AppLayoutComponent } from './app/layout/component/app.layout';
+import { NotfoundComponent } from './app/pages/notfound/notfound';
 
 /**
  * Root routes. Everything inside the layout needs a session, and some
@@ -12,14 +12,8 @@ import { Notfound } from './app/pages/notfound/notfound';
  */
 export const appRoutes: Routes = [
     {
-        path: 'users/deactivate-confirmation',
-        canActivate: [authGuard, roleGuard(['ADMIN'])],
-        loadComponent: () => import('./app/pages/users/deactivate-user-confirmation/deactivate-user-confirmation.component').then((m) => m.DeactivateUserConfirmationComponent),
-        title: 'ErgoManager - Desactivar usuario'
-    },
-    {
         path: '',
-        component: AppLayout,
+        component: AppLayoutComponent,
         canActivate: [authGuard],
         canActivateChild: [authGuard],
         children: [
@@ -70,6 +64,6 @@ export const appRoutes: Routes = [
         loadChildren: () => import('./app/pages/self-evaluation/self-evaluation.routes').then((m) => m.selfEvaluationRoutes)
     },
     { path: 'auth', loadChildren: () => import('./app/pages/auth/auth.routes') },
-    { path: 'notfound', component: Notfound, title: 'ErgoManager - Página no encontrada' },
+    { path: 'notfound', component: NotfoundComponent, title: 'ErgoManager - Página no encontrada' },
     { path: '**', redirectTo: '/notfound' }
 ];

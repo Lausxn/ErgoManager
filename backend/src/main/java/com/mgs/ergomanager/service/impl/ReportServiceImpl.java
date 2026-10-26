@@ -84,9 +84,10 @@ public class ReportServiceImpl implements ReportService {
         }
         if (type == null || type == FormType.PERSONALIZED_EVALUATION) {
             // Same rule as the detail and the PDF: an ergonomist only reads their own evaluations.
-            Long ownerId = currentUserService.isAdmin() ? null : currentUserService.getCurrentUser().getId();
-            personalizedEvaluationRepository.findAllForReport().stream()
-                    .filter(evaluation -> ownerId == null || ownerId.equals(evaluation.getUser().getId()))
+            List<PersonalizedEvaluation> evaluations = currentUserService.isAdmin()
+                    ? personalizedEvaluationRepository.findAllForReport()
+                    : personalizedEvaluationRepository.findAllForReportByUserId(currentUserService.getCurrentUser().getId());
+            evaluations.stream()
                     .map(evaluation -> toItem(evaluation, previousNames))
                     .forEach(items::add);
         }
@@ -98,12 +99,8 @@ public class ReportServiceImpl implements ReportService {
     @Override
     @Transactional(readOnly = true)
     public List<ReportCompanyDTO> findCompanies() {
-        Map<Long, Company> companies = new LinkedHashMap<>();
-        for (SelfEvaluation selfEvaluation : selfEvaluationRepository.findAllForReport()) {
-            companies.putIfAbsent(selfEvaluation.getCompany().getId(), selfEvaluation.getCompany());
-        }
         Map<Long, List<String>> previousNames = previousNamesByCompany();
-        return companies.values().stream()
+        return selfEvaluationRepository.findCompaniesWithSelfEvaluations().stream()
                 .sorted(Comparator.comparing((Company company) -> comparable(company.getBusinessName()))
                         .thenComparing(Company::getId))
                 .map(company -> new ReportCompanyDTO(company.getId(), company.getBusinessName(), company.isActive(),
@@ -115,11 +112,11 @@ public class ReportServiceImpl implements ReportService {
     @Transactional(readOnly = true)
     public List<ReportEmployeeDTO> findEmployees(Long companyId) {
         // One row per employee and company, with the name of their latest self evaluation.
+        List<SelfEvaluation> selfEvaluations = companyId == null
+                ? selfEvaluationRepository.findAllForReport()
+                : selfEvaluationRepository.findForReportByCompanyId(companyId);
         Map<String, SelfEvaluation> latest = new LinkedHashMap<>();
-        for (SelfEvaluation selfEvaluation : selfEvaluationRepository.findAllForReport()) {
-            if (companyId != null && !companyId.equals(selfEvaluation.getCompany().getId())) {
-                continue;
-            }
+        for (SelfEvaluation selfEvaluation : selfEvaluations) {
             String key = selfEvaluation.getCompany().getId() + "|" + selfEvaluation.getEmployeeEmail();
             latest.merge(key, selfEvaluation, ReportServiceImpl::newest);
         }

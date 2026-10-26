@@ -29,7 +29,6 @@ const STRENGTH_SEGMENTS = [1, 2, 3, 4] as const;
  */
 @Component({
     selector: 'app-update-password',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [ReactiveFormsModule, RouterLink, ButtonModule, PasswordModule, FormFieldComponent, PageHeaderComponent, SaveBarComponent],
     templateUrl: './update-password.component.html'

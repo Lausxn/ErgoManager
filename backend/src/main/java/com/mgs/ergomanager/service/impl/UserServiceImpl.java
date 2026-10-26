@@ -10,10 +10,9 @@ import com.mgs.ergomanager.exception.ResourceNotFoundException;
 import com.mgs.ergomanager.model.User;
 import com.mgs.ergomanager.model.enums.Role;
 import com.mgs.ergomanager.repository.UserRepository;
+import com.mgs.ergomanager.security.PasswordRules;
 import com.mgs.ergomanager.service.UserService;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Locale;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -30,7 +29,6 @@ public class UserServiceImpl implements UserService {
     private static final String DUPLICATE_EMAIL_MESSAGE = "El correo ya está registrado";
     private static final String ONLY_ADMIN_ROLE_MESSAGE = "No se puede cambiar el rol del único administrador activo.";
     private static final String ONLY_ADMIN_DEACTIVATION_MESSAGE = "No se puede desactivar al único administrador activo.";
-    private static final int BCRYPT_MAX_BYTES = 72;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
@@ -42,10 +40,8 @@ public class UserServiceImpl implements UserService {
      * @param passwordEncoder encoder used to hash the passwords
      * @param eventPublisher  publisher used to notify that a user was created
      */
-    public UserServiceImpl(
-            UserRepository userRepository,
-            PasswordEncoder passwordEncoder,
-            ApplicationEventPublisher eventPublisher) {
+    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder,
+                           ApplicationEventPublisher eventPublisher) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.eventPublisher = eventPublisher;
@@ -54,7 +50,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public List<UserResponseDTO> findAll() {
-        return userRepository.findAllByOrderByCreatedAtDescIdDesc().stream().map(this::toResponse).toList();
+        return userRepository.findAllByOrderByCreatedAtDescIdDesc().stream().map(UserServiceImpl::toResponse).toList();
     }
 
     @Override
@@ -64,54 +60,33 @@ public class UserServiceImpl implements UserService {
     }
 
     /**
-     * Creates a new administrator or ergonomist.
+     * Creates a new administrator or ergonomist. The supplied password is the
+     * temporary one: it is stored hashed and the original value is emailed once
+     * the transaction commits.
      *
-     * <p>The supplied password is treated as the temporary password. It is
-     * hashed before being persisted and the original value is delivered by
-     * email after the database transaction commits successfully.</p>
-     *
-     * @param request data required to create the user
+     * @param request data of the user, already normalized by the DTO
      * @return created user without exposing the password
      */
     @Override
     @Transactional
     public UserResponseDTO create(UserRequestDTO request) {
-        String normalizedEmail = request.email().trim().toLowerCase(Locale.ROOT);
-
-        if (userRepository.existsByEmail(normalizedEmail)) {
+        if (userRepository.existsByEmail(request.email())) {
             throw new DuplicateResourceException(DUPLICATE_EMAIL_MESSAGE);
         }
-
-        if (request.password().getBytes(StandardCharsets.UTF_8).length > BCRYPT_MAX_BYTES) {
-            throw new BusinessException("La contraseña no puede superar 72 bytes UTF-8.");
+        if (PasswordRules.exceedsMaxBytes(request.password())) {
+            throw new BusinessException("La contraseña no puede superar " + PasswordRules.MAX_BYTES + " bytes UTF-8.");
         }
-
         User user = new User();
-
-        user.setFirstName(request.firstName().trim());
-        user.setFirstLastName(request.firstLastName().trim());
-
-        if (request.secondLastName() != null && !request.secondLastName().isBlank()) {
-            user.setSecondLastName(request.secondLastName().trim());
-        } else {
-            user.setSecondLastName(null);
-        }
-
-        user.setEmail(normalizedEmail);
+        user.setFirstName(request.firstName());
+        user.setFirstLastName(request.firstLastName());
+        user.setSecondLastName(request.secondLastName());
+        user.setEmail(request.email());
         user.setPassword(passwordEncoder.encode(request.password()));
         user.setRole(request.role());
         user.setActive(true);
-
-        try {
-            User createdUser = userRepository.saveAndFlush(user);
-
-            eventPublisher.publishEvent(new UserCreatedEvent(normalizedEmail, request.password()));
-
-            return toResponse(createdUser);
-
-        } catch (DataIntegrityViolationException exception) {
-            throw new DuplicateResourceException(DUPLICATE_EMAIL_MESSAGE);
-        }
+        User created = saveAndFlush(user);
+        eventPublisher.publishEvent(new UserCreatedEvent(request.email(), request.password()));
+        return toResponse(created);
     }
 
     /**
@@ -126,42 +101,26 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponseDTO update(Long id, UserUpdateRequestDTO request) {
-        User user = userRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE));
-
-        String normalizedEmail = request.email().trim().toLowerCase(Locale.ROOT);
-
-        userRepository.findByEmail(normalizedEmail)
+        User user = getUserForUpdate(id);
+        userRepository.findByEmail(request.email())
                 .filter(existingUser -> !existingUser.getId().equals(id))
                 .ifPresent(existingUser -> {
                     throw new DuplicateResourceException(DUPLICATE_EMAIL_MESSAGE);
                 });
-
-        boolean changingOnlyActiveAdminRole =
-                user.getRole() == Role.ADMIN
-                        && request.role() == Role.ERGONOMIST
-                        && user.isActive()
-                        && userRepository.countByRoleAndActiveTrue(Role.ADMIN) == 1;
-
+        boolean changingOnlyActiveAdminRole = user.getRole() == Role.ADMIN && request.role() == Role.ERGONOMIST
+                && user.isActive() && userRepository.countByRoleAndActiveTrue(Role.ADMIN) == 1;
         if (changingOnlyActiveAdminRole) {
             throw new BusinessException(ONLY_ADMIN_ROLE_MESSAGE);
         }
-
         user.setFirstName(request.firstName());
         user.setFirstLastName(request.firstLastName());
         user.setSecondLastName(request.secondLastName());
-        user.setEmail(normalizedEmail);
+        user.setEmail(request.email());
         if (user.getRole() != request.role()) {
             user.setTokenVersion(user.getTokenVersion() + 1);
             user.setRole(request.role());
         }
-
-        try {
-            User updatedUser = userRepository.saveAndFlush(user);
-            return toResponse(updatedUser);
-        } catch (DataIntegrityViolationException exception) {
-            throw new DuplicateResourceException(DUPLICATE_EMAIL_MESSAGE);
-        }
+        return toResponse(saveAndFlush(user));
     }
 
     /**
@@ -172,9 +131,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void deactivate(Long id, String currentUserEmail) {
-        User user = userRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE));
-
+        User user = getUserForUpdate(id);
         if (user.getEmail().equalsIgnoreCase(currentUserEmail)) {
             throw new BusinessException("No puede desactivar su propia cuenta.");
         }
@@ -184,7 +141,6 @@ public class UserServiceImpl implements UserService {
         if (user.getRole() == Role.ADMIN && userRepository.countByRoleAndActiveTrue(Role.ADMIN) == 1) {
             throw new BusinessException(ONLY_ADMIN_DEACTIVATION_MESSAGE);
         }
-
         user.setActive(false);
         // A new version rejects the tokens issued before, even after a reactivation.
         user.setTokenVersion(user.getTokenVersion() + 1);
@@ -217,12 +173,38 @@ public class UserServiceImpl implements UserService {
     }
 
     /**
+     * Reads a user locking its row until the transaction ends, or fails with HTTP 404.
+     *
+     * @param id identifier of the user
+     * @return the locked user
+     */
+    private User getUserForUpdate(Long id) {
+        return userRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE));
+    }
+
+    /**
+     * Writes the user immediately, so an email taken by a concurrent request is
+     * still reported as HTTP 409.
+     *
+     * @param user user to store
+     * @return the stored user
+     */
+    private User saveAndFlush(User user) {
+        try {
+            return userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException exception) {
+            throw new DuplicateResourceException(DUPLICATE_EMAIL_MESSAGE);
+        }
+    }
+
+    /**
      * Maps a user entity to the representation exposed by the API.
      *
      * @param user stored user
      * @return user response without the password
      */
-    private UserResponseDTO toResponse(User user) {
+    private static UserResponseDTO toResponse(User user) {
         return new UserResponseDTO(
                 user.getId(),
                 user.getFirstName(),

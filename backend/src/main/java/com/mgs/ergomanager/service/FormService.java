@@ -1,7 +1,6 @@
 package com.mgs.ergomanager.service;
 
 import com.mgs.ergomanager.dto.form.FormRequestDTO;
-import com.mgs.ergomanager.dto.form.FormResendResponseDTO;
 import com.mgs.ergomanager.dto.form.FormResponseDTO;
 import com.mgs.ergomanager.model.enums.FormType;
 import java.util.List;
@@ -75,14 +74,4 @@ public interface FormService {
      * @return the activated form
      */
     FormResponseDTO activate(Long id);
-
-    /**
-     * Sends a form again to the employees of a company, which is the yearly
-     * follow up required by MGS.
-     *
-     * @param formId    identifier of the form to resend
-     * @param companyId identifier of the company to notify
-     * @return number of emails sent successfully
-     */
-    FormResendResponseDTO resendAnnually(Long formId, Long companyId);
 }

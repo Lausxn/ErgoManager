@@ -1,9 +1,9 @@
 import { Component, computed, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { IsActiveMatchOptions, RouterModule } from '@angular/router';
+import { IsActiveMatchOptions } from '@angular/router';
 import { MenuItem } from 'primeng/api';
-import { AppMenuitem } from './app.menuitem';
+
 import { AuthService } from '../../core/services/auth.service';
+import { AppMenuitemComponent } from './app.menuitem';
 
 /** Keeps an entry highlighted on every screen of its section, not only on its first one. */
 const SECTION_ACTIVE: IsActiveMatchOptions = { paths: 'subset', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' };
@@ -14,21 +14,18 @@ const SECTION_ACTIVE: IsActiveMatchOptions = { paths: 'subset', queryParams: 'ig
  */
 @Component({
     selector: 'app-menu',
-    standalone: true,
-    imports: [CommonModule, AppMenuitem, RouterModule],
+    imports: [AppMenuitemComponent],
     template: `<ul class="layout-menu">
-        <ng-container *ngFor="let item of model(); let i = index">
-            <li app-menuitem *ngIf="!item.separator" [item]="item" [index]="i" [root]="true"></li>
-            <li *ngIf="item.separator" class="menu-separator"></li>
-        </ng-container>
-    </ul> `
+        @for (item of model(); track item.label) {
+            <li app-menuitem [item]="item" [root]="true"></li>
+        }
+    </ul>`
 })
-export class AppMenu {
+export class AppMenuComponent {
     private readonly authService = inject(AuthService);
 
     protected readonly model = computed<MenuItem[]>(() => {
-        const isPreview = this.authService.isPreviewMode && !this.authService.getToken();
-        const isAdmin = isPreview || this.authService.session()?.role === 'ADMIN';
+        const isAdmin = this.authService.session()?.role === 'ADMIN';
 
         // Sections follow the order of the work, the same for both roles: prepare the
         // client and its forms, attend the appointments, then follow the results.
@@ -36,7 +33,7 @@ export class AppMenu {
             {
                 label: 'Preparación',
                 items: [
-                    { label: 'Empresas', icon: 'fa-solid fa-building fa-fw', routerLink: ['/companies'] },
+                    { label: 'Empresas', icon: 'fa-solid fa-building fa-fw', routerLink: ['/companies'], routerLinkActiveOptions: SECTION_ACTIVE },
                     { label: 'Formularios', icon: 'fa-solid fa-file-pen fa-fw', routerLink: ['/forms'], routerLinkActiveOptions: SECTION_ACTIVE }
                 ]
             },
@@ -55,7 +52,7 @@ export class AppMenu {
                 // User management stays restricted to administrators.
                 label: 'Administración',
                 visible: isAdmin,
-                items: [{ label: 'Usuarios', icon: 'fa-solid fa-users fa-fw', routerLink: ['/users'] }]
+                items: [{ label: 'Usuarios', icon: 'fa-solid fa-users fa-fw', routerLink: ['/users'], routerLinkActiveOptions: SECTION_ACTIVE }]
             },
             {
                 // Shortcuts kept while the application is being developed.

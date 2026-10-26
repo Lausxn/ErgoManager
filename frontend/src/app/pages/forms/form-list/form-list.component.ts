@@ -52,7 +52,6 @@ interface CompanyOption {
  */
 @Component({
     selector: 'app-form-list',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [FormsModule, RouterLink, ButtonModule, DialogModule, IconFieldModule, InputIconModule, InputTextModule, SelectModule, SelectButtonModule, SkeletonModule, TableModule, TagModule, TooltipModule, EmptyStateComponent, PageHeaderComponent],
     templateUrl: './form-list.component.html',

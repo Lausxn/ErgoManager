@@ -86,7 +86,6 @@ type SearchResult = { ok: true; list: HistoryResponse[] } | { ok: false };
  */
 @Component({
     selector: 'app-history-list',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [
         DatePipe,

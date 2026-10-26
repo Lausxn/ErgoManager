@@ -19,18 +19,6 @@ import org.springframework.stereotype.Repository;
 public interface AvailabilityRepository extends JpaRepository<Availability, Long> {
 
     /**
-     * Returns the free slots of an ergonomist inside a date range.
-     *
-     * @param userId identifier of the ergonomist
-     * @param from   beginning of the range
-     * @param to     end of the range
-     * @return list of free slots
-     */
-    List<Availability> findByUserIdAndTakenFalseAndStartDateTimeBetween(Long userId,
-                                                                       LocalDateTime from,
-                                                                       LocalDateTime to);
-
-    /**
      * Returns the free slots of an ergonomist inside a date range, ordered by
      * start and with the ergonomist already loaded.
      *

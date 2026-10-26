@@ -3,6 +3,7 @@ import { formatDate } from '@angular/common';
 import { AppointmentStatus } from '../../shared/models/appointment-status.model';
 import { AvailabilityResponse } from '../../shared/models/appointment.model';
 import { UserResponse } from '../../shared/models/user.model';
+import { fullNameOf } from '../../shared/utils/person';
 
 export const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -156,7 +157,7 @@ export interface ErgonomistOption {
  */
 export function agendaOwnersOf(users: readonly UserResponse[], currentUserId: number | undefined): ErgonomistOption[] {
     const toOption = (user: UserResponse, own: boolean): ErgonomistOption => {
-        const fullName = [user.firstName, user.firstLastName, user.secondLastName].filter(Boolean).join(' ');
+        const fullName = fullNameOf(user);
         return { id: user.id, fullName, email: user.email, label: own ? `${fullName} (usted)` : fullName };
     };
     const own = users.filter((user) => user.active && user.id === currentUserId).map((user) => toOption(user, true));

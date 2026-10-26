@@ -2,17 +2,17 @@ import { HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { AvatarModule } from 'primeng/avatar';
 import { ButtonModule } from 'primeng/button';
-import { TooltipModule } from 'primeng/tooltip';
+import { SkeletonModule } from 'primeng/skeleton';
 
 import { AuthService } from '../../../core/services/auth.service';
-import { LayoutService } from '../../../layout/service/layout.service';
-import { BrandLogoComponent } from '../../../shared/components/brand-logo/brand-logo.component';
-import { SidebarNavComponent } from '../../../shared/components/sidebar-nav/sidebar-nav.component';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { UserResponse } from '../../../shared/models/user.model';
 import { ToastService } from '../../../shared/services/toast.service';
 import { getApiErrorMessage } from '../../../shared/utils/api-error';
 import { ROLE_LABELS } from '../../../shared/utils/labels';
+import { fullNameOf, personInitials } from '../../../shared/utils/person';
 import { UserService } from '../user.service';
 
 const NOT_FOUND_MESSAGE = 'El usuario no existe o ya fue eliminado. Vuelva a la lista e intente de nuevo.';
@@ -21,14 +21,13 @@ const DEACTIVATE_ERROR_MESSAGE = 'No se pudo desactivar el usuario. Intente de n
 
 /**
  * Confirms the deactivation (soft delete) of an administrator or ergonomist
- * using the shared security page design. The user is read from the backend,
+ * inside the main layout. The user is read from the backend,
  * so the page never relies on the name sent in the url and blocks the action
  * when it is not allowed: own account, inactive user or missing user.
  */
 @Component({
     selector: 'app-deactivate-user-confirmation',
-    standalone: true,
-    imports: [ButtonModule, TooltipModule, BrandLogoComponent, SidebarNavComponent],
+    imports: [AvatarModule, ButtonModule, SkeletonModule, PageHeaderComponent],
     templateUrl: './deactivate-user-confirmation.component.html',
     styleUrl: './deactivate-user-confirmation.component.scss'
 })
@@ -38,8 +37,7 @@ export class DeactivateUserConfirmationComponent {
     private readonly userService = inject(UserService);
     private readonly toastService = inject(ToastService);
     private readonly destroyRef = inject(DestroyRef);
-    protected readonly authService = inject(AuthService);
-    protected readonly layoutService = inject(LayoutService);
+    private readonly authService = inject(AuthService);
     protected readonly roleLabels = ROLE_LABELS;
 
     /** Identifier taken from the url; the rest of the data comes from the backend. */
@@ -56,9 +54,14 @@ export class DeactivateUserConfirmationComponent {
     protected readonly userName = computed(() => {
         const user = this.user();
         if (user !== null) {
-            return [user.firstName, user.firstLastName, user.secondLastName].filter(Boolean).join(' ');
+            return fullNameOf(user);
         }
         return this.route.snapshot.queryParamMap.get('name')?.trim() || 'Usuario';
+    });
+
+    protected readonly initials = computed(() => {
+        const user = this.user();
+        return user === null ? '' : personInitials(user);
     });
 
     protected readonly isOwnAccount = computed(() => this.user()?.id === this.authService.session()?.userId);
@@ -79,21 +82,11 @@ export class DeactivateUserConfirmationComponent {
     });
 
     protected readonly canDeactivate = computed(() => this.user() !== null && this.blockedReason() === null && !this.isDeactivating());
-    protected readonly isSidebarCollapsed = computed(() => !!this.layoutService.layoutState().staticMenuDesktopInactive);
-    protected readonly isSidebarOpen = computed(() => !!this.layoutService.layoutState().staticMenuMobileActive);
 
     constructor() {
         if (this.hasValidUser) {
             this.loadUser();
         }
-    }
-
-    protected isSidebarVisible(): boolean {
-        return this.layoutService.isDesktop() ? !this.isSidebarCollapsed() : this.isSidebarOpen();
-    }
-
-    protected closeSidebar(): void {
-        this.layoutService.layoutState.update((state) => ({ ...state, staticMenuMobileActive: false }));
     }
 
     /**

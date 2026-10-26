@@ -40,9 +40,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SelfEvaluationServiceImpl implements SelfEvaluationService {
 
-    /** Lowest and highest weight of a predefined answer. */
-    private static final int MIN_WEIGHT = 1;
-    private static final int MAX_WEIGHT = 3;
     private static final String INCOMPLETE_ANSWERS_MESSAGE = "Responda todas las preguntas del formulario.";
 
     private static final Comparator<Answer> BY_QUESTION_ORDER =
@@ -130,10 +127,10 @@ public class SelfEvaluationServiceImpl implements SelfEvaluationService {
             answers.add(answer);
         }
         int questionCount = questions.size();
-        double riskPercentage = riskPercentage(totalScore, questionCount);
-        RiskLevel riskLevel = calculateRiskLevel(totalScore, questionCount);
+        double riskPercentage = RiskScale.percentageOf(totalScore, questionCount);
+        RiskLevel riskLevel = RiskScale.levelOf(totalScore, questionCount);
         selfEvaluation.setTotalScore(totalScore);
-        selfEvaluation.setAverageScore(round(averageScore(totalScore, questionCount)));
+        selfEvaluation.setAverageScore(round(RiskScale.averageOf(totalScore, questionCount)));
         selfEvaluation.setRiskPercentage(round(riskPercentage));
         selfEvaluation.setRiskLevel(riskLevel);
 
@@ -170,47 +167,6 @@ public class SelfEvaluationServiceImpl implements SelfEvaluationService {
                 .map(selfEvaluation -> toResponse(selfEvaluation,
                         answersBySelfEvaluation.getOrDefault(selfEvaluation.getId(), List.of())))
                 .toList();
-    }
-
-    /**
-     * Compares in whole numbers: average < 5/3 is the same as 3 * total < 5 * questions,
-     * so a result right on a limit is never misread because of decimals.
-     */
-    @Override
-    public RiskLevel calculateRiskLevel(int totalScore, int questionCount) {
-        if (questionCount <= 0) {
-            return RiskLevel.LOW;
-        }
-        if (3L * totalScore < 5L * questionCount) {
-            return RiskLevel.LOW;
-        }
-        if (3L * totalScore < 7L * questionCount) {
-            return RiskLevel.MEDIUM;
-        }
-        return RiskLevel.HIGH;
-    }
-
-    /**
-     * Average weight per question, from 1 to 3.
-     *
-     * @param totalScore    sum of the weights of the chosen answers
-     * @param questionCount number of questions of the form
-     * @return average weight
-     */
-    private static double averageScore(int totalScore, int questionCount) {
-        return questionCount <= 0 ? MIN_WEIGHT : (double) totalScore / questionCount;
-    }
-
-    /**
-     * Position of the average in the 1 to 3 scale: 1 is 0 %, 2 is 50 % and 3 is
-     * 100 %, whatever the number of questions.
-     *
-     * @param totalScore    sum of the weights of the chosen answers
-     * @param questionCount number of questions of the form
-     * @return risk percentage, from 0 to 100
-     */
-    private static double riskPercentage(int totalScore, int questionCount) {
-        return (averageScore(totalScore, questionCount) - MIN_WEIGHT) * 100.0 / (MAX_WEIGHT - MIN_WEIGHT);
     }
 
     /**

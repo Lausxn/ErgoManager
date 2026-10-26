@@ -1,4 +1,4 @@
-import { Injectable, effect, signal, computed } from '@angular/core';
+import { Injectable, computed, effect, signal } from '@angular/core';
 import { Subject } from 'rxjs';
 
 /** Sizes the user can pick to make the whole page easier to read. */
@@ -24,94 +24,66 @@ export const PAGE_SIZE_OPTIONS: readonly PageSizeOption[] = [
 /** Key of the browser storage entry that keeps the site preferences. */
 export const PREFERENCES_STORAGE_KEY = 'ergomanager.preferences';
 
-export interface layoutConfig {
+export interface LayoutConfig {
     darkTheme: boolean;
     menuMode: 'static' | 'overlay';
     pageSize: PageSize;
 }
 
+/** Open or closed state of the side menu on each kind of screen. */
 interface LayoutState {
-    staticMenuDesktopInactive?: boolean;
-    overlayMenuActive?: boolean;
-    configSidebarVisible?: boolean;
-    staticMenuMobileActive?: boolean;
-    menuHoverActive?: boolean;
-}
-
-interface MenuChangeEvent {
-    key: string;
-    routeEvent?: boolean;
+    staticMenuDesktopInactive: boolean;
+    overlayMenuActive: boolean;
+    staticMenuMobileActive: boolean;
 }
 
 /**
  * Preferences used on the first visit: the light theme, because the brand book
  * asks for "Papel" backgrounds on working pages (page 3, "Claridad").
  */
-const DEFAULT_CONFIG: layoutConfig = {
+const DEFAULT_CONFIG: LayoutConfig = {
     darkTheme: false,
     menuMode: 'static',
     pageSize: 'normal'
 };
 
-@Injectable({
-    providedIn: 'root'
-})
+/**
+ * Display preferences of the user (theme and page size, kept in the browser)
+ * and the open or closed state of the side menu.
+ */
+@Injectable({ providedIn: 'root' })
 export class LayoutService {
-    _config: layoutConfig = readStoredConfig();
+    readonly layoutConfig = signal<LayoutConfig>(readStoredConfig());
+    readonly layoutState = signal<LayoutState>({ staticMenuDesktopInactive: false, overlayMenuActive: false, staticMenuMobileActive: false });
 
-    _state: LayoutState = {
-        staticMenuDesktopInactive: false,
-        overlayMenuActive: false,
-        configSidebarVisible: false,
-        staticMenuMobileActive: false,
-        menuHoverActive: false
-    };
+    /** Emits when the menu opens over the page, so the layout can close it on an outside click. */
+    private readonly overlayOpen = new Subject<void>();
+    readonly overlayOpen$ = this.overlayOpen.asObservable();
 
-    layoutConfig = signal<layoutConfig>(this._config);
-    layoutState = signal<LayoutState>(this._state);
-    private configUpdate = new Subject<layoutConfig>();
-    private overlayOpen = new Subject<any>();
-    private menuSource = new Subject<MenuChangeEvent>();
-    private resetSource = new Subject();
-
-    menuSource$ = this.menuSource.asObservable();
-
-    resetSource$ = this.resetSource.asObservable();
-
-    configUpdate$ = this.configUpdate.asObservable();
-
-    overlayOpen$ = this.overlayOpen.asObservable();
-
-    isSidebarActive = computed(() => this.layoutState().overlayMenuActive || this.layoutState().staticMenuMobileActive);
-    isDarkTheme = computed(() => this.layoutConfig().darkTheme);
-    pageSize = computed(() => this.layoutConfig().pageSize);
+    readonly isDarkTheme = computed(() => this.layoutConfig().darkTheme);
+    readonly pageSize = computed(() => this.layoutConfig().pageSize);
 
     /** Position of the current page size inside PAGE_SIZE_OPTIONS. */
-    pageSizeIndex = computed(() =>
+    readonly pageSizeIndex = computed(() =>
         Math.max(
             PAGE_SIZE_OPTIONS.findIndex((item) => item.value === this.pageSize()),
             0
         )
     );
 
-    pageSizeLabel = computed(() => PAGE_SIZE_OPTIONS[this.pageSizeIndex()].label);
-    canIncreasePageSize = computed(() => this.pageSizeIndex() < PAGE_SIZE_OPTIONS.length - 1);
-    canDecreasePageSize = computed(() => this.pageSizeIndex() > 0);
-    isOverlay = computed(() => this.layoutConfig().menuMode === 'overlay');
+    readonly pageSizeLabel = computed(() => PAGE_SIZE_OPTIONS[this.pageSizeIndex()].label);
+    private readonly isOverlay = computed(() => this.layoutConfig().menuMode === 'overlay');
 
     constructor() {
         // Applied right away, so the first paint already uses the stored preferences.
-        this.applyTheme(this._config.darkTheme);
-        this.applyPageSize(this._config.pageSize);
+        this.applyTheme(this.layoutConfig().darkTheme);
+        this.applyPageSize(this.layoutConfig().pageSize);
 
         effect(() => {
             const config = this.layoutConfig();
-            if (config) {
-                this.onConfigUpdate();
-                this.applyTheme(config.darkTheme);
-                this.applyPageSize(config.pageSize);
-                storeConfig(config);
-            }
+            this.applyTheme(config.darkTheme);
+            this.applyPageSize(config.pageSize);
+            storeConfig(config);
         });
     }
 
@@ -132,16 +104,6 @@ export class LayoutService {
     }
 
     /**
-     * Moves the page size one step up or down, staying inside the available sizes.
-     *
-     * @param step +1 to enlarge, -1 to reduce
-     */
-    stepPageSize(step: 1 | -1): void {
-        const index = Math.min(Math.max(this.pageSizeIndex() + step, 0), PAGE_SIZE_OPTIONS.length - 1);
-        this.setPageSize(PAGE_SIZE_OPTIONS[index].value);
-    }
-
-    /**
      * Changes the size of the whole page.
      *
      * @param pageSize size picked by the user
@@ -159,45 +121,31 @@ export class LayoutService {
         document.documentElement.style.fontSize = `${option.fontSize}px`;
     }
 
-    onMenuToggle() {
+    /** Opens or closes the side menu, the way the current screen shows it. */
+    onMenuToggle(): void {
         if (this.isOverlay()) {
-            this.layoutState.update((prev) => ({ ...prev, overlayMenuActive: !this.layoutState().overlayMenuActive }));
-
+            this.layoutState.update((state) => ({ ...state, overlayMenuActive: !state.overlayMenuActive }));
             if (this.layoutState().overlayMenuActive) {
-                this.overlayOpen.next(null);
+                this.overlayOpen.next();
             }
         }
-
         if (this.isDesktop()) {
-            this.layoutState.update((prev) => ({ ...prev, staticMenuDesktopInactive: !this.layoutState().staticMenuDesktopInactive }));
+            this.layoutState.update((state) => ({ ...state, staticMenuDesktopInactive: !state.staticMenuDesktopInactive }));
         } else {
-            this.layoutState.update((prev) => ({ ...prev, staticMenuMobileActive: !this.layoutState().staticMenuMobileActive }));
-
+            this.layoutState.update((state) => ({ ...state, staticMenuMobileActive: !state.staticMenuMobileActive }));
             if (this.layoutState().staticMenuMobileActive) {
-                this.overlayOpen.next(null);
+                this.overlayOpen.next();
             }
         }
     }
 
-    isDesktop() {
+    /**
+     * Tells whether the screen is wide enough for the fixed side menu.
+     *
+     * @returns true on desktop widths
+     */
+    isDesktop(): boolean {
         return window.innerWidth > 991;
-    }
-
-    isMobile() {
-        return !this.isDesktop();
-    }
-
-    onConfigUpdate() {
-        this._config = { ...this.layoutConfig() };
-        this.configUpdate.next(this.layoutConfig());
-    }
-
-    onMenuStateChange(event: MenuChangeEvent) {
-        this.menuSource.next(event);
-    }
-
-    reset() {
-        this.resetSource.next(true);
     }
 }
 
@@ -207,10 +155,10 @@ export class LayoutService {
  *
  * @returns the preferences to start with
  */
-function readStoredConfig(): layoutConfig {
+function readStoredConfig(): LayoutConfig {
     try {
         const raw = localStorage.getItem(PREFERENCES_STORAGE_KEY);
-        const stored = raw ? (JSON.parse(raw) as Partial<layoutConfig>) : {};
+        const stored = raw ? (JSON.parse(raw) as Partial<LayoutConfig>) : {};
         return {
             darkTheme: typeof stored.darkTheme === 'boolean' ? stored.darkTheme : DEFAULT_CONFIG.darkTheme,
             menuMode: DEFAULT_CONFIG.menuMode,
@@ -226,7 +174,7 @@ function readStoredConfig(): layoutConfig {
  *
  * @param config preferences of the session
  */
-function storeConfig(config: layoutConfig): void {
+function storeConfig(config: LayoutConfig): void {
     try {
         localStorage.setItem(PREFERENCES_STORAGE_KEY, JSON.stringify({ darkTheme: config.darkTheme, pageSize: config.pageSize }));
     } catch {

@@ -23,6 +23,7 @@ import { createIdentityControls, toIdentityRequest } from '../shared/user-fields
 import { UserIdentityFieldsComponent } from '../shared/user-identity-fields.component';
 import { UserRoleFieldComponent } from '../shared/user-role-field.component';
 import { UserService } from '../user.service';
+import { fullNameOf, personInitials } from '../../../shared/utils/person';
 
 const CONNECTION_ERROR = 'No fue posible conectar con el servidor. Revise su conexión e intente de nuevo.';
 
@@ -36,7 +37,6 @@ const ALERT_DURATION_MS = 900;
  */
 @Component({
     selector: 'app-user-edit',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [DatePipe, ReactiveFormsModule, RouterLink, AvatarModule, ButtonModule, SkeletonModule, TagModule, PageHeaderComponent, UserIdentityFieldsComponent, UserRoleFieldComponent],
     templateUrl: './user-edit.component.html',
@@ -83,8 +83,8 @@ export class UserEditComponent implements OnInit, HasUnsavedChanges {
         }
 
         return {
-            fullName: [user.firstName, user.firstLastName, user.secondLastName].filter(Boolean).join(' '),
-            initials: `${user.firstName.charAt(0)}${user.firstLastName.charAt(0)}`.toUpperCase(),
+            fullName: fullNameOf(user),
+            initials: personInitials(user),
             isOwnAccount: this.authService.session()?.userId === user.id
         };
     });
@@ -216,7 +216,7 @@ export class UserEditComponent implements OnInit, HasUnsavedChanges {
                 error: (error: HttpErrorResponse) => {
                     this.isSaving.set(false);
 
-                    this.handleSaveError(error, user);
+                    this.handleSaveError(error);
                 }
             });
     }
@@ -242,9 +242,8 @@ export class UserEditComponent implements OnInit, HasUnsavedChanges {
      * Explains why the backend rejected the changes.
      *
      * @param error answer of the backend
-     * @param user user as it was before the changes
      */
-    private handleSaveError(error: HttpErrorResponse, _user: UserResponse): void {
+    private handleSaveError(error: HttpErrorResponse): void {
         const apiMessage = (error.error as ApiError | null)?.message;
 
         switch (error.status) {

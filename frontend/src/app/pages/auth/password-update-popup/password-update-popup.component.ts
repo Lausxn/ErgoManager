@@ -17,7 +17,6 @@ const MOTION_MS = typeof window !== 'undefined' && window.matchMedia?.('(prefers
  */
 @Component({
     selector: 'app-password-update-popup',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [ButtonModule],
     templateUrl: './password-update-popup.component.html',

@@ -35,10 +35,10 @@
 
         time {
             display: inline-block;
-        }
 
-        time::first-letter {
-            text-transform: uppercase;
+            &::first-letter {
+                text-transform: uppercase;
+            }
         }
     }
 
@@ -333,10 +333,9 @@
         align-items: center;
         gap: 1rem;
         padding: 0.8rem 0;
-        border-top: 1px solid var(--surface-border);
 
-        &:first-child {
-            border-top: 0;
+        & + & {
+            border-top: 1px solid var(--surface-border);
         }
 
         &--action {
@@ -414,10 +413,9 @@
         align-items: baseline;
         justify-content: space-between;
         padding: 0.7rem 0;
-        border-top: 1px solid var(--surface-border);
 
-        &:first-child {
-            border-top: 0;
+        & + & {
+            border-top: 1px solid var(--surface-border);
         }
     }
 

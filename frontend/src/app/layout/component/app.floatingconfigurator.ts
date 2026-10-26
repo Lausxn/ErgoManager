@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { AppPreferences } from './app.preferences';
+import { AppPreferencesComponent } from './app.preferences';
 
 /**
  * Theme and page size controls for the pages shown outside the main layout
@@ -7,11 +7,11 @@ import { AppPreferences } from './app.preferences';
  */
 @Component({
     selector: 'app-floating-configurator',
-    imports: [AppPreferences],
+    imports: [AppPreferencesComponent],
     template: `
         <div class="fixed top-4 right-4 z-50 mgs-prefs-floating">
             <app-preferences />
         </div>
     `
 })
-export class AppFloatingConfigurator {}
+export class AppFloatingConfiguratorComponent {}

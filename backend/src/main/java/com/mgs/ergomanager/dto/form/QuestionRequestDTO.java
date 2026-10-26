@@ -28,8 +28,7 @@ public record QuestionRequestDTO(
         @Min(value = 1, message = "El orden debe ser 1 o mayor.")
         Integer questionOrder,
 
-        @Valid
-        List<AnswerOptionRequestDTO> optionList) {
+        List<@Valid AnswerOptionRequestDTO> optionList) {
 
     /** Trims the statement and turns a missing option list into an empty one. */
     public QuestionRequestDTO {

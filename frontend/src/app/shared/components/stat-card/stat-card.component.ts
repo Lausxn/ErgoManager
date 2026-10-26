@@ -8,7 +8,6 @@ import { SkeletonModule } from 'primeng/skeleton';
  */
 @Component({
     selector: 'app-stat-card',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [SkeletonModule],
     host: { class: 'mgs-stat', '[class.mgs-stat--accent]': 'accent()', '[class.mgs-stat--dark]': 'dark()' },

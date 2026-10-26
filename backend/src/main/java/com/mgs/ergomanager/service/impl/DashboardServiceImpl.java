@@ -1,6 +1,7 @@
 package com.mgs.ergomanager.service.impl;
 
 import com.mgs.ergomanager.dto.dashboard.DashboardSummaryDTO;
+import com.mgs.ergomanager.model.enums.AppointmentStatus;
 import com.mgs.ergomanager.repository.AppointmentRepository;
 import com.mgs.ergomanager.repository.CompanyRepository;
 import com.mgs.ergomanager.repository.FormRepository;
@@ -45,7 +46,7 @@ public class DashboardServiceImpl implements DashboardService {
     public DashboardSummaryDTO getSummary() {
         return new DashboardSummaryDTO(
                 appointmentRepository.countByStatusInAndStartDateTimeGreaterThanEqual(
-                        AppointmentServiceImpl.PENDING_STATUSES, LocalDateTime.now()),
+                        AppointmentStatus.PENDING, LocalDateTime.now()),
                 companyRepository.countByActiveTrue(),
                 userRepository.countByActiveTrue(),
                 formRepository.countByActiveTrue());

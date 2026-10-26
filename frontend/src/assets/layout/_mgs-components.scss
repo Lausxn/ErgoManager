@@ -477,14 +477,6 @@
         justify-content: space-between;
     }
 
-    &__number {
-        font-family: var(--mgs-font-display);
-        font-size: 1rem;
-        font-weight: 700;
-        color: var(--mgs-accent-text);
-        font-variant-numeric: tabular-nums;
-    }
-
     &__icon {
         display: inline-flex;
         align-items: center;

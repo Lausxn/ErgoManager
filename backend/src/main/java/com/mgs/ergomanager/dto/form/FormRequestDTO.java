@@ -36,8 +36,7 @@ public record FormRequestDTO(
 
         @NotEmpty(message = "Agregue al menos una pregunta.")
         @Size(max = 100, message = "Use un máximo de 100 preguntas.")
-        @Valid
-        List<QuestionRequestDTO> questionList) {
+        List<@Valid QuestionRequestDTO> questionList) {
 
     /** Trims the texts and turns a blank description into null. */
     public FormRequestDTO {
