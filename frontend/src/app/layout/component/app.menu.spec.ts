@@ -111,6 +111,17 @@ describe('AppMenu', () => {
         }
     });
 
+    it('agrupa los accesos temporales de Autoevaluación pública y Cambiar contraseña bajo un mismo título', () => {
+        TestBed.resetTestingModule();
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionOf('ADMIN')));
+        TestBed.configureTestingModule({ imports: [AppMenu], providers: [provideRouter([]), provideHttpClient()] });
+        const sections = (TestBed.createComponent(AppMenu).componentInstance as unknown as { model: () => MenuItem[] }).model();
+        const temporal = sections.find((section) => section.label === 'Temporal');
+        expect(temporal?.items?.map((item) => item.label)).toEqual(['Autoevaluación pública', 'Cambiar contraseña']);
+        expect(sections.map((section) => section.label)).not.toContain('Empleados');
+        expect(sections.map((section) => section.label)).not.toContain('Cuenta');
+    });
+
     it('mantiene resaltadas Citas y Formularios en todas las pantallas de su sección', () => {
         for (const role of ['ADMIN', 'ERGONOMIST'] as const) {
             for (const label of ['Citas', 'Formularios']) {

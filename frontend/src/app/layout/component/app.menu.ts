@@ -59,12 +59,12 @@ export class AppMenu {
                 ]
             },
             {
-                label: 'Empleados',
-                items: [{ label: 'Autoevaluación pública', icon: 'fa-solid fa-arrow-up-right-from-square fa-fw', url: '/self-evaluation', target: '_blank' }]
-            },
-            {
-                label: 'Cuenta',
-                items: [{ label: 'Cambiar contraseña', icon: 'fa-solid fa-key fa-fw', routerLink: ['/account/password'] }]
+                // Shortcuts kept while the application is being developed.
+                label: 'Temporal',
+                items: [
+                    { label: 'Autoevaluación pública', icon: 'fa-solid fa-arrow-up-right-from-square fa-fw', url: '/self-evaluation', target: '_blank' },
+                    { label: 'Cambiar contraseña', icon: 'fa-solid fa-key fa-fw', routerLink: ['/account/password'] }
+                ]
             }
         ];
     });
