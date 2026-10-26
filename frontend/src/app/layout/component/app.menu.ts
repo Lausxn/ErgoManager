@@ -29,34 +29,33 @@ export class AppMenu {
     protected readonly model = computed<MenuItem[]>(() => {
         const isPreview = this.authService.isPreviewMode && !this.authService.getToken();
         const isAdmin = isPreview || this.authService.session()?.role === 'ADMIN';
-        const isErgonomist = isPreview || this.authService.session()?.role === 'ERGONOMIST';
 
+        // Sections follow the order of the work, the same for both roles: prepare the
+        // client and its forms, attend the appointments, then follow the results.
         return [
             {
-                label: 'Administración',
-                visible: isAdmin,
+                label: 'Preparación',
                 items: [
                     { label: 'Empresas', icon: 'fa-solid fa-building fa-fw', routerLink: ['/companies'] },
-                    { label: 'Usuarios', icon: 'fa-solid fa-users fa-fw', routerLink: ['/users'] },
                     { label: 'Formularios', icon: 'fa-solid fa-file-pen fa-fw', routerLink: ['/forms'], routerLinkActiveOptions: SECTION_ACTIVE }
                 ]
             },
             {
-                // Ergonomists have full access to forms and client companies, but not to users.
-                label: 'Ergonomía',
-                visible: isErgonomist && !isAdmin,
+                label: 'Atención',
                 items: [
-                    { label: 'Formularios', icon: 'fa-solid fa-file-pen fa-fw', routerLink: ['/forms'], routerLinkActiveOptions: SECTION_ACTIVE },
-                    { label: 'Perfiles de clientes', icon: 'fa-solid fa-building fa-fw', routerLink: ['/companies'] }
+                    { label: 'Citas', icon: 'fa-regular fa-calendar-days fa-fw', routerLink: ['/appointments'], routerLinkActiveOptions: SECTION_ACTIVE },
+                    { label: 'Evaluación personalizada', icon: 'fa-solid fa-clipboard-user fa-fw', routerLink: ['/personalized-evaluations'] }
                 ]
             },
             {
-                label: 'Evaluación',
-                items: [
-                    { label: 'Citas', icon: 'fa-regular fa-calendar-days fa-fw', routerLink: ['/appointments'], routerLinkActiveOptions: SECTION_ACTIVE },
-                    { label: 'Evaluación personalizada', icon: 'fa-solid fa-clipboard-user fa-fw', routerLink: ['/personalized-evaluations'] },
-                    { label: 'Historial', icon: 'fa-solid fa-chart-line fa-fw', routerLink: ['/history'] }
-                ]
+                label: 'Seguimiento',
+                items: [{ label: 'Historial', icon: 'fa-solid fa-chart-line fa-fw', routerLink: ['/history'] }]
+            },
+            {
+                // User management stays restricted to administrators.
+                label: 'Administración',
+                visible: isAdmin,
+                items: [{ label: 'Usuarios', icon: 'fa-solid fa-users fa-fw', routerLink: ['/users'] }]
             },
             {
                 // Shortcuts kept while the application is being developed.

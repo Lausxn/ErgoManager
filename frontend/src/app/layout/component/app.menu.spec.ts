@@ -18,7 +18,6 @@ const EXPECTED_LINKS: Record<string, string> = {
     Empresas: '/companies',
     Usuarios: '/users',
     Formularios: '/forms',
-    'Perfiles de clientes': '/companies',
     Citas: '/appointments',
     'Evaluación personalizada': '/personalized-evaluations',
     Historial: '/history',
@@ -91,10 +90,28 @@ describe('AppMenu', () => {
         expect(visibleEntries('ERGONOMIST').map((entry) => entry.label)).not.toContain('Usuarios');
     });
 
-    it('da al ergonomista acceso a Formularios y Perfiles de clientes', () => {
+    it('ordena el menú por etapas del trabajo, igual para ambos roles, y suma Administración solo al administrador', () => {
+        const sectionsOf = (role: Role) => {
+            TestBed.resetTestingModule();
+            localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionOf(role)));
+            TestBed.configureTestingModule({ imports: [AppMenu], providers: [provideRouter([]), provideHttpClient()] });
+            const model = (TestBed.createComponent(AppMenu).componentInstance as unknown as { model: () => MenuItem[] }).model();
+            return model.filter((section) => section.visible !== false).map((section) => [section.label, (section.items ?? []).filter((item) => item.visible !== false).map((item) => item.label)]);
+        };
+        const work = [
+            ['Preparación', ['Empresas', 'Formularios']],
+            ['Atención', ['Citas', 'Evaluación personalizada']],
+            ['Seguimiento', ['Historial']]
+        ];
+        const temporal = ['Temporal', ['Autoevaluación pública', 'Cambiar contraseña']];
+        expect(sectionsOf('ERGONOMIST')).toEqual([...work, temporal]);
+        expect(sectionsOf('ADMIN')).toEqual([...work, ['Administración', ['Usuarios']], temporal]);
+    });
+
+    it('da al ergonomista acceso a Formularios y Empresas', () => {
         const ergonomistLabels = visibleEntries('ERGONOMIST').map((entry) => entry.label);
         expect(ergonomistLabels).toContain('Formularios');
-        expect(ergonomistLabels).toContain('Perfiles de clientes');
+        expect(ergonomistLabels).toContain('Empresas');
     });
 
     it('muestra Evaluación personalizada a ambos roles, porque el administrador también atiende citas', () => {
