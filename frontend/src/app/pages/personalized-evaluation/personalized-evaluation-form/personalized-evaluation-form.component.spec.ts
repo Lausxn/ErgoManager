@@ -53,7 +53,7 @@ describe('Evaluación personalizada', () => {
         formRequest.flush({
             id: 12,
             title: 'Evaluación ergonómica personalizada',
-            description: 'Formulario utilizado durante la evaluación presencial.',
+            description: 'Formulario utilizado durante la evaluación personalizada virtual.',
             publicationYear: 2026,
             type: 'PERSONALIZED_EVALUATION',
             active: true,
