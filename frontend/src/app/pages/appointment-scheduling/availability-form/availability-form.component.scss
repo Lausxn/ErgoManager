@@ -116,7 +116,7 @@
     display: grid;
     grid-template-columns: 2rem minmax(0, 1fr) auto;
     align-items: end;
-    gap: 0.75rem;
+    gap: 1.25rem;
     padding: 0.85rem 0.85rem 0.85rem 1rem;
     border: 1px solid var(--surface-border);
     border-radius: var(--mgs-radius-sm);
@@ -203,12 +203,20 @@
 
     &__slots {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
         gap: 0.6rem;
         margin: 0;
         padding: 0;
         list-style: none;
     }
+}
+
+/* Edit and delete keep their own room, so neither is pressed by mistake. */
+.availability-slot__actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 1.25rem;
 }
 
 .availability-slot {
@@ -232,11 +240,15 @@
         min-width: 0;
     }
 
+    /* Breaks between the two times when the card is narrow, never inside one. */
     &__time {
         font-weight: 600;
         color: var(--heading-color);
         font-variant-numeric: tabular-nums;
-        white-space: nowrap;
+
+        span {
+            white-space: nowrap;
+        }
     }
 
     &__detail {

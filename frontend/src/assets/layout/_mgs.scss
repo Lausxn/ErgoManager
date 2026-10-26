@@ -310,6 +310,11 @@
  * Bar of unsaved changes, like the one of Discord: it appears while a form has
  * changes and shakes in wine, the alert color, when the user tries to leave.
  */
+/* While the bar is shown, a focused field scrolls above it instead of hiding behind it. */
+html:has(.mgs-save-bar) {
+    scroll-padding-bottom: 6rem;
+}
+
 .mgs-save-bar {
     position: sticky;
     bottom: 1rem;

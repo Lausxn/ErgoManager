@@ -96,10 +96,10 @@
                                 <span class="availability-range__number" aria-hidden="true">{{ index + 1 }}</span>
                                 <div class="availability-range__fields">
                                     <app-form-field label="Desde" [inputId]="'start-' + index" [control]="range.controls.startTime">
-                                        <p-datepicker [inputId]="'start-' + index" formControlName="startTime" [timeOnly]="true" hourFormat="12" [stepMinute]="15" [fluid]="true" [readonlyInput]="true" placeholder="09:00 AM" />
+                                        <p-datepicker [inputId]="'start-' + index" formControlName="startTime" [timeOnly]="true" hourFormat="12" [stepMinute]="15" [fluid]="true" [readonlyInput]="true" appendTo="body" placeholder="09:00 AM" />
                                     </app-form-field>
                                     <app-form-field label="Hasta" [inputId]="'end-' + index" [control]="range.controls.endTime">
-                                        <p-datepicker [inputId]="'end-' + index" formControlName="endTime" [timeOnly]="true" hourFormat="12" [stepMinute]="15" [fluid]="true" [readonlyInput]="true" placeholder="12:00 PM" />
+                                        <p-datepicker [inputId]="'end-' + index" formControlName="endTime" [timeOnly]="true" hourFormat="12" [stepMinute]="15" [fluid]="true" [readonlyInput]="true" appendTo="body" placeholder="12:00 PM" />
                                     </app-form-field>
                                 </div>
                                 <p-button
@@ -158,7 +158,10 @@
                                         <li class="availability-slot" [class.availability-slot--blocked]="slot.problem">
                                             <i [class]="slot.problem ? 'fa-solid fa-ban availability-slot__icon' : 'fa-regular fa-circle-check availability-slot__icon'" aria-hidden="true"></i>
                                             <span class="availability-slot__text">
-                                                <span class="availability-slot__time">{{ slot.start | date: 'shortTime' }} – {{ slot.end | date: 'shortTime' }}</span>
+                                                @let slotRange = timeRange(slot.start, slot.end);
+                                                <span class="availability-slot__time"
+                                                    ><span>{{ slotRange[0] }}</span> – <span>{{ slotRange[1] }}</span></span
+                                                >
                                                 <span class="availability-slot__detail">{{ slot.problem ? problemLabels[slot.problem] : 'Se publicará' }}</span>
                                             </span>
                                         </li>
@@ -220,7 +223,10 @@
                                         <li class="availability-slot" [class.availability-slot--booked]="entry.appointment">
                                             <i [class]="entry.appointment ? 'fa-solid fa-user-clock availability-slot__icon' : 'fa-regular fa-clock availability-slot__icon'" aria-hidden="true"></i>
                                             <span class="availability-slot__text">
-                                                <span class="availability-slot__time">{{ entry.start | date: 'shortTime' }} – {{ entry.end | date: 'shortTime' }}</span>
+                                                @let entryRange = timeRange(entry.start, entry.end);
+                                                <span class="availability-slot__time"
+                                                    ><span>{{ entryRange[0] }}</span> – <span>{{ entryRange[1] }}</span></span
+                                                >
                                                 @if (entry.appointment; as appointment) {
                                                     <span class="availability-slot__detail" [title]="appointment.employeeName">{{ statusLabels[appointment.status] }} · {{ appointment.employeeName }}</span>
                                                 } @else {
@@ -228,35 +234,37 @@
                                                 }
                                             </span>
                                             @if (entry.slot; as slot) {
-                                                @if (!day.isPast) {
+                                                <span class="availability-slot__actions">
+                                                    @if (!day.isPast) {
+                                                        <p-button
+                                                            type="button"
+                                                            icon="fa-regular fa-pen-to-square"
+                                                            [rounded]="true"
+                                                            [text]="true"
+                                                            size="small"
+                                                            severity="secondary"
+                                                            [disabled]="isDeleting('slot-' + slot.id) || isDeleting('day-' + day.key)"
+                                                            (onClick)="openEdit(slot)"
+                                                            pTooltip="Editar espacio"
+                                                            tooltipPosition="top"
+                                                            ariaLabel="Editar espacio"
+                                                        />
+                                                    }
                                                     <p-button
                                                         type="button"
-                                                        icon="fa-regular fa-pen-to-square"
+                                                        icon="fa-regular fa-trash-can"
                                                         [rounded]="true"
                                                         [text]="true"
                                                         size="small"
                                                         severity="secondary"
-                                                        [disabled]="isDeleting('slot-' + slot.id) || isDeleting('day-' + day.key)"
-                                                        (onClick)="openEdit(slot)"
-                                                        pTooltip="Editar espacio"
+                                                        [loading]="isDeleting('slot-' + slot.id)"
+                                                        [disabled]="isDeleting('day-' + day.key)"
+                                                        (onClick)="confirmDeleteSlot(slot)"
+                                                        pTooltip="Eliminar espacio"
                                                         tooltipPosition="top"
-                                                        ariaLabel="Editar espacio"
+                                                        ariaLabel="Eliminar espacio"
                                                     />
-                                                }
-                                                <p-button
-                                                    type="button"
-                                                    icon="fa-regular fa-trash-can"
-                                                    [rounded]="true"
-                                                    [text]="true"
-                                                    size="small"
-                                                    severity="secondary"
-                                                    [loading]="isDeleting('slot-' + slot.id)"
-                                                    [disabled]="isDeleting('day-' + day.key)"
-                                                    (onClick)="confirmDeleteSlot(slot)"
-                                                    pTooltip="Eliminar espacio"
-                                                    tooltipPosition="top"
-                                                    ariaLabel="Eliminar espacio"
-                                                />
+                                                </span>
                                             } @else {
                                                 <i class="fa-solid fa-lock availability-slot__lock" pTooltip="Reservado: cancele la cita desde la agenda para liberarlo" tooltipPosition="top" aria-label="Reservado"></i>
                                             }

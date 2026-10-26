@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, input, numberAttribute, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, LOCALE_ID, OnInit, computed, inject, input, numberAttribute, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -28,7 +28,7 @@ import { markFormAsDirty } from '../../../shared/utils/form';
 import { APPOINTMENT_STATUS_LABELS } from '../../../shared/utils/labels';
 import { UserService } from '../../users/user.service';
 import { AppointmentService } from '../appointment.service';
-import { ErgonomistOption, agendaOwnersOf, combineDayAndTime, dayKey, formatDuration, minutesBetween, rangesOverlap, timeOfDay } from '../appointment-utils';
+import { ErgonomistOption, agendaOwnersOf, combineDayAndTime, dayKey, formatDuration, minutesBetween, rangesOverlap, timeOfDay, timeRangeParts } from '../appointment-utils';
 
 /** Shown for every HTTP 409, whatever the server sends, so a technical text never reaches the user. */
 const OVERLAP_MESSAGE = 'El horario seleccionado se cruza con una disponibilidad existente. Seleccione otro rango de fecha y hora.';
@@ -151,6 +151,7 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
     private readonly dialogService = inject(DialogService);
     private readonly toastService = inject(ToastService);
     private readonly destroyRef = inject(DestroyRef);
+    private readonly locale = inject(LOCALE_ID);
 
     /** Ergonomist to preselect, from the ?userId= query parameter (administrator only). */
     readonly userId = input<number | undefined, unknown>(undefined, { transform: numberAttribute });
@@ -442,6 +443,17 @@ export class AvailabilityFormComponent implements OnInit, HasUnsavedChanges {
      */
     protected markerOf(date: { day: number; month: number; year: number }): { free: number; booked: number } | undefined {
         return this.dayMarkers().get(`${date.year}-${String(date.month + 1).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`);
+    }
+
+    /**
+     * Time range of a slot with its a. m. or p. m., for the cards, split in its
+     * two sides so a narrow card breaks the line between them.
+     *
+     * @param start beginning of the slot
+     * @param end   end of the slot
+     */
+    protected timeRange(start: Date | string, end: Date | string): [string, string] {
+        return timeRangeParts(start, end, this.locale);
     }
 
     protected addRange(): void {
