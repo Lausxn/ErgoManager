@@ -1,14 +1,15 @@
 @use 'mixins' as *;
 
+/* Flush to the left edge under the top bar, so both read as one frame. */
 .layout-sidebar {
     position: fixed;
-    width: 20rem;
-    height: calc(100vh - var(--layout-topbar-height) - 4rem);
+    width: 18rem;
+    height: calc(100vh - var(--layout-topbar-height));
     z-index: 999;
     overflow-y: auto;
     user-select: none;
-    top: calc(var(--layout-topbar-height) + 2rem);
-    left: 2rem;
+    top: var(--layout-topbar-height);
+    left: 0;
     transition:
         transform var(--layout-section-transition-duration),
         left var(--layout-section-transition-duration);

@@ -63,6 +63,16 @@ public interface AppointmentService {
     List<AppointmentResponseDTO> findAgenda(Long userId, LocalDateTime from, LocalDateTime to);
 
     /**
+     * Returns the appointments of every agenda inside a date range, for the
+     * overview of an administrator.
+     *
+     * @param from beginning of the range
+     * @param to   end of the range
+     * @return list of appointments
+     */
+    List<AppointmentResponseDTO> findAllAgendas(LocalDateTime from, LocalDateTime to);
+
+    /**
      * Cancels an appointment and frees its slot.
      *
      * @param id identifier of the appointment

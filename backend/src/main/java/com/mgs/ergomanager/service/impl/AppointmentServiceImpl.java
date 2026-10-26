@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Isolation;
@@ -47,6 +48,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     private static final DateTimeFormatter HISTORY_DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final String OVERLAP_MESSAGE = "El horario seleccionado se cruza con una disponibilidad existente. Seleccione otro rango de fecha y hora.";
     private static final String APPOINTMENT_NOT_FOUND_MESSAGE = "No se encontró la cita.";
+    private static final String ACCESS_DENIED_MESSAGE = "No tiene permisos para realizar esta acción.";
     private final AvailabilityRepository availabilityRepository;
     private final AppointmentRepository appointmentRepository;
     private final UserRepository userRepository;
@@ -215,7 +217,26 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Transactional(readOnly = true)
     public List<AppointmentResponseDTO> findAgenda(Long userId, LocalDateTime from, LocalDateTime to) {
         currentUserService.checkOwnerOrAdmin(userId);
-        List<Appointment> appointments = appointmentRepository.findAgenda(userId, from, to);
+        return toResponses(appointmentRepository.findAgenda(userId, from, to));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AppointmentResponseDTO> findAllAgendas(LocalDateTime from, LocalDateTime to) {
+        if (!currentUserService.isAdmin()) {
+            throw new AccessDeniedException(ACCESS_DENIED_MESSAGE);
+        }
+        return toResponses(appointmentRepository.findAllAgendas(from, to));
+    }
+
+    /**
+     * Maps appointments to responses, telling which ones already have a
+     * personalized evaluation with a single query.
+     *
+     * @param appointments appointments with their associations loaded
+     * @return appointment responses in the same order
+     */
+    private List<AppointmentResponseDTO> toResponses(List<Appointment> appointments) {
         if (appointments.isEmpty()) {
             return List.of();
         }

@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -621,6 +622,27 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
                 .andExpect(status().isForbidden());
         mvc.perform(withRange(get("/api/appointments"), ergonomist.getId())).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/appointments").with(as(admin))).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void theOverviewOfEveryAgendaIsOnlyForAdministrators() throws Exception {
+        Availability later = persistAvailability(otherErgonomist, futureAt(15, 10), futureAt(15, 11));
+        Availability earlier = persistAvailability(ergonomist, futureAt(15, 8), futureAt(15, 9));
+        mvc.perform(bookingRequest(submitSelfEvaluation(1, 2, 3), later.getId()).with(as(admin))).andExpect(status().isCreated());
+        mvc.perform(bookingRequest(submitSelfEvaluation(1, 2, 3), earlier.getId()).with(as(admin))).andExpect(status().isCreated());
+        Supplier<MockHttpServletRequestBuilder> overview = () -> get("/api/appointments/all")
+                .param("from", futureAt(15, 0).format(QUERY_DATE_FORMAT))
+                .param("to", futureAt(16, 0).format(QUERY_DATE_FORMAT));
+
+        // Every ergonomist, ordered by start, with the evaluated flag of the agenda.
+        mvc.perform(overview.get().with(as(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].userId").value(ergonomist.getId()))
+                .andExpect(jsonPath("$[1].userId").value(otherErgonomist.getId()))
+                .andExpect(jsonPath("$[0].evaluated").value(false));
+        mvc.perform(overview.get().with(as(ergonomist))).andExpect(status().isForbidden());
+        mvc.perform(overview.get()).andExpect(status().isUnauthorized());
     }
 
     // ----- personalized evaluations -----

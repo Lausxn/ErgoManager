@@ -127,6 +127,21 @@ public class AppointmentController {
     }
 
     /**
+     * Returns the appointments of every agenda inside a date range; only for
+     * administrators, who see the day of all the ergonomists on their dashboard.
+     *
+     * @param from beginning of the range
+     * @param to   end of the range
+     * @return list of appointments
+     */
+    @GetMapping("/all")
+    public ResponseEntity<List<AppointmentResponseDTO>> findAllAgendas(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
+        return ResponseEntity.ok(appointmentService.findAllAgendas(from, to));
+    }
+
+    /**
      * Cancels an appointment and frees its slot.
      *
      * @param id identifier of the appointment
