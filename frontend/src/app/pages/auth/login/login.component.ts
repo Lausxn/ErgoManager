@@ -9,7 +9,7 @@ import { PasswordModule } from 'primeng/password';
 
 import { SESSION_MESSAGE_STATE_KEY } from '../../../core/interceptors/error.interceptor';
 import { AuthService } from '../../../core/services/auth.service';
-import { AppFloatingConfigurator } from '../../../layout/component/app.floatingconfigurator';
+import { AppFloatingConfiguratorComponent } from '../../../layout/component/app.floatingconfigurator';
 import { BrandLogoComponent } from '../../../shared/components/brand-logo/brand-logo.component';
 import { getApiErrorMessage, getApiFieldErrors } from '../../../shared/utils/api-error';
 import { isControlInvalid, markFormAsDirty } from '../../../shared/utils/form';
@@ -25,9 +25,8 @@ const LOGIN_FAILED_MESSAGE = 'No fue posible iniciar sesión. Intente de nuevo.'
  */
 @Component({
     selector: 'app-login',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, PasswordModule, IconFieldModule, InputIconModule, AppFloatingConfigurator, BrandLogoComponent],
+    imports: [ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, PasswordModule, IconFieldModule, InputIconModule, AppFloatingConfiguratorComponent, BrandLogoComponent],
     templateUrl: './login.component.html'
 })
 export class LoginComponent {

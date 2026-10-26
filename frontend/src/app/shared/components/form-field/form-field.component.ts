@@ -16,7 +16,6 @@ import { fieldErrorMessage, isControlInvalid } from '../../utils/form';
  */
 @Component({
     selector: 'app-form-field',
-    standalone: true,
     host: { class: 'mgs-field', '[class.mgs-field--half]': 'half()', '[class.mgs-field--invalid]': 'showError()' },
     template: `
         @if (label()) {

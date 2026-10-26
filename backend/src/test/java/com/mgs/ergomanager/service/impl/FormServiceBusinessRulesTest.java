@@ -19,11 +19,8 @@ import com.mgs.ergomanager.model.Form;
 import com.mgs.ergomanager.model.Question;
 import com.mgs.ergomanager.model.enums.FormType;
 import com.mgs.ergomanager.repository.AnswerOptionRepository;
-import com.mgs.ergomanager.repository.CompanyRepository;
 import com.mgs.ergomanager.repository.FormRepository;
 import com.mgs.ergomanager.repository.QuestionRepository;
-import com.mgs.ergomanager.repository.SelfEvaluationRepository;
-import com.mgs.ergomanager.service.EmailService;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,15 +48,6 @@ class FormServiceBusinessRulesTest {
     @Mock
     private AnswerOptionRepository answerOptionRepository;
 
-    @Mock
-    private CompanyRepository companyRepository;
-
-    @Mock
-    private SelfEvaluationRepository selfEvaluationRepository;
-
-    @Mock
-    private EmailService emailService;
-
     private FormServiceImpl formService;
 
     /**
@@ -67,14 +55,7 @@ class FormServiceBusinessRulesTest {
      */
     @BeforeEach
     void setUp() {
-        formService = new FormServiceImpl(
-                formRepository,
-                questionRepository,
-                answerOptionRepository,
-                companyRepository,
-                selfEvaluationRepository,
-                emailService,
-                "http://localhost:4200");
+        formService = new FormServiceImpl(formRepository, questionRepository, answerOptionRepository);
     }
 
     /**

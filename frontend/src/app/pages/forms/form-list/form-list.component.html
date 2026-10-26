@@ -1,8 +1,11 @@
-<app-page-header eyebrow="Administración" title="Formularios" subtitle="Consulte y administre los instrumentos de evaluación ergonómica.">
-    <p-button label="Crear formulario" icon="fa-solid fa-plus" [routerLink]="section() === 'personalized' ? '/forms/personalized/new' : '/forms/new'" />
+<app-page-header
+    eyebrow="Formularios"
+    [title]="isPersonalized() ? 'Evaluaciones personalizadas' : 'Autoevaluaciones'"
+    [subtitle]="isPersonalized() ? 'Formularios que aplica el ergonomista durante la cita.' : 'Formularios que responden los colaboradores desde el enlace de su empresa.'"
+>
+    <p-button label="Volver a formularios" icon="fa-solid fa-arrow-left" severity="secondary" [text]="true" routerLink="/forms" />
+    <p-button label="Crear formulario" icon="fa-solid fa-plus" [routerLink]="isPersonalized() ? '/forms/personalized/new' : '/forms/new'" />
 </app-page-header>
-
-<app-form-navigation [section]="section()" />
 
 <div class="mgs-table-card">
     <p-table [value]="isLoading() ? skeletonRows : filteredRows()" [paginator]="!isLoading() && filteredRows().length > 10" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [rowHover]="true" dataKey="id" sortField="publicationYear" [sortOrder]="-1">

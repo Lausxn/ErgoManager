@@ -16,7 +16,6 @@ import { USER_LIMITS } from './user-fields';
  */
 @Component({
     selector: 'app-user-identity-fields',
-    standalone: true,
     imports: [ReactiveFormsModule, InputTextModule],
     viewProviders: [{ provide: ControlContainer, useExisting: FormGroupDirective }],
     template: `

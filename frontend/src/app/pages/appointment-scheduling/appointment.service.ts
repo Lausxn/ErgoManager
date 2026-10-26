@@ -61,6 +61,18 @@ export class AppointmentService {
     }
 
     /**
+     * Reads the appointments of every agenda inside a date range; only for
+     * administrators.
+     *
+     * @param from beginning of the range, in ISO 8601
+     * @param to   end of the range, in ISO 8601
+     * @returns list of appointments ordered by start
+     */
+    findAllAgendas(from: string, to: string): Observable<AppointmentResponse[]> {
+        return this.http.get<AppointmentResponse[]>(`${this.baseUrl}/all`, { params: { from, to } });
+    }
+
+    /**
      * Cancels an appointment and frees its slot.
      *
      * @param id identifier of the appointment

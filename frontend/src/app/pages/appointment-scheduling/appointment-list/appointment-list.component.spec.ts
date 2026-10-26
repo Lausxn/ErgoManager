@@ -137,3 +137,66 @@ describe('AppointmentListComponent: reprogramar cita', () => {
         expect(page().querySelector('tbody')!.textContent).not.toContain('Ana Mora');
     });
 });
+
+describe('AppointmentListComponent: el administrador también atiende citas', () => {
+    const ADMIN_ID = 1;
+    let fixture: ComponentFixture<AppointmentListComponent>;
+    let http: HttpTestingController;
+
+    const own = { ...appointmentOf(50, 'Carla Solís', at(2, 9)), userId: ADMIN_ID, ergonomistName: 'Juan Madrigal' };
+
+    beforeEach(() => {
+        TestBed.configureTestingModule({
+            imports: [AppointmentListComponent],
+            providers: [
+                provideRouter([]),
+                provideNoopAnimations(),
+                provideHttpClient(),
+                provideHttpClientTesting(),
+                { provide: AuthService, useValue: { session: () => ({ userId: ADMIN_ID, role: 'ADMIN', fullName: 'Juan Madrigal' }) } },
+                { provide: ToastService, useValue: jasmine.createSpyObj<ToastService>('ToastService', ['success', 'error', 'info']) }
+            ]
+        });
+        http = TestBed.inject(HttpTestingController);
+        fixture = TestBed.createComponent(AppointmentListComponent);
+        fixture.detectChanges();
+        http.expectOne(`${environment.apiUrl}/users`).flush([
+            { id: ERGONOMIST_ID, firstName: 'Keisy', firstLastName: 'Rojas', email: 'ergo@mgs.test', role: 'ERGONOMIST', active: true, createdAt: '2026-10-01T10:00:00' },
+            { id: ADMIN_ID, firstName: 'Juan', firstLastName: 'Madrigal', email: 'admin@mgs.test', role: 'ADMIN', active: true, createdAt: '2026-10-01T10:00:00' }
+        ]);
+        fixture.detectChanges();
+    });
+
+    afterEach(() => http.verify());
+
+    it('abre su propia agenda primero y le permite registrar la evaluación de sus citas', () => {
+        const agenda = http.expectOne((request) => request.method === 'GET' && request.url === AGENDA_URL);
+        expect(agenda.request.params.get('userId')).toBe(String(ADMIN_ID));
+        agenda.flush([own]);
+        http.expectOne((request) => request.method === 'GET' && request.url === AVAILABILITIES_URL).flush([]);
+        fixture.detectChanges();
+
+        const agendas = fixture.componentInstance['ergonomists']();
+        expect(agendas.map((option) => option.label)).toEqual(['Juan Madrigal (usted)', 'Keisy Rojas']);
+        const page = fixture.nativeElement as HTMLElement;
+        const row = Array.from(page.querySelectorAll<HTMLElement>('tbody tr')).find((element) => element.textContent?.includes('Carla Solís'))!;
+        expect(Array.from(row.querySelectorAll('button')).some((button) => button.textContent?.trim() === 'Registrar evaluación')).toBeTrue();
+    });
+
+    it('no le ofrece registrar la evaluación de las citas de un ergonomista', () => {
+        fixture.componentInstance['selectErgonomist'](ERGONOMIST_ID);
+        // Switching drops the reading of the administrator's agenda and reads the ergonomist's one.
+        const open = (url: string) => http.match((candidate) => candidate.method === 'GET' && candidate.url === url).filter((request) => !request.cancelled);
+        for (const request of open(AGENDA_URL)) {
+            request.flush(request.request.params.get('userId') === String(ERGONOMIST_ID) ? [appointmentOf(51, 'Pedro Vega', at(2, 10))] : []);
+        }
+        for (const request of open(AVAILABILITIES_URL)) {
+            request.flush([]);
+        }
+        fixture.detectChanges();
+
+        const page = fixture.nativeElement as HTMLElement;
+        expect(page.textContent).toContain('Pedro Vega');
+        expect(Array.from(page.querySelectorAll('button')).some((button) => button.textContent?.trim() === 'Registrar evaluación')).toBeFalse();
+    });
+});

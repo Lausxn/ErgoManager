@@ -33,7 +33,7 @@ export class InactivityService implements OnDestroy {
 
     /** Starts watching the activity of the signed in user. */
     start(): void {
-        if (this.intervalId !== null || this.authService.isPreviewMode) {
+        if (this.intervalId !== null) {
             return;
         }
         if (readLastActivity() === null) {

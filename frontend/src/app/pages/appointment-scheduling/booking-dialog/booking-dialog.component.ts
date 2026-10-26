@@ -51,7 +51,6 @@ interface EvaluationChoice extends SelfEvaluationResponse {
  */
 @Component({
     selector: 'app-booking-dialog',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [DatePipe, FormsModule, ButtonModule, DialogModule, IconFieldModule, InputIconModule, InputTextModule, SelectModule, SkeletonModule, TagModule, TextareaModule, EmptyStateComponent],
     templateUrl: './booking-dialog.component.html',

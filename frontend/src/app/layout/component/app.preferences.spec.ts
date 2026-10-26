@@ -1,10 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { LayoutService, PREFERENCES_STORAGE_KEY } from '../service/layout.service';
-import { AppPreferences } from './app.preferences';
+import { AppPreferencesComponent } from './app.preferences';
 
-describe('AppPreferences', () => {
-    let fixture: ComponentFixture<AppPreferences>;
+describe('AppPreferencesComponent', () => {
+    let fixture: ComponentFixture<AppPreferencesComponent>;
     let element: HTMLElement;
     let layoutService: LayoutService;
 
@@ -21,11 +21,11 @@ describe('AppPreferences', () => {
 
     beforeEach(() => {
         localStorage.removeItem(PREFERENCES_STORAGE_KEY);
-        TestBed.configureTestingModule({ imports: [AppPreferences] });
+        TestBed.configureTestingModule({ imports: [AppPreferencesComponent] });
         layoutService = TestBed.inject(LayoutService);
         layoutService.setDarkTheme(false);
         layoutService.setPageSize('normal');
-        fixture = TestBed.createComponent(AppPreferences);
+        fixture = TestBed.createComponent(AppPreferencesComponent);
         element = fixture.nativeElement;
         document.body.append(element);
         fixture.detectChanges();

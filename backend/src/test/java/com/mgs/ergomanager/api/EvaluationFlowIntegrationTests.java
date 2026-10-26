@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -362,7 +363,9 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
         mvc.perform(availabilityRequest(ergonomist.getId(), start.plusHours(3), start.plusHours(4))
                         .with(as(otherErgonomist)))
                 .andExpect(status().isForbidden());
-        mvc.perform(availabilityRequest(admin.getId(), start, start.plusHours(1)).with(as(admin)))
+        // An administrator opens only their own agenda, never the one of another administrator.
+        User otherAdmin = persistUser("otro.admin.agenda@example.test", Role.ADMIN);
+        mvc.perform(availabilityRequest(otherAdmin.getId(), start, start.plusHours(1)).with(as(admin)))
                 .andExpect(status().isBadRequest());
 
         mvc.perform(withRange(get("/api/appointments/availabilities"), ergonomist.getId()).with(as(ergonomist)))
@@ -621,6 +624,27 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
         mvc.perform(get("/api/appointments").with(as(admin))).andExpect(status().isBadRequest());
     }
 
+    @Test
+    void theOverviewOfEveryAgendaIsOnlyForAdministrators() throws Exception {
+        Availability later = persistAvailability(otherErgonomist, futureAt(15, 10), futureAt(15, 11));
+        Availability earlier = persistAvailability(ergonomist, futureAt(15, 8), futureAt(15, 9));
+        mvc.perform(bookingRequest(submitSelfEvaluation(1, 2, 3), later.getId()).with(as(admin))).andExpect(status().isCreated());
+        mvc.perform(bookingRequest(submitSelfEvaluation(1, 2, 3), earlier.getId()).with(as(admin))).andExpect(status().isCreated());
+        Supplier<MockHttpServletRequestBuilder> overview = () -> get("/api/appointments/all")
+                .param("from", futureAt(15, 0).format(QUERY_DATE_FORMAT))
+                .param("to", futureAt(16, 0).format(QUERY_DATE_FORMAT));
+
+        // Every ergonomist, ordered by start, with the evaluated flag of the agenda.
+        mvc.perform(overview.get().with(as(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].userId").value(ergonomist.getId()))
+                .andExpect(jsonPath("$[1].userId").value(otherErgonomist.getId()))
+                .andExpect(jsonPath("$[0].evaluated").value(false));
+        mvc.perform(overview.get().with(as(ergonomist))).andExpect(status().isForbidden());
+        mvc.perform(overview.get()).andExpect(status().isUnauthorized());
+    }
+
     // ----- personalized evaluations -----
 
     @Test
@@ -700,6 +724,28 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     // ----- full flow -----
+
+    @Test
+    void anAdministratorAttendsTheAppointmentsOfTheirOwnAgenda() throws Exception {
+        // An administrator also works as an ergonomist: they publish their own slots,
+        // but cannot open the agenda of another administrator.
+        User otherAdmin = persistUser("otro.admin.flow@example.test", Role.ADMIN);
+        long slotId = idOf(mvc.perform(availabilityRequest(admin.getId(), futureAt(23, 8), futureAt(23, 9)).with(as(admin)))
+                .andExpect(status().isCreated()).andReturn());
+        mvc.perform(availabilityRequest(otherAdmin.getId(), futureAt(23, 10), futureAt(23, 11)).with(as(admin)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("message").value("El usuario seleccionado no es un ergónomo activo."));
+
+        long appointmentId = idOf(mvc.perform(bookingRequest(submitSelfEvaluation(2, 2, 2), slotId).with(as(admin)))
+                .andExpect(status().isCreated()).andReturn());
+        mvc.perform(evaluationRequest(appointmentId).with(as(admin))).andExpect(status().isCreated());
+        mvc.perform(get("/api/personalized-evaluations").param("userId", String.valueOf(admin.getId())).with(as(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+
+        // The appointments of an ergonomist are still evaluated only by that ergonomist.
+        mvc.perform(evaluationRequest(bookAppointment(24)).with(as(admin))).andExpect(status().isForbidden());
+    }
 
     @Test
     void fullFlowFromSelfEvaluationToPdfReport() throws Exception {

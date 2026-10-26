@@ -12,9 +12,6 @@ import org.junit.jupiter.params.provider.CsvSource;
  */
 class SelfEvaluationRiskLevelTest {
 
-    private final SelfEvaluationServiceImpl service =
-            new SelfEvaluationServiceImpl(null, null, null, null, null, null, null);
-
     /**
      * Verifies the three equal parts of the 1 to 3 scale with forms of
      * different sizes, including the values right next to each limit.
@@ -41,6 +38,6 @@ class SelfEvaluationRiskLevelTest {
             "0, 0, LOW"
     })
     void calculatesTheRiskLevelFromTheAverageWeight(int totalScore, int questionCount, RiskLevel expected) {
-        assertEquals(expected, service.calculateRiskLevel(totalScore, questionCount));
+        assertEquals(expected, RiskScale.levelOf(totalScore, questionCount));
     }
 }

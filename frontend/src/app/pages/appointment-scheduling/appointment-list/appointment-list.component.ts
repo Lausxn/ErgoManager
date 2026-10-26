@@ -18,7 +18,6 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { StatCardComponent } from '../../../shared/components/stat-card/stat-card.component';
 import { AppointmentResponse, AvailabilityResponse } from '../../../shared/models/appointment.model';
-import { UserResponse } from '../../../shared/models/user.model';
 import { DialogService } from '../../../shared/services/dialog.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { getApiErrorMessage } from '../../../shared/utils/api-error';
@@ -26,9 +25,10 @@ import { toLocalDateTime } from '../../../shared/utils/date-time';
 import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_TAG_CLASSES } from '../../../shared/utils/labels';
 import { UserService } from '../../users/user.service';
 import { AppointmentService } from '../appointment.service';
-import { addDays, formatDuration, groupSlotsByDay, isPendingStatus, minutesBetween } from '../appointment-utils';
+import { ErgonomistOption, addDays, agendaOwnersOf, formatDuration, groupSlotsByDay, isPendingStatus, minutesBetween } from '../appointment-utils';
 import { BookingDialogComponent } from '../booking-dialog/booking-dialog.component';
 import { RescheduleDialogComponent } from '../reschedule-dialog/reschedule-dialog.component';
+import { nameInitials } from '../../../shared/utils/person';
 
 /** Placeholder rows drawn as skeletons while the agenda loads. */
 const SKELETON_ROWS = Array.from({ length: 5 }, (_, index) => ({ id: -index - 1 }));
@@ -37,13 +37,6 @@ type Period = 'NEXT_7' | 'NEXT_30' | 'LAST_30';
 
 /** Days covered by each period, negative when it looks back. */
 const PERIOD_DAYS: Record<Period, number> = { NEXT_7: 7, NEXT_30: 30, LAST_30: -30 };
-
-/** Ergonomist offered in the selector of the administrator. */
-interface ErgonomistOption {
-    id: number;
-    fullName: string;
-    email: string;
-}
 
 /** Appointment with the values the table shows, computed once per load. */
 interface AppointmentRow extends AppointmentResponse {
@@ -60,7 +53,6 @@ interface AppointmentRow extends AppointmentResponse {
  */
 @Component({
     selector: 'app-appointment-list',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [
         DatePipe,
@@ -140,17 +132,17 @@ export class AppointmentListComponent implements OnInit {
     });
 
     protected readonly rows = computed<AppointmentRow[]>(() => {
-        const isErgonomist = !this.isAdmin();
+        const currentUserId = this.authService.session()?.userId;
         return this.appointments().map((appointment) => {
             const isPending = isPendingStatus(appointment.status);
-            const [first = '', second = ''] = appointment.employeeName.trim().split(/\s+/);
             return {
                 ...appointment,
-                initials: `${first.charAt(0)}${second.charAt(0)}`.toUpperCase(),
+                initials: nameInitials(appointment.employeeName),
                 statusLabel: APPOINTMENT_STATUS_LABELS[appointment.status],
                 statusTagClass: APPOINTMENT_STATUS_TAG_CLASSES[appointment.status],
                 isPending,
-                canEvaluate: isErgonomist && isPending && !appointment.evaluated
+                // Each one evaluates the appointments of their own agenda, administrators included.
+                canEvaluate: appointment.userId === currentUserId && isPending && !appointment.evaluated
             };
         });
     });
@@ -200,10 +192,7 @@ export class AppointmentListComponent implements OnInit {
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: (users) => {
-                    const ergonomists = users
-                        .filter((user) => user.active && user.role === 'ERGONOMIST')
-                        .map((user) => ({ id: user.id, fullName: fullNameOf(user), email: user.email }))
-                        .sort((a, b) => a.fullName.localeCompare(b.fullName));
+                    const ergonomists = agendaOwnersOf(users, this.authService.session()?.userId);
                     this.ergonomists.set(ergonomists);
                     this.isLoadingErgonomists.set(false);
                     const requested = this.userId();
@@ -426,9 +415,4 @@ export class AppointmentListComponent implements OnInit {
                 }
             });
     }
-}
-
-/** Full name of a user, skipping the empty second last name. */
-function fullNameOf(user: UserResponse): string {
-    return [user.firstName, user.firstLastName, user.secondLastName].filter(Boolean).join(' ');
 }

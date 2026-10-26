@@ -11,7 +11,6 @@ import { UnsavedChangesState } from '../../forms/unsaved-changes';
  */
 @Component({
     selector: 'app-save-bar',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [ButtonModule],
     // No box of its own, so the bar sticks to the bottom of the whole form.

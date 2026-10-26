@@ -1,8 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
-import { Router, RouterModule } from '@angular/router';
-import { CommonModule } from '@angular/common';
+import { Router, RouterLink } from '@angular/router';
 import { TooltipModule } from 'primeng/tooltip';
-import { AppPreferences } from './app.preferences';
+import { AppPreferencesComponent } from './app.preferences';
 import { LayoutService } from '../service/layout.service';
 import { AuthService } from '../../core/services/auth.service';
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component';
@@ -10,8 +9,7 @@ import { ROLE_LABELS } from '../../shared/utils/labels';
 
 @Component({
     selector: 'app-topbar',
-    standalone: true,
-    imports: [RouterModule, CommonModule, TooltipModule, AppPreferences, BrandLogoComponent],
+    imports: [RouterLink, TooltipModule, AppPreferencesComponent, BrandLogoComponent],
     template: ` <div class="layout-topbar">
         <div class="layout-topbar-logo-container">
             <button class="layout-menu-button layout-topbar-action" (click)="layoutService.onMenuToggle()" aria-label="Mostrar u ocultar el menú">
@@ -24,9 +22,6 @@ import { ROLE_LABELS } from '../../shared/utils/labels';
         </div>
 
         <div class="layout-topbar-actions">
-            @if (isPreview()) {
-                <a routerLink="/auth/login" class="mgs-preview-badge" pTooltip="Modo temporal sin guards. Desactívelo en environment.development.ts" tooltipPosition="bottom">Vista previa · Iniciar sesión</a>
-            }
             @if (session(); as currentSession) {
                 <div class="layout-topbar-user">
                     <span class="layout-topbar-user-name">{{ currentSession.fullName }}</span>
@@ -43,12 +38,11 @@ import { ROLE_LABELS } from '../../shared/utils/labels';
         </div>
     </div>`
 })
-export class AppTopbar {
+export class AppTopbarComponent {
     protected readonly layoutService = inject(LayoutService);
     private readonly authService = inject(AuthService);
     private readonly router = inject(Router);
     protected readonly session = this.authService.session;
-    protected readonly isPreview = computed(() => this.authService.isPreviewMode && !this.session()?.token);
 
     protected readonly roleLabel = computed(() => {
         const role = this.session()?.role;

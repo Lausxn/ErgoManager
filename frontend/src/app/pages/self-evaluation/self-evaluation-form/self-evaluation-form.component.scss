@@ -58,9 +58,8 @@
     padding: 0.85rem 1.25rem;
     border: 1px solid var(--surface-border);
     border-radius: var(--mgs-radius);
-    background: color-mix(in srgb, var(--surface-card), transparent 6%);
+    background: var(--surface-card);
     box-shadow: var(--mgs-shadow-sm);
-    backdrop-filter: blur(8px);
 
     @media (min-width: 1200px) {
         top: 0.75rem;

@@ -378,6 +378,65 @@
     list-style: none;
 }
 
+/* Page made only of a few options: they sit in the middle of the free space under the header. */
+.layout-main:has(> .mgs-option-stage) {
+    display: flex;
+    flex-direction: column;
+}
+
+.mgs-option-stage {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+}
+
+.mgs-option-grid--centered {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    align-content: center;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    /* Slightly above the exact middle, where the eye expects the center to be. */
+    padding-bottom: 5rem;
+
+    > li {
+        width: min(17rem, 100%);
+    }
+}
+
+/* Square option with its content centered; icons and titles line up even when a title takes two lines. */
+.mgs-option--tile {
+    aspect-ratio: 1;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 2.25rem 1.75rem 3.75rem;
+    text-align: center;
+
+    .mgs-option__top {
+        justify-content: center;
+    }
+
+    .mgs-option__icon {
+        width: 3.5rem;
+        height: 3.5rem;
+        font-size: 1.45rem;
+    }
+
+    .mgs-option__description {
+        flex: 0 0 auto;
+    }
+
+    /* Pinned to the bottom, so every card shows it at the same height. */
+    .mgs-option__arrow {
+        position: absolute;
+        bottom: 1.5rem;
+        left: 50%;
+        margin-left: -0.5em;
+    }
+}
+
 .mgs-option {
     position: relative;
     display: flex;
@@ -416,14 +475,6 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-    }
-
-    &__number {
-        font-family: var(--mgs-font-display);
-        font-size: 1rem;
-        font-weight: 700;
-        color: var(--mgs-accent-text);
-        font-variant-numeric: tabular-nums;
     }
 
     &__icon {
@@ -729,53 +780,55 @@
     width: 100%;
 }
 
-/* ===== Side menu: graphite "Autoridad" panel, same as the account side navigation ===== */
+/* ===== Side menu: light panel that shares the frame of the top bar; wine only marks where you are ===== */
 
 .layout-sidebar {
-    border-color: rgba(255, 255, 255, 0.06);
-    border-radius: var(--mgs-radius);
-    background: linear-gradient(180deg, var(--p-surface-900), var(--mgs-black));
-    box-shadow: var(--mgs-shadow-md);
-    padding: 0.75rem 1rem 1.25rem;
+    border: 0;
+    border-right: 1px solid var(--surface-border);
+    border-radius: 0;
+    background: var(--surface-card);
+    padding: 0.75rem 0.75rem 1rem;
 
     .layout-menu {
         .layout-root-menuitem > .layout-menuitem-root-text {
-            margin: 1.4rem 0 0.5rem 0.75rem;
-            font-size: 0.68rem;
-            font-weight: 700;
-            letter-spacing: 0.18em;
-            color: var(--p-surface-500);
+            margin: 1.15rem 0 0.3rem 0.9rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0;
+            text-transform: none;
+            color: var(--text-color-secondary);
         }
 
         ul a {
             gap: 0.25rem;
             margin: 0.1rem 0;
-            padding: 0.7rem 0.9rem;
+            padding: 0.6rem 0.9rem;
             border-radius: var(--mgs-radius-sm);
-            color: var(--p-surface-300);
+            color: var(--text-color);
 
             .layout-menuitem-icon {
                 margin-right: 0.65rem;
-                color: var(--p-surface-400);
+                color: var(--text-color-secondary);
             }
 
             &:hover {
-                background: rgba(255, 255, 255, 0.05);
-                color: #ffffff;
+                background: var(--surface-hover);
+                color: var(--heading-color);
             }
 
             &.active-route {
-                background: rgba(255, 255, 255, 0.08);
-                box-shadow: inset 3px 0 0 var(--p-primary-400);
-                color: #ffffff;
+                background: color-mix(in srgb, var(--mgs-accent-text), transparent 90%);
+                box-shadow: inset 3px 0 0 var(--mgs-accent-text);
+                color: var(--mgs-accent-text);
+                font-weight: 600;
 
                 .layout-menuitem-icon {
-                    color: #ffffff;
+                    color: var(--mgs-accent-text);
                 }
             }
 
             &:focus-visible {
-                outline: 2px solid var(--p-primary-300);
+                outline: 2px solid var(--mgs-accent-text);
                 outline-offset: -2px;
             }
         }

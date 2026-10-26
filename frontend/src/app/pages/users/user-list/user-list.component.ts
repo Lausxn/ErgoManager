@@ -25,6 +25,7 @@ import { ToastService } from '../../../shared/services/toast.service';
 import { getApiErrorMessage } from '../../../shared/utils/api-error';
 import { ACTIVE_TAG_CLASSES, ROLE_LABELS, ROLE_TAG_CLASSES, toEnumOptions } from '../../../shared/utils/labels';
 import { UserService } from '../user.service';
+import { fullNameOf, personInitials } from '../../../shared/utils/person';
 
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
 
@@ -48,7 +49,6 @@ interface UserRow extends UserResponse {
  */
 @Component({
     selector: 'app-user-list',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [
         DatePipe,
@@ -95,11 +95,11 @@ export class UserListComponent {
     protected readonly rows = computed<UserRow[]>(() => {
         const currentUserId = this.authService.session()?.userId;
         return this.userList().map((user) => {
-            const fullName = [user.firstName, user.firstLastName, user.secondLastName].filter(Boolean).join(' ');
+            const fullName = fullNameOf(user);
             return {
                 ...user,
                 fullName,
-                initials: `${user.firstName.charAt(0)}${user.firstLastName.charAt(0)}`.toUpperCase(),
+                initials: personInitials(user),
                 roleLabel: ROLE_LABELS[user.role],
                 roleTagClass: ROLE_TAG_CLASSES[user.role],
                 searchKey: `${fullName} ${user.email}`.toLowerCase(),

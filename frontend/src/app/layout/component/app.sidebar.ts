@@ -1,14 +1,13 @@
-import { Component, ElementRef } from '@angular/core';
-import { AppMenu } from './app.menu';
+import { Component } from '@angular/core';
 
+import { AppMenuComponent } from './app.menu';
+
+/** Panel at the left of the layout that holds the side menu. */
 @Component({
     selector: 'app-sidebar',
-    standalone: true,
-    imports: [AppMenu],
-    template: ` <div class="layout-sidebar">
-        <app-menu></app-menu>
+    imports: [AppMenuComponent],
+    template: `<div class="layout-sidebar">
+        <app-menu />
     </div>`
 })
-export class AppSidebar {
-    constructor(public el: ElementRef) {}
-}
+export class AppSidebarComponent {}

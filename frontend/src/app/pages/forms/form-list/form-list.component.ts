@@ -24,7 +24,9 @@ import { getApiErrorMessage } from '../../../shared/utils/api-error';
 import { ACTIVE_TAG_CLASSES } from '../../../shared/utils/labels';
 import { CompanyService } from '../../companies/company.service';
 import { FormService } from '../form.service';
-import { FormNavigationComponent, FormSection } from '../form-navigation/form-navigation.component';
+
+/** Kind of forms shown by the list. */
+export type FormSection = 'self-evaluation' | 'personalized';
 
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
 
@@ -50,26 +52,8 @@ interface CompanyOption {
  */
 @Component({
     selector: 'app-form-list',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [
-        FormsModule,
-        RouterLink,
-        ButtonModule,
-        DialogModule,
-        IconFieldModule,
-        InputIconModule,
-        InputTextModule,
-        SelectModule,
-        SelectButtonModule,
-        SkeletonModule,
-        TableModule,
-        TagModule,
-        TooltipModule,
-        EmptyStateComponent,
-        PageHeaderComponent,
-        FormNavigationComponent
-    ],
+    imports: [FormsModule, RouterLink, ButtonModule, DialogModule, IconFieldModule, InputIconModule, InputTextModule, SelectModule, SelectButtonModule, SkeletonModule, TableModule, TagModule, TooltipModule, EmptyStateComponent, PageHeaderComponent],
     templateUrl: './form-list.component.html',
     styles: [
         `
@@ -146,6 +130,7 @@ interface CompanyOption {
 })
 export class FormListComponent implements OnInit {
     readonly section = input<FormSection>('self-evaluation');
+    protected readonly isPersonalized = computed(() => this.section() === 'personalized');
     private readonly formService = inject(FormService);
     private readonly companyService = inject(CompanyService);
     private readonly dialogService = inject(DialogService);

@@ -1,7 +1,7 @@
 import { Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { AppFloatingConfigurator } from '../../../layout/component/app.floatingconfigurator';
+import { AppFloatingConfiguratorComponent } from '../../../layout/component/app.floatingconfigurator';
 import { BrandLogoComponent } from '../brand-logo/brand-logo.component';
 
 /**
@@ -9,8 +9,7 @@ import { BrandLogoComponent } from '../brand-logo/brand-logo.component';
  */
 @Component({
     selector: 'app-status-page',
-    standalone: true,
-    imports: [RouterLink, ButtonModule, AppFloatingConfigurator, BrandLogoComponent],
+    imports: [RouterLink, ButtonModule, AppFloatingConfiguratorComponent, BrandLogoComponent],
     template: `
         <app-floating-configurator />
         <div class="mgs-public flex flex-col items-center justify-center px-4">

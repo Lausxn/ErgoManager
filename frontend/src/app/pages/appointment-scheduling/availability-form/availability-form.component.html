@@ -1,12 +1,5 @@
 <app-page-header eyebrow="Citas" title="Gestionar disponibilidad" subtitle="Habilite los días y horas en que se pueden agendar citas, y retire los que ya no estén disponibles.">
-    <p-button
-        label="Volver a la agenda"
-        icon="fa-solid fa-arrow-left"
-        severity="secondary"
-        [text]="true"
-        routerLink="/appointments"
-        [queryParams]="isAdmin() && availabilityForm.controls.userId.value !== null ? { userId: availabilityForm.controls.userId.value } : {}"
-    />
+    <p-button label="Volver a citas" icon="fa-solid fa-arrow-left" severity="secondary" [text]="true" routerLink="/appointments" />
 </app-page-header>
 
 <form [formGroup]="availabilityForm" (ngSubmit)="submit()" class="mgs-form-layout" novalidate>
@@ -27,7 +20,7 @@
                             inputId="userId"
                             formControlName="userId"
                             [options]="ergonomists()"
-                            optionLabel="fullName"
+                            optionLabel="label"
                             optionValue="id"
                             placeholder="Elija un ergonomista"
                             [filter]="ergonomists().length > 6"
@@ -37,7 +30,7 @@
                         >
                             <ng-template #item let-ergonomist>
                                 <div class="flex flex-col">
-                                    <span class="font-semibold">{{ ergonomist.fullName }}</span>
+                                    <span class="font-semibold">{{ ergonomist.label }}</span>
                                     <span class="text-xs text-muted-color">{{ ergonomist.email }}</span>
                                 </div>
                             </ng-template>
@@ -103,10 +96,10 @@
                                 <span class="availability-range__number" aria-hidden="true">{{ index + 1 }}</span>
                                 <div class="availability-range__fields">
                                     <app-form-field label="Desde" [inputId]="'start-' + index" [control]="range.controls.startTime">
-                                        <p-datepicker [inputId]="'start-' + index" formControlName="startTime" [timeOnly]="true" hourFormat="12" [stepMinute]="15" [fluid]="true" [readonlyInput]="true" placeholder="09:00 AM" />
+                                        <p-datepicker [inputId]="'start-' + index" formControlName="startTime" [timeOnly]="true" hourFormat="12" [stepMinute]="15" [fluid]="true" [readonlyInput]="true" appendTo="body" placeholder="09:00 AM" />
                                     </app-form-field>
                                     <app-form-field label="Hasta" [inputId]="'end-' + index" [control]="range.controls.endTime">
-                                        <p-datepicker [inputId]="'end-' + index" formControlName="endTime" [timeOnly]="true" hourFormat="12" [stepMinute]="15" [fluid]="true" [readonlyInput]="true" placeholder="12:00 PM" />
+                                        <p-datepicker [inputId]="'end-' + index" formControlName="endTime" [timeOnly]="true" hourFormat="12" [stepMinute]="15" [fluid]="true" [readonlyInput]="true" appendTo="body" placeholder="12:00 PM" />
                                     </app-form-field>
                                 </div>
                                 <p-button
@@ -165,7 +158,10 @@
                                         <li class="availability-slot" [class.availability-slot--blocked]="slot.problem">
                                             <i [class]="slot.problem ? 'fa-solid fa-ban availability-slot__icon' : 'fa-regular fa-circle-check availability-slot__icon'" aria-hidden="true"></i>
                                             <span class="availability-slot__text">
-                                                <span class="availability-slot__time">{{ slot.start | date: 'shortTime' }} – {{ slot.end | date: 'shortTime' }}</span>
+                                                @let slotRange = timeRange(slot.start, slot.end);
+                                                <span class="availability-slot__time"
+                                                    ><span>{{ slotRange[0] }}</span> – <span>{{ slotRange[1] }}</span></span
+                                                >
                                                 <span class="availability-slot__detail">{{ slot.problem ? problemLabels[slot.problem] : 'Se publicará' }}</span>
                                             </span>
                                         </li>
@@ -227,7 +223,10 @@
                                         <li class="availability-slot" [class.availability-slot--booked]="entry.appointment">
                                             <i [class]="entry.appointment ? 'fa-solid fa-user-clock availability-slot__icon' : 'fa-regular fa-clock availability-slot__icon'" aria-hidden="true"></i>
                                             <span class="availability-slot__text">
-                                                <span class="availability-slot__time">{{ entry.start | date: 'shortTime' }} – {{ entry.end | date: 'shortTime' }}</span>
+                                                @let entryRange = timeRange(entry.start, entry.end);
+                                                <span class="availability-slot__time"
+                                                    ><span>{{ entryRange[0] }}</span> – <span>{{ entryRange[1] }}</span></span
+                                                >
                                                 @if (entry.appointment; as appointment) {
                                                     <span class="availability-slot__detail" [title]="appointment.employeeName">{{ statusLabels[appointment.status] }} · {{ appointment.employeeName }}</span>
                                                 } @else {
@@ -235,35 +234,37 @@
                                                 }
                                             </span>
                                             @if (entry.slot; as slot) {
-                                                @if (!day.isPast) {
+                                                <span class="availability-slot__actions">
+                                                    @if (!day.isPast) {
+                                                        <p-button
+                                                            type="button"
+                                                            icon="fa-regular fa-pen-to-square"
+                                                            [rounded]="true"
+                                                            [text]="true"
+                                                            size="small"
+                                                            severity="secondary"
+                                                            [disabled]="isDeleting('slot-' + slot.id) || isDeleting('day-' + day.key)"
+                                                            (onClick)="editingSlot.set(slot)"
+                                                            pTooltip="Editar espacio"
+                                                            tooltipPosition="top"
+                                                            ariaLabel="Editar espacio"
+                                                        />
+                                                    }
                                                     <p-button
                                                         type="button"
-                                                        icon="fa-regular fa-pen-to-square"
+                                                        icon="fa-regular fa-trash-can"
                                                         [rounded]="true"
                                                         [text]="true"
                                                         size="small"
                                                         severity="secondary"
-                                                        [disabled]="isDeleting('slot-' + slot.id) || isDeleting('day-' + day.key)"
-                                                        (onClick)="openEdit(slot)"
-                                                        pTooltip="Editar espacio"
+                                                        [loading]="isDeleting('slot-' + slot.id)"
+                                                        [disabled]="isDeleting('day-' + day.key)"
+                                                        (onClick)="confirmDeleteSlot(slot)"
+                                                        pTooltip="Eliminar espacio"
                                                         tooltipPosition="top"
-                                                        ariaLabel="Editar espacio"
+                                                        ariaLabel="Eliminar espacio"
                                                     />
-                                                }
-                                                <p-button
-                                                    type="button"
-                                                    icon="fa-regular fa-trash-can"
-                                                    [rounded]="true"
-                                                    [text]="true"
-                                                    size="small"
-                                                    severity="secondary"
-                                                    [loading]="isDeleting('slot-' + slot.id)"
-                                                    [disabled]="isDeleting('day-' + day.key)"
-                                                    (onClick)="confirmDeleteSlot(slot)"
-                                                    pTooltip="Eliminar espacio"
-                                                    tooltipPosition="top"
-                                                    ariaLabel="Eliminar espacio"
-                                                />
+                                                </span>
                                             } @else {
                                                 <i class="fa-solid fa-lock availability-slot__lock" pTooltip="Reservado: cancele la cita desde la agenda para liberarlo" tooltipPosition="top" aria-label="Reservado"></i>
                                             }
@@ -352,43 +353,4 @@
     />
 </form>
 
-<p-dialog
-    [visible]="isEditOpen()"
-    (visibleChange)="isEditOpen.set($event)"
-    [modal]="true"
-    [draggable]="false"
-    [resizable]="false"
-    [dismissableMask]="!isSavingEdit()"
-    [closeOnEscape]="!isSavingEdit()"
-    [closable]="!isSavingEdit()"
-    header="Editar espacio"
-    styleClass="availability-edit-dialog"
-    [style]="{ width: 'min(30rem, calc(100vw - 2rem))' }"
->
-    <form [formGroup]="editForm" (ngSubmit)="saveEdit()" class="flex flex-col gap-4" novalidate>
-        <p class="mgs-section-lead m-0">Cambie el día o las horas de este espacio libre. Si ya tiene una cita, cancélela o reprográmela desde la agenda.</p>
-        <app-form-field label="Día" inputId="edit-date" [control]="editForm.controls.date">
-            <p-datepicker inputId="edit-date" formControlName="date" [minDate]="today" dateFormat="dd/mm/yy" [showIcon]="true" [fluid]="true" [readonlyInput]="true" appendTo="body" />
-        </app-form-field>
-        <div class="availability-range__fields">
-            <app-form-field label="Desde" inputId="edit-start" [control]="editForm.controls.startTime">
-                <p-datepicker inputId="edit-start" formControlName="startTime" [timeOnly]="true" hourFormat="12" [stepMinute]="15" [fluid]="true" [readonlyInput]="true" appendTo="body" />
-            </app-form-field>
-            <app-form-field label="Hasta" inputId="edit-end" [control]="editForm.controls.endTime">
-                <p-datepicker inputId="edit-end" formControlName="endTime" [timeOnly]="true" hourFormat="12" [stepMinute]="15" [fluid]="true" [readonlyInput]="true" appendTo="body" />
-            </app-form-field>
-        </div>
-        @if (isEditRangeInvalid()) {
-            <small class="mgs-field__error" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>La hora final debe ser posterior a la inicial.</small>
-        }
-        @if (editError(); as message) {
-            <div class="mgs-alert" role="alert">
-                <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ message }}</span>
-            </div>
-        }
-        <div class="flex justify-end gap-2">
-            <p-button type="button" label="Volver" [text]="true" severity="secondary" [disabled]="isSavingEdit()" (onClick)="isEditOpen.set(false)" />
-            <p-button type="submit" label="Guardar cambios" icon="fa-regular fa-floppy-disk" [loading]="isSavingEdit()" />
-        </div>
-    </form>
-</p-dialog>
+<app-availability-edit-dialog [(slot)]="editingSlot" [freeSlots]="freeSlots()" [bookedAppointments]="bookedAppointments()" (saved)="replaceSlot($event)" (failed)="reloadCalendar()" />

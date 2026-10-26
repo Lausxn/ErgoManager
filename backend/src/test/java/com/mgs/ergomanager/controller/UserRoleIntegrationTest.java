@@ -144,9 +144,10 @@ class UserRoleIntegrationTest {
         mockMvc.perform(put("/api/users/{id}", target.getId()).header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(role == Role.ADMIN ? status().isBadRequest() : status().isForbidden());
+        // Both roles attend appointments: administrators for their own agenda.
         mockMvc.perform(post("/api/personalized-evaluations").header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON).content("{}"))
-                .andExpect(role == Role.ERGONOMIST ? status().isBadRequest() : status().isForbidden());
+                .andExpect(status().isBadRequest());
     }
 
     private ResultActions update(String token, User user, Role role) throws Exception {

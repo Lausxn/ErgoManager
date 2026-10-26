@@ -3,46 +3,13 @@ package com.mgs.ergomanager.service;
 import com.mgs.ergomanager.dto.appointment.AppointmentRequestDTO;
 import com.mgs.ergomanager.dto.appointment.AppointmentRescheduleRequestDTO;
 import com.mgs.ergomanager.dto.appointment.AppointmentResponseDTO;
-import com.mgs.ergomanager.dto.appointment.AvailabilityRequestDTO;
-import com.mgs.ergomanager.dto.appointment.AvailabilityResponseDTO;
 import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Availability published by the ergonomists and appointments booked on it.
+ * Appointments booked on the time slots of the ergonomists.
  */
 public interface AppointmentService {
-
-    /**
-     * Publishes a new time slot for an ergonomist.
-     *
-     * @param request data of the slot
-     * @return the created slot
-     */
-    AvailabilityResponseDTO createAvailability(AvailabilityRequestDTO request);
-
-    /** Reads one slot, including its reserved state. */
-    AvailabilityResponseDTO findAvailabilityById(Long id);
-
-    /** Changes the dates of a free slot without changing its owner. */
-    AvailabilityResponseDTO updateAvailability(Long id, AvailabilityRequestDTO request);
-
-    /**
-     * Returns the free slots of an ergonomist inside a date range.
-     *
-     * @param userId identifier of the ergonomist
-     * @param from   beginning of the range
-     * @param to     end of the range
-     * @return list of free slots
-     */
-    List<AvailabilityResponseDTO> findFreeAvailabilities(Long userId, LocalDateTime from, LocalDateTime to);
-
-    /**
-     * Deletes a slot that has not been booked.
-     *
-     * @param id identifier of the slot
-     */
-    void deleteAvailability(Long id);
 
     /**
      * Books an appointment on a free slot.
@@ -61,6 +28,16 @@ public interface AppointmentService {
      * @return list of appointments
      */
     List<AppointmentResponseDTO> findAgenda(Long userId, LocalDateTime from, LocalDateTime to);
+
+    /**
+     * Returns the appointments of every agenda inside a date range, for the
+     * overview of an administrator.
+     *
+     * @param from beginning of the range
+     * @param to   end of the range
+     * @return list of appointments
+     */
+    List<AppointmentResponseDTO> findAllAgendas(LocalDateTime from, LocalDateTime to);
 
     /**
      * Cancels an appointment and frees its slot.

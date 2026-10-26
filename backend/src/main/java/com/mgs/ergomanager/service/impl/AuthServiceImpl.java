@@ -8,8 +8,8 @@ import com.mgs.ergomanager.exception.ResourceNotFoundException;
 import com.mgs.ergomanager.model.User;
 import com.mgs.ergomanager.repository.UserRepository;
 import com.mgs.ergomanager.security.JwtService;
+import com.mgs.ergomanager.security.PasswordRules;
 import com.mgs.ergomanager.service.AuthService;
-import java.nio.charset.StandardCharsets;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthServiceImpl implements AuthService {
 
     private static final String TOKEN_TYPE = "Bearer";
+    private static final String USER_NOT_FOUND_MESSAGE = "No se encontró el usuario.";
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final JwtService jwtService;
@@ -53,7 +54,7 @@ public class AuthServiceImpl implements AuthService {
                 new UsernamePasswordAuthenticationToken(request.email(), request.password()));
 
         User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new ResourceNotFoundException("User", request.email()));
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE));
 
         return buildSession(user);
     }
@@ -62,16 +63,15 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public LoginResponseDTO changePassword(String email, ChangePasswordRequestDTO request) {
         User user = userRepository.findByEmailForUpdate(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User", email));
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_MESSAGE));
         if (!user.isActive()) {
             throw new BusinessException("La cuenta está desactivada. Contacte al administrador.");
         }
-        if (request.currentPassword().getBytes(StandardCharsets.UTF_8).length > 72
+        if (PasswordRules.exceedsMaxBytes(request.currentPassword())
                 || !passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
             throw new BusinessException("La contraseña actual es incorrecta.");
         }
-        if (request.newPassword().getBytes(StandardCharsets.UTF_8).length > 72) {
-            // BCrypt only reads 72 bytes, and accented letters or ñ take two bytes each.
+        if (PasswordRules.exceedsMaxBytes(request.newPassword())) {
             throw new BusinessException("La nueva contraseña es demasiado larga. Use menos caracteres con tilde o ñ.");
         }
         if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
@@ -93,28 +93,7 @@ public class AuthServiceImpl implements AuthService {
     private LoginResponseDTO buildSession(User user) {
         String token = jwtService.generateToken(user.getEmail(), user.getRole().name(), user.getTokenVersion());
         long expiresAtMs = System.currentTimeMillis() + jwtService.getExpirationMs();
-
-        return new LoginResponseDTO(
-        token,
-        TOKEN_TYPE,
-        expiresAtMs,
-        user.getId(),
-        buildFullName(user),
-        user.getRole(),
-        user.isMustChangePassword());
-    }
-
-    /**
-     * Joins the name parts of a user into a single display name.
-     *
-     * @param user user whose name is needed
-     * @return full name without extra blank spaces
-     */
-    private String buildFullName(User user) {
-        StringBuilder fullName = new StringBuilder(user.getFirstName()).append(' ').append(user.getFirstLastName());
-        if (user.getSecondLastName() != null && !user.getSecondLastName().isBlank()) {
-            fullName.append(' ').append(user.getSecondLastName());
-        }
-        return fullName.toString();
+        return new LoginResponseDTO(token, TOKEN_TYPE, expiresAtMs, user.getId(), user.getFullName(), user.getRole(),
+                user.isMustChangePassword());
     }
 }

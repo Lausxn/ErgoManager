@@ -29,10 +29,6 @@ export const errorInterceptor: HttpInterceptorFn = (request, next) => {
 
     return next(request).pipe(
         catchError((error: HttpErrorResponse) => {
-            // The preview mode has no token: stay on the page instead of being sent to the login.
-            if (authService.isPreviewMode && !authService.getToken()) {
-                return throwError(() => error);
-            }
             if (error.status === UNAUTHORIZED_STATUS && !request.url.endsWith(LOGIN_URL_SUFFIX)) {
                 authService.logout();
                 // The login page explains why the session ended, for example because it expired.

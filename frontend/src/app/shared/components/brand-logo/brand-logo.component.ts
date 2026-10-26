@@ -17,7 +17,6 @@ export type BrandLogoTone = 'auto' | 'color' | 'black' | 'white';
  */
 @Component({
     selector: 'app-brand-logo',
-    standalone: true,
     template: `<img [src]="source()" [alt]="altText" [style.width.px]="width()" class="block max-w-none select-none" draggable="false" />`,
     host: { class: 'inline-flex shrink-0', '[style.padding.px]': 'clearSpace()' }
 })

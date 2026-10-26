@@ -1,4 +1,5 @@
-<app-page-header eyebrow="Citas" title="Agenda" subtitle="Programe visitas y evaluaciones presenciales con los clientes.">
+<app-page-header eyebrow="Citas" title="Agenda" subtitle="Programe las evaluaciones personalizadas virtuales con los colaboradores.">
+    <p-button label="Volver a citas" icon="fa-solid fa-arrow-left" severity="secondary" [text]="true" routerLink="/appointments" />
     @if (selectedErgonomistId() !== null) {
         <p-button label="Gestionar disponibilidad" icon="fa-regular fa-calendar-plus" severity="secondary" [outlined]="true" (onClick)="publishAvailability()" />
         <p-button label="Agendar cita" icon="fa-solid fa-calendar-check" (onClick)="openBooking()" />
@@ -30,7 +31,7 @@
                         [options]="ergonomists()"
                         [ngModel]="selectedErgonomistId()"
                         (ngModelChange)="selectErgonomist($event)"
-                        optionLabel="fullName"
+                        optionLabel="label"
                         optionValue="id"
                         [filter]="ergonomists().length > 6"
                         filterBy="fullName,email"
@@ -38,7 +39,7 @@
                     >
                         <ng-template #item let-ergonomist>
                             <div class="flex flex-col">
-                                <span class="font-semibold">{{ ergonomist.fullName }}</span>
+                                <span class="font-semibold">{{ ergonomist.label }}</span>
                                 <span class="text-xs text-muted-color">{{ ergonomist.email }}</span>
                             </div>
                         </ng-template>

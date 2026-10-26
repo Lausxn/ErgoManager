@@ -12,7 +12,7 @@ describe('InactivityService', () => {
     let router: jasmine.SpyObj<Router>;
 
     beforeEach(() => {
-        authService = jasmine.createSpyObj<AuthService>('AuthService', ['logout'], { isPreviewMode: false });
+        authService = jasmine.createSpyObj<AuthService>('AuthService', ['logout']);
         router = jasmine.createSpyObj<Router>('Router', ['navigate'], { url: '/users' });
         router.navigate.and.resolveTo(true);
         TestBed.configureTestingModule({
@@ -56,17 +56,5 @@ describe('InactivityService', () => {
         document.dispatchEvent(new MouseEvent('click'));
         const recorded = Number(localStorage.getItem(LAST_ACTIVITY_STORAGE_KEY));
         expect(Date.now() - recorded).toBeLessThan(1000);
-    });
-
-    it('no vigila la actividad en el modo de vista previa', () => {
-        TestBed.resetTestingModule();
-        TestBed.configureTestingModule({
-            providers: [
-                { provide: AuthService, useValue: jasmine.createSpyObj<AuthService>('AuthService', ['logout'], { isPreviewMode: true }) },
-                { provide: Router, useValue: router }
-            ]
-        });
-        TestBed.inject(InactivityService).start();
-        expect(localStorage.getItem(LAST_ACTIVITY_STORAGE_KEY)).toBeNull();
     });
 });

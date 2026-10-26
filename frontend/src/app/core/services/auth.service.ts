@@ -12,20 +12,6 @@ const SESSION_STORAGE_KEY = 'ergomanager.session';
 export const LAST_ACTIVITY_STORAGE_KEY = 'ergomanager.lastActivity';
 
 /**
- * Demo user of the preview mode (see environment.previewMode). It has no token,
- * so the backend still rejects any protected call.
- */
-const PREVIEW_SESSION: LoginResponse = {
-    token: '',
-    tokenType: 'Bearer',
-    expiresAtMs: Number.MAX_SAFE_INTEGER,
-    userId: 0,
-    fullName: 'Vista previa',
-    role: 'ADMIN',
-    mustChangePassword: false
-};
-
-/**
  * Keeps the signed in session of an administrator or an ergonomist. It is the
  * only place where the JWT is read from and written to the browser storage.
  */
@@ -33,9 +19,7 @@ const PREVIEW_SESSION: LoginResponse = {
 export class AuthService {
     private readonly http = inject(HttpClient);
 
-    /** True while the temporary preview mode lets every page open without signing in. */
-    readonly isPreviewMode = environment.previewMode;
-    private readonly currentSession = signal<LoginResponse | null>(readStoredSession() ?? this.getPreviewSession());
+    private readonly currentSession = signal<LoginResponse | null>(readStoredSession());
 
     /** Session of the signed in user, or null when nobody is signed in. */
     readonly session = this.currentSession.asReadonly();
@@ -48,9 +32,6 @@ export class AuthService {
      * @returns true while the session is valid
      */
     isAuthenticated(): boolean {
-        if (this.isPreviewMode) {
-            return true;
-        }
         const session = this.currentSession();
         return session !== null && session.expiresAtMs > Date.now();
     }
@@ -115,7 +96,7 @@ export class AuthService {
     logout(): void {
         localStorage.removeItem(SESSION_STORAGE_KEY);
         localStorage.removeItem(LAST_ACTIVITY_STORAGE_KEY);
-        this.currentSession.set(this.getPreviewSession());
+        this.currentSession.set(null);
     }
 
     /**
@@ -126,7 +107,7 @@ export class AuthService {
      */
     hasExpiredSession(): boolean {
         const session = this.currentSession();
-        return !this.isPreviewMode && session !== null && session.expiresAtMs <= Date.now();
+        return session !== null && session.expiresAtMs <= Date.now();
     }
 
     /**
@@ -145,20 +126,8 @@ export class AuthService {
      * @returns true when the session matches one of them
      */
     hasAnyRole(allowedRoles: readonly Role[]): boolean {
-        if (this.isPreviewMode) {
-            return true;
-        }
         const session = this.currentSession();
         return session !== null && allowedRoles.includes(session.role);
-    }
-
-    /**
-     * Returns the demo session when the preview mode is on.
-     *
-     * @returns the demo session, or null outside the preview mode
-     */
-    private getPreviewSession(): LoginResponse | null {
-        return this.isPreviewMode ? PREVIEW_SESSION : null;
     }
 
     /**

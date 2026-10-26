@@ -12,7 +12,6 @@ import { ROLE_CHOICES } from './user-fields';
  */
 @Component({
     selector: 'app-user-role-field',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [ReactiveFormsModule, RadioButtonModule],
     viewProviders: [{ provide: ControlContainer, useExisting: FormGroupDirective }],

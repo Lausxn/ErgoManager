@@ -3,37 +3,28 @@ package com.mgs.ergomanager.service.impl;
 import com.mgs.ergomanager.dto.form.AnswerOptionRequestDTO;
 import com.mgs.ergomanager.dto.form.AnswerOptionResponseDTO;
 import com.mgs.ergomanager.dto.form.FormRequestDTO;
-import com.mgs.ergomanager.dto.form.FormResendResponseDTO;
 import com.mgs.ergomanager.dto.form.FormResponseDTO;
 import com.mgs.ergomanager.dto.form.QuestionRequestDTO;
 import com.mgs.ergomanager.dto.form.QuestionResponseDTO;
 import com.mgs.ergomanager.exception.BusinessException;
 import com.mgs.ergomanager.exception.ResourceNotFoundException;
 import com.mgs.ergomanager.model.AnswerOption;
-import com.mgs.ergomanager.model.Company;
 import com.mgs.ergomanager.model.Form;
 import com.mgs.ergomanager.model.Question;
 import com.mgs.ergomanager.model.enums.FormType;
 import com.mgs.ergomanager.repository.AnswerOptionRepository;
-import com.mgs.ergomanager.repository.CompanyRepository;
 import com.mgs.ergomanager.repository.FormRepository;
 import com.mgs.ergomanager.repository.QuestionRepository;
-import com.mgs.ergomanager.repository.SelfEvaluationRepository;
-import com.mgs.ergomanager.service.EmailService;
 import com.mgs.ergomanager.service.FormService;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,9 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class FormServiceImpl implements FormService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(FormServiceImpl.class);
     private static final String FORM_NOT_FOUND_MESSAGE = "No se encontró el formulario.";
-    private static final String COMPANY_NOT_FOUND_MESSAGE = "No se encontró la empresa.";
     private static final Map<FormType, String> ACTIVE_FORM_EXISTS_MESSAGES = Map.of(
             FormType.SELF_EVALUATION,
             "Ya existe una autoevaluación activa. Desactívela antes de activar otra.",
@@ -61,36 +50,19 @@ public class FormServiceImpl implements FormService {
     private final FormRepository formRepository;
     private final QuestionRepository questionRepository;
     private final AnswerOptionRepository answerOptionRepository;
-    private final CompanyRepository companyRepository;
-    private final SelfEvaluationRepository selfEvaluationRepository;
-    private final EmailService emailService;
-    private final String frontendUrl;
 
     /**
-     * Builds the service with its collaborators.
+     * Builds the service with its repositories.
      *
-     * @param formRepository           repository of forms
-     * @param questionRepository       repository of questions
-     * @param answerOptionRepository   repository of the predefined answers of the questions
-     * @param companyRepository        repository of client companies
-     * @param selfEvaluationRepository repository of self evaluations, source of the employee emails
-     * @param emailService             service that sends the invitations
-     * @param frontendUrl              base URL of the Angular application
+     * @param formRepository         repository of forms
+     * @param questionRepository     repository of questions
+     * @param answerOptionRepository repository of the predefined answers of the questions
      */
-    public FormServiceImpl(FormRepository formRepository,
-                           QuestionRepository questionRepository,
-                           AnswerOptionRepository answerOptionRepository,
-                           CompanyRepository companyRepository,
-                           SelfEvaluationRepository selfEvaluationRepository,
-                           EmailService emailService,
-                           @Value("${ergomanager.frontend-url}") String frontendUrl) {
+    public FormServiceImpl(FormRepository formRepository, QuestionRepository questionRepository,
+                           AnswerOptionRepository answerOptionRepository) {
         this.formRepository = formRepository;
         this.questionRepository = questionRepository;
         this.answerOptionRepository = answerOptionRepository;
-        this.companyRepository = companyRepository;
-        this.selfEvaluationRepository = selfEvaluationRepository;
-        this.emailService = emailService;
-        this.frontendUrl = frontendUrl.endsWith("/") ? frontendUrl.substring(0, frontendUrl.length() - 1) : frontendUrl;
     }
 
     @Override
@@ -249,52 +221,6 @@ public class FormServiceImpl implements FormService {
         form.setActive(true);
         formRepository.save(form);
         return toResponse(form, questions, optionsByQuestion);
-    }
-
-    /**
-     * Sends the invitation to the contact of the company and to every employee
-     * that already answered a self evaluation for it. It runs without a
-     * transaction on purpose, so no database connection is held while the
-     * emails are sent. A failed recipient is logged and does not stop the rest.
-     *
-     * @param formId    identifier of the form to resend
-     * @param companyId identifier of the company to notify
-     * @return number of emails sent successfully
-     */
-    @Override
-    public FormResendResponseDTO resendAnnually(Long formId, Long companyId) {
-        Form form = getForm(formId);
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new ResourceNotFoundException(COMPANY_NOT_FOUND_MESSAGE));
-        if (form.getType() != FormType.SELF_EVALUATION) {
-            throw new BusinessException("Solo las autoevaluaciones se reenvían a las empresas.");
-        }
-        if (!form.isActive()) {
-            throw new BusinessException("El formulario está inactivo. Actívelo antes de reenviarlo.");
-        }
-        if (!company.isActive()) {
-            throw new BusinessException("La empresa está inactiva. Actívela antes de reenviar el formulario.");
-        }
-
-        Set<String> recipients = new LinkedHashSet<>();
-        recipients.add(company.getContactEmail().trim().toLowerCase(Locale.ROOT));
-        for (String email : selfEvaluationRepository.findDistinctEmployeeEmailsByCompanyId(companyId)) {
-            recipients.add(email.trim().toLowerCase(Locale.ROOT));
-        }
-
-        String link = frontendUrl + "/self-evaluation?companyId=" + companyId;
-        int sent = 0;
-        for (String recipient : recipients) {
-            try {
-                emailService.sendFormInvitation(recipient, company.getBusinessName(), form.getTitle(), link);
-                sent++;
-            } catch (Exception exception) {
-                LOGGER.error("No se pudo enviar el formulario {} al destinatario {}", formId, recipient, exception);
-            }
-        }
-        LOGGER.info("Formulario {} reenviado a la empresa {}: {} de {} correos enviados",
-                formId, companyId, sent, recipients.size());
-        return new FormResendResponseDTO(sent);
     }
 
     /**

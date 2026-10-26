@@ -6,6 +6,7 @@ import com.mgs.ergomanager.dto.appointment.AppointmentResponseDTO;
 import com.mgs.ergomanager.dto.appointment.AvailabilityRequestDTO;
 import com.mgs.ergomanager.dto.appointment.AvailabilityResponseDTO;
 import com.mgs.ergomanager.service.AppointmentService;
+import com.mgs.ergomanager.service.AvailabilityService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -33,14 +34,17 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Appointments", description = "Availability of the ergonomists and booked appointments")
 public class AppointmentController {
 
+    private final AvailabilityService availabilityService;
     private final AppointmentService appointmentService;
 
     /**
-     * Builds the controller with its service.
+     * Builds the controller with its services.
      *
-     * @param appointmentService service that manages the agenda
+     * @param availabilityService service of the published time slots
+     * @param appointmentService  service of the booked appointments
      */
-    public AppointmentController(AppointmentService appointmentService) {
+    public AppointmentController(AvailabilityService availabilityService, AppointmentService appointmentService) {
+        this.availabilityService = availabilityService;
         this.appointmentService = appointmentService;
     }
 
@@ -53,21 +57,21 @@ public class AppointmentController {
     @PostMapping("/availabilities")
     public ResponseEntity<AvailabilityResponseDTO> createAvailability(
             @Valid @RequestBody AvailabilityRequestDTO request) {
-        AvailabilityResponseDTO created = appointmentService.createAvailability(request);
+        AvailabilityResponseDTO created = availabilityService.createAvailability(request);
         return ResponseEntity.created(URI.create("/api/appointments/availabilities/" + created.id())).body(created);
     }
 
     /** Returns the slot used to populate the edit form. */
     @GetMapping("/availabilities/{id}")
     public ResponseEntity<AvailabilityResponseDTO> findAvailabilityById(@PathVariable Long id) {
-        return ResponseEntity.ok(appointmentService.findAvailabilityById(id));
+        return ResponseEntity.ok(availabilityService.findAvailabilityById(id));
     }
 
     /** Updates a free slot; booked appointments are managed separately. */
     @PutMapping("/availabilities/{id}")
     public ResponseEntity<AvailabilityResponseDTO> updateAvailability(
             @PathVariable Long id, @Valid @RequestBody AvailabilityRequestDTO request) {
-        return ResponseEntity.ok(appointmentService.updateAvailability(id, request));
+        return ResponseEntity.ok(availabilityService.updateAvailability(id, request));
     }
 
     /**
@@ -83,7 +87,7 @@ public class AppointmentController {
             @RequestParam Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
-        return ResponseEntity.ok(appointmentService.findFreeAvailabilities(userId, from, to));
+        return ResponseEntity.ok(availabilityService.findFreeAvailabilities(userId, from, to));
     }
 
     /**
@@ -94,7 +98,7 @@ public class AppointmentController {
      */
     @DeleteMapping("/availabilities/{id}")
     public ResponseEntity<Void> deleteAvailability(@PathVariable Long id) {
-        appointmentService.deleteAvailability(id);
+        availabilityService.deleteAvailability(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -124,6 +128,21 @@ public class AppointmentController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
         return ResponseEntity.ok(appointmentService.findAgenda(userId, from, to));
+    }
+
+    /**
+     * Returns the appointments of every agenda inside a date range; only for
+     * administrators, who see the day of all the ergonomists on their dashboard.
+     *
+     * @param from beginning of the range
+     * @param to   end of the range
+     * @return list of appointments
+     */
+    @GetMapping("/all")
+    public ResponseEntity<List<AppointmentResponseDTO>> findAllAgendas(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
+        return ResponseEntity.ok(appointmentService.findAllAgendas(from, to));
     }
 
     /**

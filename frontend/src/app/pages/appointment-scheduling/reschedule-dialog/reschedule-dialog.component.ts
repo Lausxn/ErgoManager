@@ -22,7 +22,6 @@ const RESCHEDULE_DAYS_AHEAD = 30;
  */
 @Component({
     selector: 'app-reschedule-dialog',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [DatePipe, ButtonModule, DialogModule, SkeletonModule],
     templateUrl: './reschedule-dialog.component.html',

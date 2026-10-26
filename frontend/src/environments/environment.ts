@@ -5,8 +5,6 @@
 export const environment = {
     production: true,
     apiUrl: 'https://api.ergomanager.mgs.com/api',
-    /** Preview mode without guards, never enabled in production. */
-    previewMode: false,
     /** Time without activity (clicks, keys, scroll) before the session is closed: 15 minutes. */
     inactivityTimeoutMs: 15 * 60 * 1000
 };

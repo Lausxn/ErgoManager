@@ -25,6 +25,7 @@ import { ROLE_LABELS, ROLE_TAG_CLASSES } from '../../../shared/utils/labels';
 import { compareFieldsValidator } from '../../../shared/utils/password';
 import { UserService } from '../user.service';
 import { passwordByteLimit, userEmailValidator } from './user-validation';
+import { fullNameOf, personInitials } from '../../../shared/utils/person';
 
 /** Limits of UserRequestDTO in the backend. */
 const MAX_NAME_LENGTH = 60;
@@ -41,7 +42,6 @@ const DUPLICATED_EMAIL_MESSAGE = 'Ya existe un usuario con este correo.';
  */
 @Component({
     selector: 'app-user-form',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [ReactiveFormsModule, RouterLink, AvatarModule, ButtonModule, InputTextModule, PasswordModule, ProgressBarModule, RadioButtonModule, TagModule, FormFieldComponent, PageHeaderComponent, SaveBarComponent],
     templateUrl: './user-form.component.html'
@@ -91,15 +91,12 @@ export class UserFormComponent implements HasUnsavedChanges {
     private readonly formValue = toSignal(merge(this.userForm.valueChanges, this.userForm.statusChanges).pipe(map(() => this.userForm.getRawValue())), { initialValue: this.userForm.getRawValue() });
 
     protected readonly preview = computed(() => {
-        const { firstName, firstLastName, secondLastName, email, role } = this.formValue();
+        const value = this.formValue();
         return {
-            name: [firstName, firstLastName, secondLastName]
-                .map((part) => part.trim())
-                .filter(Boolean)
-                .join(' '),
-            initials: `${firstName.trim().charAt(0)}${firstLastName.trim().charAt(0)}`.toUpperCase(),
-            email: email.trim(),
-            role
+            name: fullNameOf(value),
+            initials: personInitials(value),
+            email: value.email.trim(),
+            role: value.role
         };
     });
 

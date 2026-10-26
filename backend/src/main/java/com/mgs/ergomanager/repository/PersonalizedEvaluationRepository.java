@@ -16,28 +16,12 @@ import org.springframework.stereotype.Repository;
 public interface PersonalizedEvaluationRepository extends JpaRepository<PersonalizedEvaluation, Long> {
 
     /**
-     * Returns the evaluation written for an appointment.
-     *
-     * @param appointmentId identifier of the appointment
-     * @return the evaluation when it exists
-     */
-    Optional<PersonalizedEvaluation> findByAppointmentId(Long appointmentId);
-
-    /**
      * Checks whether an appointment already has an evaluation.
      *
      * @param appointmentId identifier of the appointment
      * @return true when the evaluation exists
      */
     boolean existsByAppointmentId(Long appointmentId);
-
-    /**
-     * Returns the evaluations written by an ergonomist.
-     *
-     * @param userId identifier of the ergonomist
-     * @return list of evaluations
-     */
-    List<PersonalizedEvaluation> findByUserId(Long userId);
 
     /**
      * Returns the evaluations written by an ergonomist, newest first, with the
@@ -80,4 +64,15 @@ public interface PersonalizedEvaluationRepository extends JpaRepository<Personal
     @Query("select p from PersonalizedEvaluation p join fetch p.appointment a join fetch a.selfEvaluation s"
             + " join fetch s.company join fetch p.user left join fetch p.form")
     List<PersonalizedEvaluation> findAllForReport();
+
+    /**
+     * Returns the evaluations of one ergonomist with everything a report row
+     * needs, so an ergonomist only reads their own.
+     *
+     * @param userId identifier of the ergonomist
+     * @return evaluations of the ergonomist
+     */
+    @Query("select p from PersonalizedEvaluation p join fetch p.appointment a join fetch a.selfEvaluation s"
+            + " join fetch s.company join fetch p.user u left join fetch p.form where u.id = :userId")
+    List<PersonalizedEvaluation> findAllForReportByUserId(@Param("userId") Long userId);
 }

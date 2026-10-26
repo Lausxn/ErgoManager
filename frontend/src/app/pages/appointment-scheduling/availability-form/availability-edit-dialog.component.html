@@ -1,0 +1,40 @@
+<p-dialog
+    [visible]="slot() !== null"
+    (visibleChange)="$event || close()"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [dismissableMask]="!isSaving()"
+    [closeOnEscape]="!isSaving()"
+    [closable]="!isSaving()"
+    header="Editar espacio"
+    styleClass="availability-edit-dialog"
+    [style]="{ width: 'min(30rem, calc(100vw - 2rem))' }"
+>
+    <form [formGroup]="form" (ngSubmit)="save()" class="flex flex-col gap-4" novalidate>
+        <p class="mgs-section-lead m-0">Cambie el día o las horas de este espacio libre. Si ya tiene una cita, cancélela o reprográmela desde la agenda.</p>
+        <app-form-field label="Día" inputId="edit-date" [control]="form.controls.date">
+            <p-datepicker inputId="edit-date" formControlName="date" [minDate]="today" dateFormat="dd/mm/yy" [showIcon]="true" [fluid]="true" [readonlyInput]="true" appendTo="body" />
+        </app-form-field>
+        <div class="edit-times">
+            <app-form-field label="Desde" inputId="edit-start" [control]="form.controls.startTime">
+                <p-datepicker inputId="edit-start" formControlName="startTime" [timeOnly]="true" hourFormat="12" [stepMinute]="15" [fluid]="true" [readonlyInput]="true" appendTo="body" />
+            </app-form-field>
+            <app-form-field label="Hasta" inputId="edit-end" [control]="form.controls.endTime">
+                <p-datepicker inputId="edit-end" formControlName="endTime" [timeOnly]="true" hourFormat="12" [stepMinute]="15" [fluid]="true" [readonlyInput]="true" appendTo="body" />
+            </app-form-field>
+        </div>
+        @if (isRangeInvalid()) {
+            <small class="mgs-field__error" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>La hora final debe ser posterior a la inicial.</small>
+        }
+        @if (error(); as message) {
+            <div class="mgs-alert" role="alert">
+                <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>{{ message }}</span>
+            </div>
+        }
+        <div class="flex justify-end gap-2">
+            <p-button type="button" label="Volver" [text]="true" severity="secondary" [disabled]="isSaving()" (onClick)="close()" />
+            <p-button type="submit" label="Guardar cambios" icon="fa-regular fa-floppy-disk" [loading]="isSaving()" />
+        </div>
+    </form>
+</p-dialog>

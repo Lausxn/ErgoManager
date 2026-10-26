@@ -1,5 +1,6 @@
 package com.mgs.ergomanager.exception;
 
+import com.mgs.ergomanager.security.CurrentUserService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -36,7 +37,6 @@ public class GlobalExceptionHandler {
     private static final String BAD_CREDENTIALS_MESSAGE = "El correo o la contraseña son incorrectos.";
     private static final String DISABLED_ACCOUNT_MESSAGE = "La cuenta está desactivada. Contacte al administrador.";
     private static final String AUTHENTICATION_FAILED_MESSAGE = "No fue posible iniciar sesión.";
-    private static final String ACCESS_DENIED_MESSAGE = "No tiene permisos para realizar esta acción.";
     private static final String UNREADABLE_BODY_MESSAGE = "El cuerpo de la solicitud no es válido.";
 
     /**
@@ -219,7 +219,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException exception,
                                                             HttpServletRequest request) {
-        return buildResponse(HttpStatus.FORBIDDEN, ACCESS_DENIED_MESSAGE, request, null);
+        return buildResponse(HttpStatus.FORBIDDEN, CurrentUserService.ACCESS_DENIED_MESSAGE, request, null);
     }
 
     /**

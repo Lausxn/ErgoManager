@@ -1,49 +1,141 @@
-<section class="mgs-impact dashboard-hero" aria-labelledby="dashboard-title">
-    <span class="mgs-impact__rule" aria-hidden="true"></span>
-    <span class="mgs-impact__eyebrow">{{ isAdmin() ? 'Panel de administración' : 'Panel del ergonomista' }}</span>
-    <h1 id="dashboard-title" class="mgs-impact__title">{{ greeting() }}</h1>
-    <p class="mgs-impact__lead">
-        @if (isAdmin()) {
-            Estas son las cinco funciones habilitadas para su perfil y el estado actual de ErgoManager.
-        } @else {
-            Estas son las cinco funciones habilitadas para su perfil.
-        }
-    </p>
-    <p class="dashboard-hero__date">
-        <i class="fa-regular fa-calendar" aria-hidden="true"></i>
-        <time [attr.datetime]="today | date: 'yyyy-MM-dd'">{{ today | date: "EEEE, d 'de' MMMM 'de' y" }}</time>
-    </p>
-</section>
-
-@if (isAdmin()) {
-    <section class="mgs-stats" aria-label="Indicadores del sistema">
-        <app-stat-card label="Citas programadas" icon="fa-regular fa-calendar-check" [value]="figures().scheduledAppointments" [loading]="isLoading()" />
-        <app-stat-card label="Empresas activas" icon="fa-solid fa-building" [value]="figures().activeCompanies" [loading]="isLoading()" />
-        <app-stat-card label="Usuarios activos" icon="fa-solid fa-user-check" [value]="figures().activeUsers" [loading]="isLoading()" [accent]="true" />
-        <app-stat-card label="Formularios activos" icon="fa-solid fa-file-lines" [value]="figures().activeForms" [loading]="isLoading()" />
-    </section>
-}
-
-<section aria-labelledby="dashboard-functions">
-    <div class="mgs-card-header">
+<div class="dashboard">
+    <header class="dashboard__head">
         <div>
-            <h2 id="dashboard-functions" class="mgs-section-title">Funciones</h2>
-            <p class="mgs-section-lead">Elija por dónde continuar.</p>
+            <h1 class="dashboard__greeting">{{ greeting() }}</h1>
+            @if (isLoadingAppointments()) {
+                <p-skeleton width="18rem" height="1.1rem" styleClass="mt-2" />
+            } @else if (!appointmentsFailed()) {
+                <p class="dashboard__line">{{ dayLine() }}</p>
+            }
+        </div>
+        <p class="dashboard__date">
+            <time [attr.datetime]="now() | date: 'yyyy-MM-dd'">{{ now() | date: "EEEE d 'de' MMMM" }}</time>
+        </p>
+    </header>
+
+    <section class="day" aria-labelledby="day-title">
+        <div class="day__top">
+            <h2 id="day-title" class="day__title">Hoy</h2>
+            <a class="day__link" routerLink="/appointments/agenda">Abrir agenda</a>
+        </div>
+
+        @if (isLoadingAppointments()) {
+            <p-skeleton height="3.1rem" styleClass="day__skeleton" />
+        } @else if (appointmentsFailed()) {
+            <div class="day__message">
+                <span>No se pudieron cargar las citas.</span>
+                <button type="button" class="day__retry" (click)="loadAppointments()">Reintentar</button>
+            </div>
+        } @else if (lanes().length === 0) {
+            <p class="day__message">{{ isAdmin() ? 'No hay citas agendadas para hoy.' : 'No tiene citas agendadas para hoy.' }}</p>
+        } @else {
+            <div class="day__lanes" [class.day__lanes--single]="!isAdmin()" [style.--hours]="hourCount()">
+                @for (lane of lanes(); track lane.ownerId) {
+                    @if (isAdmin()) {
+                        <span class="day__owner">{{ lane.name }}</span>
+                    }
+                    <ul class="day__track" [attr.aria-label]="'Citas de ' + lane.name">
+                        @for (block of lane.blocks; track block.id) {
+                            <li class="day__block" [class.day__block--now]="block.inProgress" [style.left.%]="block.left" [style.width.%]="block.width">
+                                <strong>{{ block.employeeName }}</strong>
+                                <span>{{ block.start | date: 'shortTime' }}{{ block.inProgress ? ', en curso' : '' }}</span>
+                            </li>
+                        }
+                    </ul>
+                }
+                <div class="day__hours" aria-hidden="true">
+                    @for (mark of hourMarks(); track mark.left) {
+                        <span [style.left.%]="mark.left">{{ mark.date | date: 'H:mm' }}</span>
+                    }
+                </div>
+                @if (nowPosition(); as position) {
+                    <span class="day__now" [style.--now]="position" aria-hidden="true"></span>
+                }
+            </div>
+            <ul class="day__list" aria-label="Citas de hoy">
+                @for (appointment of todayList(); track appointment.id) {
+                    <li class="day__item" [class.day__item--now]="appointment.inProgress">
+                        <span class="day__item-time">{{ appointment.startDateTime | date: 'shortTime' }}</span>
+                        <span class="day__item-who">
+                            <strong>{{ appointment.employeeName }}</strong>
+                            <span>{{ appointment.inProgress ? 'En curso' : appointment.companyName }}{{ isAdmin() ? ', ' + appointment.ergonomistName : '' }}</span>
+                        </span>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+
+    <div class="dashboard__columns">
+        <section class="panel" aria-labelledby="next-title">
+            <h2 id="next-title" class="panel__title">Próximos días</h2>
+            @if (isLoadingAppointments()) {
+                <p-skeleton height="2.5rem" styleClass="mb-2" />
+                <p-skeleton height="2.5rem" />
+            } @else if (nextDays().length === 0) {
+                <p class="panel__empty">No hay citas en los próximos {{ daysAhead }} días.</p>
+            } @else {
+                <ul class="rows">
+                    @for (appointment of nextDays(); track appointment.id) {
+                        <li class="rows__item">
+                            <span class="rows__when">
+                                {{ appointment.startDateTime | date: 'shortTime' }}
+                                <small>{{ appointment.startDateTime | date: 'EEEE d' }}</small>
+                            </span>
+                            <span class="rows__who">
+                                <strong>{{ appointment.employeeName }}</strong>
+                                <span>{{ appointment.companyName }}</span>
+                            </span>
+                            <span class="rows__meta">{{ isAdmin() ? appointment.ergonomistName : appointment.statusLabel }}</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+
+        <div class="dashboard__side">
+            @if (!isAdmin() || toRegister().length > 0) {
+                <section class="panel" aria-labelledby="register-title">
+                    <h2 id="register-title" class="panel__title">Por registrar</h2>
+                    @if (isLoadingAppointments()) {
+                        <p-skeleton height="2.5rem" />
+                    } @else if (toRegister().length === 0) {
+                        <p class="panel__empty">Todas sus citas atendidas tienen su evaluación.</p>
+                    } @else {
+                        <ul class="rows">
+                            @for (appointment of toRegister(); track appointment.id) {
+                                <li class="rows__item rows__item--action">
+                                    <span class="rows__who">
+                                        <strong>{{ appointment.employeeName }}</strong>
+                                        <span>Cita del {{ appointment.startDateTime | date: 'EEEE d' }}</span>
+                                    </span>
+                                    <button type="button" class="rows__action" (click)="register(appointment)">Registrar</button>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </section>
+            }
+
+            @if (isAdmin()) {
+                <section class="panel" aria-labelledby="system-title">
+                    <h2 id="system-title" class="panel__title">En el sistema</h2>
+                    <dl class="figures">
+                        @for (figure of figures(); track figure.label) {
+                            <div class="figures__row">
+                                <dt>{{ figure.label }}</dt>
+                                <dd>
+                                    @if (isLoadingSummary()) {
+                                        <p-skeleton width="1.5rem" height="1.3rem" />
+                                    } @else {
+                                        {{ figure.value }}
+                                    }
+                                </dd>
+                            </div>
+                        }
+                    </dl>
+                </section>
+            }
         </div>
     </div>
-    <ul class="mgs-option-grid">
-        @for (card of functionCards(); track card.route) {
-            <li>
-                <a class="mgs-option" [routerLink]="card.route">
-                    <span class="mgs-option__top">
-                        <span class="mgs-option__number">{{ card.number }}</span>
-                        <span class="mgs-option__icon" aria-hidden="true"><i [class]="card.icon"></i></span>
-                    </span>
-                    <span class="mgs-option__title">{{ card.title }}</span>
-                    <span class="mgs-option__description">{{ card.description }}</span>
-                    <span class="mgs-option__arrow" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></span>
-                </a>
-            </li>
-        }
-    </ul>
-</section>
+</div>

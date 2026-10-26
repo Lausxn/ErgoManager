@@ -6,7 +6,6 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
  */
 @Component({
     selector: 'app-empty-state',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: { class: 'mgs-empty' },
     template: `

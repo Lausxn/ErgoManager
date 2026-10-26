@@ -25,7 +25,6 @@ import com.mgs.ergomanager.repository.AvailabilityRepository;
 import com.mgs.ergomanager.repository.HistoryRepository;
 import com.mgs.ergomanager.repository.PersonalizedEvaluationRepository;
 import com.mgs.ergomanager.repository.SelfEvaluationRepository;
-import com.mgs.ergomanager.repository.UserRepository;
 import com.mgs.ergomanager.security.CurrentUserService;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -46,9 +45,6 @@ class AppointmentRescheduleTest {
 
     @Mock
     private AppointmentRepository appointmentRepository;
-
-    @Mock
-    private UserRepository userRepository;
 
     @Mock
     private SelfEvaluationRepository selfEvaluationRepository;
@@ -72,7 +68,6 @@ class AppointmentRescheduleTest {
         appointmentService = new AppointmentServiceImpl(
                 availabilityRepository,
                 appointmentRepository,
-                userRepository,
                 selfEvaluationRepository,
                 personalizedEvaluationRepository,
                 historyRepository,

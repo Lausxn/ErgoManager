@@ -4,6 +4,7 @@ import com.mgs.ergomanager.dto.form.FormRequestDTO;
 import com.mgs.ergomanager.dto.form.FormResendResponseDTO;
 import com.mgs.ergomanager.dto.form.FormResponseDTO;
 import com.mgs.ergomanager.model.enums.FormType;
+import com.mgs.ergomanager.service.FormInvitationService;
 import com.mgs.ergomanager.service.FormService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -32,14 +33,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class FormController {
 
     private final FormService formService;
+    private final FormInvitationService formInvitationService;
 
     /**
-     * Builds the controller with its service.
+     * Builds the controller with its services.
      *
-     * @param formService service that manages the forms
+     * @param formService           service that manages the forms
+     * @param formInvitationService service that emails the forms to the companies
      */
-    public FormController(FormService formService) {
+    public FormController(FormService formService, FormInvitationService formInvitationService) {
         this.formService = formService;
+        this.formInvitationService = formInvitationService;
     }
 
     /**
@@ -143,6 +147,6 @@ public class FormController {
     @PostMapping("/{id}/resend/{companyId}")
     public ResponseEntity<FormResendResponseDTO> resendAnnually(@PathVariable Long id,
                                                                 @PathVariable Long companyId) {
-        return ResponseEntity.accepted().body(formService.resendAnnually(id, companyId));
+        return ResponseEntity.accepted().body(formInvitationService.resendAnnually(id, companyId));
     }
 }

@@ -1,5 +1,9 @@
+import { formatDate } from '@angular/common';
+
 import { AppointmentStatus } from '../../shared/models/appointment-status.model';
 import { AvailabilityResponse } from '../../shared/models/appointment.model';
+import { UserResponse } from '../../shared/models/user.model';
+import { fullNameOf } from '../../shared/utils/person';
 
 export const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -131,4 +135,64 @@ export function timeOfDay(hours: number, minutes = 0): Date {
     const time = new Date();
     time.setHours(hours, minutes, 0, 0);
     return time;
+}
+
+/** Owner of an agenda offered in the selector of the administrator. */
+export interface ErgonomistOption {
+    id: number;
+    fullName: string;
+    email: string;
+    /** Text of the selector: the name, marked when it is the signed in user. */
+    label: string;
+}
+
+/**
+ * Builds the agendas an administrator can choose from: their own first, since
+ * an administrator also attends appointments, then the active ergonomists by
+ * name. Other administrators are left out.
+ *
+ * @param users         users returned by /api/users
+ * @param currentUserId identifier of the signed in administrator
+ * @returns options of the selector
+ */
+export function agendaOwnersOf(users: readonly UserResponse[], currentUserId: number | undefined): ErgonomistOption[] {
+    const toOption = (user: UserResponse, own: boolean): ErgonomistOption => {
+        const fullName = fullNameOf(user);
+        return { id: user.id, fullName, email: user.email, label: own ? `${fullName} (usted)` : fullName };
+    };
+    const own = users.filter((user) => user.active && user.id === currentUserId).map((user) => toOption(user, true));
+    const ergonomists = users
+        .filter((user) => user.active && user.role === 'ERGONOMIST' && user.id !== currentUserId)
+        .map((user) => toOption(user, false))
+        .sort((a, b) => a.fullName.localeCompare(b.fullName));
+    return [...own, ...ergonomists];
+}
+
+/**
+ * Writes a time range on a 12 hour clock, so morning and afternoon are never
+ * confused: the period goes once when both times share it ("8:00 – 9:00 a. m.")
+ * and after each time when the range crosses noon ("11:30 a. m. – 12:30 p. m.").
+ *
+ * @param start  beginning of the range
+ * @param end    end of the range
+ * @param locale locale of the texts, such as "es"
+ * @returns the range as text
+ */
+export function formatTimeRange(start: Date | string, end: Date | string, locale: string): string {
+    return timeRangeParts(start, end, locale).join(' – ');
+}
+
+/**
+ * The two sides of {@link formatTimeRange}, so a narrow card can break the
+ * range between them instead of inside a time.
+ *
+ * @param start  beginning of the range
+ * @param end    end of the range
+ * @param locale locale of the texts, such as "es"
+ * @returns the beginning and the end, each with its period when needed
+ */
+export function timeRangeParts(start: Date | string, end: Date | string, locale: string): [string, string] {
+    const time = (value: Date | string) => formatDate(value, 'h:mm', locale);
+    const period = (value: Date | string) => formatDate(value, 'a', locale);
+    return period(start) === period(end) ? [time(start), `${time(end)} ${period(end)}`] : [`${time(start)} ${period(start)}`, `${time(end)} ${period(end)}`];
 }

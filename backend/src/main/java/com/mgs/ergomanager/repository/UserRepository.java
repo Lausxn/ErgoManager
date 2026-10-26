@@ -54,23 +54,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
 
     /**
-     * Checks whether a user other than the given one uses an email.
-     *
-     * @param email email to look for
-     * @param id    identifier of the user being updated
-     * @return true when another user already uses that email
-     */
-    boolean existsByEmailAndIdNot(String email, Long id);
-
-    /**
-     * Returns the active users that hold the given role.
-     *
-     * @param role role to filter by
-     * @return list of users
-     */
-    List<User> findByRoleAndActiveTrue(Role role);
-
-    /**
      * Returns every user, newest first.
      *
      * @return ordered list of users

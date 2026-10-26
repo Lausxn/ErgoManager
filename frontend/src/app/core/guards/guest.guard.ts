@@ -11,8 +11,7 @@ export const guestGuard: CanActivateFn = () => {
     const authService = inject(AuthService);
     const router = inject(Router);
 
-    // In preview mode everyone counts as signed in, but the login page must stay reachable.
-    if (authService.isPreviewMode || !authService.isAuthenticated()) {
+    if (!authService.isAuthenticated()) {
         return true;
     }
 

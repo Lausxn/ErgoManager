@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 
@@ -12,6 +13,7 @@ import { DialogService } from '../../../shared/services/dialog.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { toLocalDateTime } from '../../../shared/utils/date-time';
 import { timeOfDay } from '../appointment-utils';
+import { AvailabilityEditDialogComponent } from './availability-edit-dialog.component';
 import { AvailabilityFormComponent } from './availability-form.component';
 
 const URL = `${environment.apiUrl}/appointments/availabilities`;
@@ -129,6 +131,52 @@ describe('AvailabilityFormComponent', () => {
     }
 
     afterEach(() => http.verify());
+
+    describe('horarios después de elegir el día', () => {
+        /** Opens the time picker of a field and presses one of its arrows. */
+        async function pressArrow(inputId: string, arrow: 'hour-up' | 'minute-up'): Promise<void> {
+            const input = page().querySelector<HTMLInputElement>(`#${inputId}`)!;
+            input.focus();
+            input.click();
+            fixture.detectChanges();
+            await fixture.whenStable();
+            // The picker is drawn on the body, above the bar of unsaved changes; the last one is the one just opened.
+            const pickers = Array.from(document.body.querySelectorAll<HTMLElement>('.p-datepicker-time-picker')).filter((element) => !page().contains(element));
+            expect(pickers.length).withContext('selector de hora en el body').toBeGreaterThan(0);
+            const picker = pickers[pickers.length - 1];
+            const buttons = picker.querySelectorAll<HTMLButtonElement>('button');
+            const button = buttons[arrow === 'hour-up' ? 0 : 2];
+            button.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+            button.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+            fixture.detectChanges();
+            document.body.click();
+            fixture.detectChanges();
+            await fixture.whenStable();
+        }
+
+        it('deja cambiar "Desde" y "Hasta" aunque el día se haya elegido primero', async () => {
+            setup();
+            form().controls.dates.setValue([daysFromToday(3)]);
+            fixture.detectChanges();
+
+            for (const id of ['start-0', 'end-0']) {
+                const input = page().querySelector<HTMLInputElement>(`#${id}`)!;
+                expect(input.disabled).withContext(id).toBeFalse();
+                expect(input.readOnly).withContext(`${id} se cambia con el selector, no escribiendo`).toBeTrue();
+            }
+            // 8:00 - 12:00 by default: one hour more at the start, one more at the end.
+            await pressArrow('start-0', 'hour-up');
+            await pressArrow('end-0', 'hour-up');
+
+            const range = form().controls.ranges.at(0).getRawValue();
+            expect([range.startTime!.getHours(), range.startTime!.getMinutes()]).toEqual([9, 0]);
+            expect([range.endTime!.getHours(), range.endTime!.getMinutes()]).toEqual([13, 0]);
+            expect(form().controls.dates.value.length).withContext('el día elegido se conserva').toBe(1);
+            expect(previewDetails()).toEqual(['Se publicará']);
+            // The range crosses noon, so each time carries its period ("AM" in the tests, "a. m." in the app).
+            expect(page().querySelector('section[aria-labelledby="availability-preview-title"]')!.textContent).toMatch(/9:00 (AM|a\.\sm\.) – 1:00 (PM|p\.\sm\.)/);
+        });
+    });
 
     describe('mensaje de cruce (Task 62)', () => {
         for (const response of [{ message: MESSAGE }, {}, { message: 'SQL constraint exception' }]) {
@@ -351,7 +399,11 @@ describe('AvailabilityFormComponent', () => {
         }
 
         function editForm() {
-            return fixture.componentInstance['editForm'];
+            return fixture.debugElement.query(By.directive(AvailabilityEditDialogComponent)).componentInstance['form'] as AvailabilityEditDialogComponent['form'];
+        }
+
+        function isDialogOpen(): boolean {
+            return fixture.componentInstance['editingSlot']() !== null;
         }
 
         /** Opens the dialog of the first free slot. */
@@ -401,7 +453,7 @@ describe('AvailabilityFormComponent', () => {
             fixture.detectChanges();
 
             expect(toast.success).toHaveBeenCalledWith('Espacio actualizado', jasmine.any(String));
-            expect(fixture.componentInstance['isEditOpen']()).toBeFalse();
+            expect(isDialogOpen()).toBeFalse();
             expect(page().textContent).toContain('Libre · 1 h 30 min');
         });
 
@@ -431,7 +483,7 @@ describe('AvailabilityFormComponent', () => {
 
             expect(dialogAlert()).toContain(MESSAGE);
             expect(document.body.textContent).not.toContain('SQL constraint exception');
-            expect(fixture.componentInstance['isEditOpen']()).toBeTrue();
+            expect(isDialogOpen()).toBeTrue();
         });
 
         it('si el espacio ya tiene una cita, muestra el mensaje del backend y la cita en la lista', async () => {
