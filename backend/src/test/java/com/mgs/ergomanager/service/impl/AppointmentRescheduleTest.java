@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import com.mgs.ergomanager.dto.appointment.AppointmentRescheduleRequestDTO;
 import com.mgs.ergomanager.exception.BusinessException;
+import com.mgs.ergomanager.hu.UserStories;
 import com.mgs.ergomanager.model.Appointment;
 import com.mgs.ergomanager.model.Availability;
 import com.mgs.ergomanager.model.Company;
@@ -29,6 +30,7 @@ import com.mgs.ergomanager.security.CurrentUserService;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -590,6 +592,7 @@ class AppointmentRescheduleTest {
      * rescheduled.
      */
     @Test
+    @Tag(UserStories.HU_021)
     void rescheduleShouldRejectInactiveCompany() {
         Appointment appointment =
                 buildAppointment(

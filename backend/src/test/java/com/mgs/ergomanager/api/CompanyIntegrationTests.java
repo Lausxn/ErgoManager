@@ -11,12 +11,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.mgs.ergomanager.hu.UserStories;
 import com.mgs.ergomanager.model.Company;
 import com.mgs.ergomanager.model.User;
 import com.mgs.ergomanager.model.enums.Role;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
@@ -53,6 +55,7 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_003)
     void createsNormalizedCompany() throws Exception {
         mvc.perform(post("/api/companies").with(as(admin))
                         .contentType(MediaType.APPLICATION_JSON).content(toJson(body("Acme", "3-101-000001"))))
@@ -67,6 +70,7 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_003)
     void listsByBusinessNameAndReadsById() throws Exception {
         long zeta = create("Zeta", "3-101-000002");
         create("Alfa", "3-101-000003");
@@ -83,6 +87,7 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_003)
     void rejectsDuplicateNameIgnoringCaseAndSurroundingSpaces() throws Exception {
         create("Cliente Acme", "3-101-106001");
         mvc.perform(post("/api/companies").with(as(admin))
@@ -94,6 +99,8 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_003)
+    @Tag(UserStories.HU_021)
     void inactiveProfileStillReservesItsName() throws Exception {
         persistCompany("Reservado", "3-101-106003", false);
         mvc.perform(post("/api/companies").with(as(ergonomist))
@@ -103,6 +110,7 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_020)
     void rejectsRenameWithoutChangingStoredData() throws Exception {
         create("Primero", "3-101-106005");
         long second = create("Segundo", "3-101-106006");
@@ -117,6 +125,8 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_020)
+    @Tag(UserStories.HU_021)
     void updatesOwnNameAndPersistsContactDataWithoutReactivatingProfile() throws Exception {
         Company company = persistCompany("Existente", "3-101-106007", false);
         Map<String, Object> request = body("EXISTENTE", "3-101-106007");
@@ -133,6 +143,7 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_003)
     void databaseRejectsDuplicateNamesEvenWhenServiceIsBypassed() {
         persistCompany("Nombre único", "3-101-106008", true);
         assertThrows(DataIntegrityViolationException.class,
@@ -140,6 +151,8 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_003)
+    @Tag(UserStories.HU_020)
     void rejectsDuplicatedTaxIdOnCreateAndUpdate() throws Exception {
         create("Primera", "3-101-000004");
         long second = create("Segunda", "3-101-000005");
@@ -158,6 +171,7 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_003)
     void returnsSpanishValidationMessages() throws Exception {
         Map<String, Object> invalid = body("", "3-101-000000000000000000");
         invalid.put("contactEmail", "no-es-correo");
@@ -170,6 +184,7 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_021)
     void deactivatesAndActivates() throws Exception {
         Company company = persistCompany("Activa", "3-101-000006", true);
         mvc.perform(delete("/api/companies/{id}", company.getId()).with(as(admin))).andExpect(status().isNoContent());
@@ -181,6 +196,38 @@ class CompanyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_021)
+    void aDeactivatedCompanyStaysInTheListWithItsData() throws Exception {
+        Company company = persistCompany("Inactiva con historial", "3-101-000009", true);
+        mvc.perform(delete("/api/companies/{id}", company.getId()).with(as(admin))).andExpect(status().isNoContent());
+
+        mvc.perform(get("/api/companies").with(as(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id == %d)].active", company.getId()).value(false))
+                .andExpect(jsonPath("$[?(@.id == %d)].businessName", company.getId()).value("Inactiva con historial"))
+                .andExpect(jsonPath("$[?(@.id == %d)].taxId", company.getId()).value("3-101-000009"));
+    }
+
+    @Test
+    @Tag(UserStories.HU_021)
+    void deactivatingAnUnknownCompanyOrWithoutSigningInIsRejected() throws Exception {
+        mvc.perform(delete("/api/companies/{id}", 999_999L).with(as(admin)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("message").value("No se encontró la empresa."));
+        mvc.perform(patch("/api/companies/{id}/activate", 999_999L).with(as(admin)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("message").value("No se encontró la empresa."));
+
+        Company company = persistCompany("Sin sesión", "3-101-000010", true);
+        mvc.perform(delete("/api/companies/{id}", company.getId())).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/companies/{id}", company.getId()).with(as(admin)))
+                .andExpect(jsonPath("active").value(true));
+    }
+
+    @Test
+    @Tag(UserStories.HU_003)
+    @Tag(UserStories.HU_020)
+    @Tag(UserStories.HU_021)
     void ergonomistHasFullAccessToCompanies() throws Exception {
         Company company = persistCompany("Lectura", "3-101-000007", true);
         mvc.perform(get("/api/companies").with(as(ergonomist))).andExpect(status().isOk());

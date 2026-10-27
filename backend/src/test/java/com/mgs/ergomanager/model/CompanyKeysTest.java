@@ -2,9 +2,12 @@ package com.mgs.ergomanager.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.mgs.ergomanager.hu.UserStories;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /** Comparison keys of the business name and the tax id. */
+@Tag(UserStories.HU_003)
 class CompanyKeysTest {
 
     @Test

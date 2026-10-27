@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.mgs.ergomanager.hu.UserStories;
 import com.mgs.ergomanager.model.Company;
 import com.mgs.ergomanager.model.User;
 import com.mgs.ergomanager.model.enums.Role;
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
@@ -66,6 +68,7 @@ class CompanyPersistenceIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_003)
     void createStoresEveryFieldNormalizedAndAnswersWithTheStoredRow() throws Exception {
         MvcResult result = mvc.perform(json(post("/api/companies"), body(
                         "  Servicios del Valle S.A. ", " 3-101-300002 ", " RRHH@Valle.Test ", " 2222-3333 ", " Heredia ")))
@@ -86,6 +89,7 @@ class CompanyPersistenceIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_003)
     void createStoresBlankOptionalFieldsAsNull() throws Exception {
         Map<String, Object> request = body("Sin contacto", "3-101-300003", "contacto@sin.test", "   ", null);
         long id = idOf(mvc.perform(json(post("/api/companies"), request))
@@ -100,6 +104,7 @@ class CompanyPersistenceIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_020)
     void updateReplacesEveryEditableFieldAndKeepsIdentityStateAndCreationDate() throws Exception {
         Company original = persistFullCompany();
         LocalDateTime createdAt = stored(original.getId()).getCreatedAt();
@@ -123,6 +128,7 @@ class CompanyPersistenceIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_020)
     void updateClearsOptionalFieldsSentBlankOrLeftOut() throws Exception {
         Company original = persistFullCompany();
 
@@ -136,6 +142,7 @@ class CompanyPersistenceIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_020)
     void rejectedUpdateLeavesTheStoredRowUntouched() throws Exception {
         Company original = persistFullCompany();
 
@@ -161,6 +168,7 @@ class CompanyPersistenceIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_020)
     void updateAnswersWithTheSameDataThatIsReadLater() throws Exception {
         Company original = persistFullCompany();
 

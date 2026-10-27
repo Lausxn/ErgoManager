@@ -111,6 +111,12 @@
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Groups the tests of each user story in one suite (com.mgs.ergomanager.hu). -->
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-suite</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -127,4 +133,80 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!--
+            Test report per user story: ./mvnw test -Phu-reports
+            Runs only the suites of com.mgs.ergomanager.hu (one per user story) and
+            leaves a .txt and a .xml for each of them in test-reports/. A failing test
+            does not stop the build here, so the report always shows it.
+        -->
+        <profile>
+            <id>hu-reports</id>
+            <properties>
+                <hu.raw>${project.build.directory}/surefire-hu</hu.raw>
+                <hu.out>${project.basedir}/test-reports</hu.out>
+                <hu.xsl>${project.basedir}/src/test/hu-reports</hu.xsl>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <includes>
+                                <include>**/hu/HU*.java</include>
+                            </includes>
+                            <reportsDirectory>${hu.raw}</reportsDirectory>
+                            <testFailureIgnore>true</testFailureIgnore>
+                        </configuration>
+                    </plugin>
+                    <!--
+                        Surefire counts the tests of a suite well in its .xml but not in its
+                        .txt, so both files are written again from the .xml: the .txt as a
+                        readable summary and the .xml without the machine properties.
+                    -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>hu-reports</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <macrodef name="hu-report">
+                                            <attribute name="suite"/>
+                                            <attribute name="file"/>
+                                            <attribute name="title"/>
+                                            <sequential>
+                                                <xslt in="${hu.raw}/TEST-com.mgs.ergomanager.hu.@{suite}.xml" out="${hu.out}/@{file}.txt" style="${hu.xsl}/summary.xsl">
+                                                    <param name="title" expression="@{title}"/>
+                                                </xslt>
+                                                <xslt in="${hu.raw}/TEST-com.mgs.ergomanager.hu.@{suite}.xml" out="${hu.out}/@{file}.xml" style="${hu.xsl}/clean.xsl">
+                                                    <param name="title" expression="@{title}"/>
+                                                </xslt>
+                                            </sequential>
+                                        </macrodef>
+                                        <!-- Only the report files: the folder may be open in the explorer or synced. -->
+                                        <delete quiet="true">
+                                            <fileset dir="${hu.out}" includes="HU-*.txt,HU-*.xml" erroronmissingdir="false"/>
+                                        </delete>
+                                        <hu-report suite="HU003CrearPerfilCliente" file="HU-003-Crear-perfil-de-cliente" title="HU-003 Crear perfil de cliente"/>
+                                        <hu-report suite="HU009CrearDesactivarFormularios" file="HU-009-Crear-y-desactivar-formularios" title="HU-009 Crear y desactivar formularios"/>
+                                        <hu-report suite="HU016GestionarDisponibilidad" file="HU-016-Gestionar-disponibilidad" title="HU-016 Gestionar disponibilidad"/>
+                                        <hu-report suite="HU020EditarPerfilCliente" file="HU-020-Editar-perfil-de-cliente" title="HU-020 Editar perfil de cliente"/>
+                                        <hu-report suite="HU021DesactivarPerfilCliente" file="HU-021-Desactivar-perfil-de-cliente" title="HU-021 Desactivar perfil de cliente"/>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

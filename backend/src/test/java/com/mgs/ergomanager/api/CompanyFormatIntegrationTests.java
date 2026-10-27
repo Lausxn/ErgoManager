@@ -6,12 +6,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.mgs.ergomanager.hu.UserStories;
 import com.mgs.ergomanager.model.Company;
 import com.mgs.ergomanager.model.User;
 import com.mgs.ergomanager.model.enums.Role;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -45,6 +47,7 @@ class CompanyFormatIntegrationTests extends ApiIntegrationTestSupport {
 
     @ParameterizedTest
     @ValueSource(strings = {"3101600001", " 3 101 600001 ", "3-101600001", "31-01-600001", "3-101-600001"})
+    @Tag(UserStories.HU_003)
     void storesTheTaxIdWithTheDashesOfTheLegalFormat(String typed) throws Exception {
         // Ten digits always get the dashes in their place, wherever they were typed.
         save(post("/api/companies"), "Formato", typed, null)
@@ -54,6 +57,7 @@ class CompanyFormatIntegrationTests extends ApiIntegrationTestSupport {
 
     @ParameterizedTest
     @ValueSource(strings = {"3-101-60000", "3-101-60000X", "3101ABC", "3-101-6000011"})
+    @Tag(UserStories.HU_003)
     void rejectsATaxIdThatIsNotTheLegalFormat(String typed) throws Exception {
         save(post("/api/companies"), "Formato", typed, null)
                 .andExpect(status().isBadRequest())
@@ -63,6 +67,7 @@ class CompanyFormatIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_003)
     void checksThePhoneNumberOnlyWhenItIsSent() throws Exception {
         save(post("/api/companies"), "Teléfono corto", "3-101-600002", "123")
                 .andExpect(status().isBadRequest())
@@ -74,6 +79,7 @@ class CompanyFormatIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_003)
     void reportsEveryInvalidFormatTogetherAndBeforeAnyDuplicate() throws Exception {
         persistCompany("---", "3-101-600005", true);
         save(post("/api/companies"), "---", "123", "12")
@@ -84,6 +90,7 @@ class CompanyFormatIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_020)
     void aCompanyWithOlderFormatsCanBeEditedWhileThoseValuesDoNotChange() throws Exception {
         Company legacy = persistCompany("***", "3101ABC", true);
         legacy.setPhoneNumber("123");

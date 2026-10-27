@@ -14,6 +14,7 @@ import com.mgs.ergomanager.dto.form.AnswerOptionRequestDTO;
 import com.mgs.ergomanager.dto.form.FormRequestDTO;
 import com.mgs.ergomanager.dto.form.QuestionRequestDTO;
 import com.mgs.ergomanager.exception.BusinessException;
+import com.mgs.ergomanager.hu.UserStories;
 import com.mgs.ergomanager.model.AnswerOption;
 import com.mgs.ergomanager.model.Form;
 import com.mgs.ergomanager.model.Question;
@@ -24,6 +25,7 @@ import com.mgs.ergomanager.repository.QuestionRepository;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -34,6 +36,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * deactivation.
  */
 @ExtendWith(MockitoExtension.class)
+@Tag(UserStories.HU_009)
 class FormServiceBusinessRulesTest {
 
     private static final String ACTIVE_SELF_EVALUATION_EXISTS_MESSAGE =

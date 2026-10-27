@@ -3,16 +3,19 @@ package com.mgs.ergomanager.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
+import com.mgs.ergomanager.hu.UserStories;
 import com.mgs.ergomanager.model.AnswerOption;
 import com.mgs.ergomanager.model.Form;
 import com.mgs.ergomanager.model.Question;
 import com.mgs.ergomanager.model.enums.FormType;
 import jakarta.persistence.EntityManager;
 import java.util.List;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /** Storage of the form types and of the weighted answer options. */
+@Tag(UserStories.HU_009)
 class FormModelPersistenceTests extends ApiIntegrationTestSupport {
 
     @Autowired

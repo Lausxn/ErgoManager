@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.mgs.ergomanager.hu.UserStories;
 import com.mgs.ergomanager.model.Appointment;
 import com.mgs.ergomanager.model.Company;
 import com.mgs.ergomanager.model.Form;
@@ -18,11 +19,13 @@ import com.mgs.ergomanager.repository.AppointmentRepository;
 import com.mgs.ergomanager.repository.PersonalizedEvaluationRepository;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
 /** The reports of a client stay reachable after the client is renamed. */
+@Tag(UserStories.HU_020)
 class CompanyRenameReportsIntegrationTests extends ApiIntegrationTestSupport {
 
     @Autowired
