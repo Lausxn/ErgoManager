@@ -1,6 +1,7 @@
 package com.mgs.ergomanager.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
@@ -8,7 +9,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.mgs.ergomanager.dto.company.CompanyRequestDTO;
+import com.mgs.ergomanager.dto.company.CompanyResponseDTO;
 import com.mgs.ergomanager.exception.DuplicateResourceException;
+import com.mgs.ergomanager.exception.ResourceNotFoundException;
+import com.mgs.ergomanager.hu.UserStories;
 import com.mgs.ergomanager.model.Company;
 import com.mgs.ergomanager.model.CompanyKeys;
 import com.mgs.ergomanager.repository.CompanyNameChangeRepository;
@@ -20,13 +24,14 @@ import java.util.Optional;
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.ConstraintViolationException.ConstraintKind;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
-/** Queries made by the company service and its translation of database conflicts. */
+/** Queries made by the company service, its translation of database conflicts and the activation of a company. */
 @ExtendWith(MockitoExtension.class)
 class CompanyServiceImplTest {
 
@@ -72,6 +77,7 @@ class CompanyServiceImplTest {
     }
 
     @Test
+    @Tag(UserStories.HU_020)
     void anEditThatKeepsNameAndTaxIdMakesNoDuplicateQuery() {
         when(companyRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(stored));
         when(companyRepository.saveAndFlush(any(Company.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -84,6 +90,7 @@ class CompanyServiceImplTest {
     }
 
     @Test
+    @Tag(UserStories.HU_020)
     void anEditOnlyChecksTheValueThatChanges() {
         when(companyRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(stored));
         when(companyRepository.saveAndFlush(any(Company.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -95,6 +102,8 @@ class CompanyServiceImplTest {
     }
 
     @Test
+    @Tag(UserStories.HU_003)
+    @Tag(UserStories.HU_020)
     void translatesTheUniqueConstraintsIntoConflictsWithTheirMessage() {
         assertThat(CompanyServiceImpl.conflictOf(violation(ConstraintKind.UNIQUE, "companies.uk_companies_business_name_key")))
                 .isInstanceOf(DuplicateResourceException.class)
@@ -109,6 +118,75 @@ class CompanyServiceImplTest {
     }
 
     @Test
+    @Tag(UserStories.HU_021)
+    void deactivateMarksTheCompanyInactiveWithoutDeletingIt() {
+        stored.setActive(true);
+        when(companyRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(stored));
+
+        service.deactivate(7L);
+
+        assertThat(stored.isActive()).isFalse();
+        // A soft delete: the row and its data stay for the history and the reports.
+        assertThat(stored.getBusinessName()).isEqualTo("Servicios del Valle");
+        verify(companyRepository, never()).delete(any(Company.class));
+        verify(companyRepository, never()).deleteById(any());
+    }
+
+    @Test
+    @Tag(UserStories.HU_021)
+    void deactivatingAnInactiveCompanyKeepsItInactive() {
+        stored.setActive(false);
+        when(companyRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(stored));
+
+        service.deactivate(7L);
+
+        assertThat(stored.isActive()).isFalse();
+    }
+
+    @Test
+    @Tag(UserStories.HU_021)
+    void activateGivesTheCompanyBackAndAnswersTheActiveProfile() {
+        stored.setActive(false);
+        when(companyRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(stored));
+
+        CompanyResponseDTO response = service.activate(7L);
+
+        assertThat(stored.isActive()).isTrue();
+        assertThat(response.active()).isTrue();
+        assertThat(response.businessName()).isEqualTo("Servicios del Valle");
+        assertThat(response.taxId()).isEqualTo("3-101-500001");
+    }
+
+    @Test
+    @Tag(UserStories.HU_021)
+    void deactivatingOrActivatingAnUnknownCompanyIsNotFound() {
+        when(companyRepository.findByIdForUpdate(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.deactivate(99L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("No se encontró la empresa.");
+        assertThatThrownBy(() -> service.activate(99L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("No se encontró la empresa.");
+    }
+
+    @Test
+    @Tag(UserStories.HU_020)
+    @Tag(UserStories.HU_021)
+    void anEditKeepsAnInactiveCompanyInactive() {
+        stored.setActive(false);
+        when(companyRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(stored));
+        when(companyRepository.saveAndFlush(any(Company.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CompanyResponseDTO response = service.update(7L, request("Servicios del Valle", "3-101-500001"));
+
+        assertThat(stored.isActive()).isFalse();
+        assertThat(response.active()).isFalse();
+    }
+
+    @Test
+    @Tag(UserStories.HU_003)
+    @Tag(UserStories.HU_020)
     void otherViolationsAreNotReportedAsDuplicates() {
         DataIntegrityViolationException notNull = violation(ConstraintKind.NOT_NULL, "tax_id");
         assertThat(CompanyServiceImpl.conflictOf(notNull)).isSameAs(notNull);

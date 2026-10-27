@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.lowagie.text.pdf.PdfReader;
 import com.lowagie.text.pdf.parser.PdfTextExtractor;
+import com.mgs.ergomanager.hu.UserStories;
 import com.mgs.ergomanager.model.AnswerOption;
 import com.mgs.ergomanager.model.Availability;
 import com.mgs.ergomanager.model.Company;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -315,6 +317,8 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_009)
+    @Tag(UserStories.HU_021)
     void rejectsMissingOrInactiveCompanyAndInactiveForm() throws Exception {
         Company inactive = persistCompany("Inactiva", "3-101-000201", false);
         mvc.perform(post("/api/self-evaluations").contentType(MediaType.APPLICATION_JSON)
@@ -351,6 +355,7 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
     // ----- availability -----
 
     @Test
+    @Tag(UserStories.HU_016)
     void createsAndListsAvailabilityWithOwnershipRules() throws Exception {
         LocalDateTime start = futureAt(5, 8);
         mvc.perform(availabilityRequest(ergonomist.getId(), start, start.plusHours(1)).with(as(ergonomist)))
@@ -381,6 +386,7 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_016)
     void rejectsInvalidOrOverlappingAvailability() throws Exception {
         LocalDateTime start = futureAt(6, 10);
         mvc.perform(availabilityRequest(ergonomist.getId(), start, start.minusMinutes(30)).with(as(ergonomist)))
@@ -406,6 +412,7 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_016)
     void deletesOnlyOwnFreeSlots() throws Exception {
         Availability free = persistAvailability(ergonomist, futureAt(7, 8), futureAt(7, 9));
         Availability taken = persistAvailability(ergonomist, futureAt(7, 10), futureAt(7, 11));
@@ -577,6 +584,7 @@ class EvaluationFlowIntegrationTests extends ApiIntegrationTestSupport {
       }
 
     @Test
+    @Tag(UserStories.HU_021)
     void inactiveCompanyCannotBeUsedButKeepsItsHistory() throws Exception {
         long selfEvaluationId = submitSelfEvaluation(3, 3, 3);
         Availability slot = persistAvailability(ergonomist, futureAt(10, 8), futureAt(10, 9));

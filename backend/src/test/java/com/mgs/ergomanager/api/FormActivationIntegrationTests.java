@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.mgs.ergomanager.hu.UserStories;
 import com.mgs.ergomanager.model.Company;
 import com.mgs.ergomanager.model.Form;
 import com.mgs.ergomanager.model.Question;
@@ -18,10 +19,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
 /** Drafts, one active form per type and the views of the active forms. */
+@Tag(UserStories.HU_009)
 class FormActivationIntegrationTests extends ApiIntegrationTestSupport {
 
     private User admin;

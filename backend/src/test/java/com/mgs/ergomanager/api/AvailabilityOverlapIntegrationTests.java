@@ -6,12 +6,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.mgs.ergomanager.hu.UserStories;
 import com.mgs.ergomanager.model.Availability;
 import com.mgs.ergomanager.model.User;
 import com.mgs.ergomanager.model.enums.Role;
 import java.time.LocalDateTime;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -19,6 +21,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /** Range conflicts through the real availability API, including update exclusions. */
+@Tag(UserStories.HU_016)
 class AvailabilityOverlapIntegrationTests extends ApiIntegrationTestSupport {
 
     private static final String URL = "/api/appointments/availabilities";

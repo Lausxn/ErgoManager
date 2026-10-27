@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.mgs.ergomanager.hu.UserStories;
 import com.mgs.ergomanager.model.AnswerOption;
 import com.mgs.ergomanager.model.Form;
 import com.mgs.ergomanager.model.User;
@@ -18,12 +19,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /** Creation and edition of self evaluation and personalized evaluation forms. */
+@Tag(UserStories.HU_009)
 class FormTypeIntegrationTests extends ApiIntegrationTestSupport {
 
     private static final String SELF = "SELF_EVALUATION";

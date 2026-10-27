@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
+import com.mgs.ergomanager.hu.UserStories;
 import com.mgs.ergomanager.model.Availability;
 import com.mgs.ergomanager.model.User;
 import com.mgs.ergomanager.model.enums.Role;
@@ -16,6 +17,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +29,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /** Separate real transactions verify that concurrent availability writes share the agenda lock. */
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
+@Tag(UserStories.HU_016)
 class AvailabilityConcurrencyIntegrationTests extends ApiIntegrationTestSupport {
 
     private static final String URL = "/api/appointments/availabilities";

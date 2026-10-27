@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.mgs.ergomanager.config.CompanyKeyBackfill;
+import com.mgs.ergomanager.hu.UserStories;
 import com.mgs.ergomanager.model.Company;
 import com.mgs.ergomanager.model.CompanyKeys;
 import com.mgs.ergomanager.model.User;
@@ -17,6 +18,7 @@ import com.mgs.ergomanager.model.enums.Role;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.util.Map;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -52,6 +54,8 @@ class CompanyUniqueKeyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_003)
+    @Tag(UserStories.HU_020)
     void everySavedCompanyGetsItsKeysAndARenameRefreshesThem() {
         Company company = reload(persistCompany("Acme S.A.", "3-101-400001", true));
         assertThat(company.getBusinessNameKey()).isEqualTo(CompanyKeys.businessNameKey("acme s.a."));
@@ -68,6 +72,7 @@ class CompanyUniqueKeyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_003)
     void databaseRejectsANameThatOnlyChangesCaseOrSpaces() {
         persistCompany("Servicios del Valle", "3-101-400004", true);
         assertThrows(DataIntegrityViolationException.class,
@@ -75,6 +80,7 @@ class CompanyUniqueKeyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_003)
     void databaseAcceptsNamesThatOnlyDifferInAccents() {
         persistCompany("Nandu", "3-101-400006", true);
         persistCompany("Ñandú", "3-101-400007", true);
@@ -82,6 +88,7 @@ class CompanyUniqueKeyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_003)
     void databaseRejectsTheSameTaxIdWrittenWithoutDashes() {
         persistCompany("Primera", "3-101-400008", true);
         assertThrows(DataIntegrityViolationException.class,
@@ -89,6 +96,7 @@ class CompanyUniqueKeyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_003)
     void theApiStoresTheNameWithSingleSpaces() throws Exception {
         var admin = persistUser("admin.keys@example.test", Role.ADMIN);
         mvc.perform(post("/api/companies").with(as(admin)).contentType(MediaType.APPLICATION_JSON)
@@ -106,6 +114,7 @@ class CompanyUniqueKeyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_003)
     void theApiRejectsANameThatOnlyChangesCaseOrSpacesAndAcceptsOneWithOtherAccents() throws Exception {
         persistCompany("Nandu S.A.", "3-101-400020", true);
         save(post("/api/companies"), "  NANDU   s.a. ", "3-101-400021")
@@ -116,6 +125,8 @@ class CompanyUniqueKeyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_003)
+    @Tag(UserStories.HU_020)
     void theApiRejectsATaxIdWrittenWithoutDashesOnCreateAndUpdate() throws Exception {
         persistCompany("Primera", "3-101-400023", true);
         Company second = persistCompany("Segunda", "3-101-400024", true);
@@ -129,6 +140,7 @@ class CompanyUniqueKeyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_020)
     void aRenameToAnotherCompanyNameIsRejectedAndKeepsTheStoredName() throws Exception {
         persistCompany("Grupo Norte", "3-101-400025", true);
         Company other = persistCompany("Grupo Sur", "3-101-400026", true);
@@ -139,6 +151,7 @@ class CompanyUniqueKeyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_020)
     void aCompanyThatRepeatsAnOlderNameMustBeRenamedWhenItIsEdited() throws Exception {
         long original = insertWithoutKeys("Repetida S.A.", "3-101-400027");
         long repeated = insertWithoutKeys("REPETIDA s.a.", "3-101-400028");
@@ -156,6 +169,7 @@ class CompanyUniqueKeyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_021)
     void aRepeatedOlderCompanyCanBeDeactivatedAndActivatedWithoutRebuildingItsKeys() throws Exception {
         insertWithoutKeys("Duplicada S.A.", "3-101-400030");
         long repeatedName = insertWithoutKeys("DUPLICADA  s.a.", "3-101-400031");
@@ -184,6 +198,7 @@ class CompanyUniqueKeyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_020)
     void correctingARepeatedOlderCompanyFillsItsKeys() throws Exception {
         insertWithoutKeys("Corregible S.A.", "3-101-400032");
         long repeated = insertWithoutKeys("CORREGIBLE s.a.", "3101400032");
@@ -198,6 +213,7 @@ class CompanyUniqueKeyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_003)
     void backfillFillsTheKeysOfOlderCompaniesAndSkipsRepeatedOnes() {
         long first = insertWithoutKeys("Antigua S.A.", "3-101-400010");
         long sameName = insertWithoutKeys("ANTIGUA  s.a.", "3-101-400011");

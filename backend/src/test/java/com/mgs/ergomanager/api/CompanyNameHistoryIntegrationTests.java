@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.mgs.ergomanager.hu.UserStories;
 import com.mgs.ergomanager.model.Company;
 import com.mgs.ergomanager.model.CompanyNameChange;
 import com.mgs.ergomanager.model.User;
@@ -18,6 +19,7 @@ import com.mgs.ergomanager.repository.CompanyNameChangeRepository;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -25,6 +27,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /** Previous names of a client: kept after a rename and reserved for that client. */
+@Tag(UserStories.HU_020)
 class CompanyNameHistoryIntegrationTests extends ApiIntegrationTestSupport {
 
     private static final String RESERVED_MESSAGE = "Ese nombre perteneció a otra empresa y queda reservado para ella. "
@@ -102,6 +105,7 @@ class CompanyNameHistoryIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @Test
+    @Tag(UserStories.HU_021)
     void anInactiveCompanyStillReservesItsPreviousNames() throws Exception {
         rename(cocaCola, "Coca-Cola FEMSA").andExpect(status().isOk());
         mvc.perform(delete("/api/companies/{id}", cocaCola.getId()).with(as(admin)))

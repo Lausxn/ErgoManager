@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
+import com.mgs.ergomanager.hu.UserStories;
 import com.mgs.ergomanager.model.Company;
 import com.mgs.ergomanager.model.CompanyNameChange;
 import com.mgs.ergomanager.model.User;
@@ -22,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -110,6 +112,7 @@ class CompanyConcurrencyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @RepeatedTest(3)
+    @Tag(UserStories.HU_020)
     void twoSimultaneousRenamesKeepEveryPreviousName() throws Exception {
         String original = stored().getBusinessName();
 
@@ -124,6 +127,8 @@ class CompanyConcurrencyIntegrationTests extends ApiIntegrationTestSupport {
     }
 
     @RepeatedTest(3)
+    @Tag(UserStories.HU_020)
+    @Tag(UserStories.HU_021)
     void aRenameAndADeactivationAtTheSameTimeKeepBothChanges() throws Exception {
         String original = stored().getBusinessName();
 
